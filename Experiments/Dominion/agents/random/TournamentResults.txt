@@ -1,0 +1,6 @@
+Game: Dominion, Players: 4, Mode: RANDOM, TotalGames: 10, GamesPerMatchup: 10
+random got 10.00 points. random won 80.0% of the 10 games of the tournament. random won 20.0% of the 40 games it played during the tournament.
+
+---- Ranking ---- (+/- are standard errors on the mean calculated using a Normal approximation) 
+random: Win rate 0.25 +/- 0.064	Mean Ordinal 2.28 +/- 0.16
+

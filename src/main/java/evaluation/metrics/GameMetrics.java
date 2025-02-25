@@ -414,6 +414,43 @@ public class GameMetrics implements IMetricsCollection {
         }
     }
 
+    public static class ScoresPerRound extends AbstractMetric {
+
+        ArrayList<Double> scoreArrayPerRound = new ArrayList<>();
+        @Override
+        protected boolean _run(MetricsGameListener listener, Event e, Map<String, Object> records) {
+            if (e.type == Event.GameEvent.ROUND_OVER) {
+                for (int i=0; i<e.state.getNPlayers(); i++) {
+                    scoreArrayPerRound.add(e.state.getGameScore(i));
+                }
+                return false;
+            }
+            if (e.type == Event.GameEvent.GAME_OVER) {
+                String scoreArrayStr = scoreArrayPerRound.toString();
+                records.put("ScoresPerRound", scoreArrayStr);
+                return true;
+            }
+            return false;
+        }
+
+        @Override
+        public void notifyGameOver() {
+            super.notifyGameOver();
+            scoreArrayPerRound.clear();
+        }
+
+        @Override
+        public Set<IGameEvent> getDefaultEventTypes() {
+            return Set.of(Event.GameEvent.ROUND_OVER, Event.GameEvent.GAME_OVER);
+        }
+        @Override
+        public Map<String, Class<?>> getColumns(int nPlayersPerGame, Set<String> playerNames) {
+            Map<String, Class<?>> columns = new HashMap<>();
+            columns.put("ScoresPerRound", String.class);
+            return columns;
+        }
+    }
+
     /**
      * Returns the total number of components in the state as the first element of the returned value
      * and an array of the counts that are hidden to each player

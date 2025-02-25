@@ -1,0 +1,1 @@
+GameSeed,GameName,Round,Event,Tick,Turn,PlayerCount,GameID,DominionActionValue(attackCount),DominionActionValue(plusMoney),DominionActionValue(plusActions),DominionActionValue(trashCardCount),DominionActionValue(plusBuys),DominionActionValue(plusDraws)
