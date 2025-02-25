@@ -1,0 +1,13 @@
+{
+  "class": "evaluation.listeners.MetricsGameListener",
+  "args":  [
+    {"enum" : "evaluation.metrics.IDataLogger$ReportDestination", "value" : "ToFile"},
+    [
+      {"enum" : "evaluation.metrics.IDataLogger$ReportType", "value" : "RawDataPerEvent"},
+      {"enum" : "evaluation.metrics.IDataLogger$ReportType", "value" : "Summary"}
+    ],
+    [
+      {"class": "evaluation.metrics.GameMetrics$FinalScore" },
+      {"class": "evaluation.metrics.GameMetrics$ScoresPerRound"}
+    ]]
+}

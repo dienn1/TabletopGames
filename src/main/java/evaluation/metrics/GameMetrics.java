@@ -7,6 +7,10 @@ import core.interfaces.IGameEvent;
 import evaluation.listeners.MetricsGameListener;
 import evaluation.summarisers.TAGStatSummary;
 import evaluation.summarisers.TAGSummariser;
+import games.wonders7.actions.BuildFromDiscard;
+import games.wonders7.actions.BuildStage;
+import games.wonders7.actions.DiscardCard;
+import games.wonders7.actions.PlayCard;
 import utilities.Pair;
 
 import java.util.*;
@@ -449,6 +453,64 @@ public class GameMetrics implements IMetricsCollection {
             columns.put("ScoresPerRound", String.class);
             return columns;
         }
+    }
+
+    public static abstract class ActionsCount extends AbstractMetric {
+        // TODO let inheritor do proper initialization of actionsTracked somehow
+        protected Set<Class<?>> actionsTracked;
+        protected final HashMap<String, Integer> actionsCount = new HashMap<>();
+        @Override
+        protected final boolean _run(MetricsGameListener listener, Event e, Map<String, Object> records) {
+            if (e.type == Event.GameEvent.ACTION_CHOSEN) {
+                updateActionCount(e.action);
+                return false;
+            }
+            if (e.type == Event.GameEvent.GAME_OVER) {
+                return updateRecord(records);
+            }
+            return false;
+        }
+
+        protected void updateActionCount(AbstractAction a) {
+            if (actionsTracked.contains(a.getClass())) {
+                String actionName = a.getClass().getSimpleName();
+                actionsCount.put(actionName, actionsCount.getOrDefault(actionName, 0) + 1);
+            }
+        }
+
+        protected boolean updateRecord(Map<String, Object> records) {
+            for (Class<?> a : actionsTracked) {
+                String actionName = a.getSimpleName();
+                records.put(actionName, actionsCount.getOrDefault(actionName, 0));
+            }
+            return true;
+        }
+
+        @Override
+        public void notifyGameOver() {
+            super.notifyGameOver();
+            actionsCount.clear();
+        }
+
+        @Override
+        public Set<IGameEvent> getDefaultEventTypes() {
+            return Set.of(Event.GameEvent.ACTION_CHOSEN, Event.GameEvent.GAME_OVER);
+        }
+
+        @Override
+        public Map<String, Class<?>> getColumns(int nPlayersPerGame, Set<String> playerNames) {
+            if (actionsTracked == null) {
+                initializeActionsTracked();
+            }
+            Map<String, Class<?>> columns = new HashMap<>();
+            for (Class<?> a : actionsTracked) {
+                columns.put(a.getSimpleName(), Integer.class);
+            }
+            return columns;
+        }
+
+        // Initialize actionsTracked, have to implement this
+        protected abstract void initializeActionsTracked();
     }
 
     /**

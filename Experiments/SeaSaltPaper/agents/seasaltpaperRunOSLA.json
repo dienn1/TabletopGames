@@ -1,0 +1,9 @@
+{
+  "game": "SeaSaltPaper",
+  "playerDirectory" : "Experiments/SeaSaltPaper/agents/osla/players",
+  "nPlayers" : 2,
+  "matchups" : 10,
+  "verbose"  : true,
+  "listener" : "Experiments/SeaSaltPaper/agents/osla/seasaltpaperMetric.json",
+  "destDir" : "Experiments/SeaSaltPaper/agents/osla"
+}
