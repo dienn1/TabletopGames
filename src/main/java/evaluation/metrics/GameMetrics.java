@@ -559,7 +559,7 @@ public class GameMetrics implements IMetricsCollection {
 
         @Override
         protected final boolean _run(MetricsGameListener listener, Event e, Map<String, Object> records) {
-            if (isValidSave(e)) {
+            if (isValidSave(e) && !savePath.isEmpty()) {
                 gameStateToJson(e.state);
             }
             return false;

@@ -7,33 +7,33 @@ import games.dominion.actions.*;
 
 public class DominionCard extends Card {
 
-    CardType type;
+    CardType cardType;
 
-    protected DominionCard(CardType type) {
-        super(type.name());
-        this.type = type;
+    protected DominionCard(CardType cardType) {
+        super(cardType.name());
+        this.cardType = cardType;
     }
 
-    public static DominionCard create(CardType type) {
-        return switch (type) {
+    public static DominionCard create(CardType cardType) {
+        return switch (cardType) {
             case GOLD, COPPER, SILVER, ESTATE, DUCHY, PROVINCE, CURSE, VILLAGE, SMITHY, LABORATORY, MARKET, FESTIVAL,
                  CELLAR, MILITIA, MOAT, REMODEL, MERCHANT, MINE, WORKSHOP, ARTISAN, MONEYLENDER, POACHER, WITCH, CHAPEL,
-                 HARBINGER, THRONE_ROOM, BANDIT, BUREAUCRAT, SENTRY -> new DominionCard(type);
+                 HARBINGER, THRONE_ROOM, BANDIT, BUREAUCRAT, SENTRY -> new DominionCard(cardType);
             case GARDENS -> new Gardens();
-            default -> throw new AssertionError("Not yet implemented : " + type);
+            default -> throw new AssertionError("Not yet implemented : " + cardType);
         };
     }
 
     public boolean isTreasureCard() {
-        return type.isTreasure;
+        return cardType.isTreasure;
     }
 
     public boolean isActionCard() {
-        return type.isAction;
+        return cardType.isAction;
     }
 
     public boolean isVictoryCard() {
-        return type.isVictory;
+        return cardType.isVictory;
     }
 
     public DominionAction getAction(int playerId) {
@@ -41,14 +41,14 @@ public class DominionCard extends Card {
     }
 
     public DominionAction getAction(int playerId, boolean dummy) {
-        switch (type) {
+        switch (cardType) {
             case VILLAGE:
             case SMITHY:
             case LABORATORY:
             case FESTIVAL:
             case MARKET:
             case MOAT:
-                return new SimpleAction(type, playerId, dummy);
+                return new SimpleAction(cardType, playerId, dummy);
             case CELLAR:
                 return new Cellar(playerId, dummy);
             case MILITIA:
@@ -82,16 +82,16 @@ public class DominionCard extends Card {
             case SENTRY:
                 return new Sentry(playerId, dummy);
             default:
-                throw new AssertionError("No action for : " + type);
+                throw new AssertionError("No action for : " + cardType);
         }
     }
 
     public boolean hasAttackReaction() {
-        return type.isReaction;
+        return cardType.isReaction;
     }
 
     public AbstractAction getAttackReaction(int playerId) {
-        switch (type) {
+        switch (cardType) {
             case MOAT:
                 return new MoatReaction(playerId);
             default:
@@ -100,19 +100,19 @@ public class DominionCard extends Card {
     }
 
     public int victoryPoints(int player, DominionGameState context) {
-        return type.victory;
+        return cardType.victory;
     }
 
     public int treasureValue() {
-        return type.treasure;
+        return cardType.treasure;
     }
 
     public int getCost() {
-        return type.cost;
+        return cardType.cost;
     }
 
     public CardType cardType() {
-        return type;
+        return cardType;
     }
 
     @Override
@@ -125,7 +125,7 @@ public class DominionCard extends Card {
     public boolean equals(Object obj) {
         if (obj instanceof DominionCard) {
             DominionCard other = (DominionCard) obj;
-            return other.type == type;
+            return other.cardType == cardType;
         }
         return false;
     }
