@@ -1,5 +1,7 @@
 package games.wonders7.metrics;
 
+import core.AbstractGameState;
+import core.AbstractGameStateContainer;
 import core.actions.AbstractAction;
 import core.interfaces.IGameEvent;
 import evaluation.listeners.MetricsGameListener;
@@ -10,6 +12,7 @@ import evaluation.metrics.IMetricsCollection;
 import games.wonders7.Wonders7Constants;
 import games.wonders7.Wonders7GameParameters;
 import games.wonders7.Wonders7GameState;
+import games.wonders7.Wonders7GameStateContainer;
 import games.wonders7.actions.*;
 import games.wonders7.cards.Wonder7Card;
 
@@ -99,7 +102,7 @@ public class Wonders7Metrics implements IMetricsCollection {
                 }
                 if (a instanceof PlayCard p) {
                     Wonder7Card card = Wonder7Card.factory(p.cardType);
-                    cardTypeCount.put(card.type.name(), cardTypeCount.getOrDefault(card.type.name(), 0) + 1);
+                    cardTypeCount.put(card.buildingType.name(), cardTypeCount.getOrDefault(card.buildingType.name(), 0) + 1);
                 }
                 return false;
             }
@@ -190,6 +193,28 @@ public class Wonders7Metrics implements IMetricsCollection {
                 columns.put(r.name(), Integer.class);
             }
             return columns;
+        }
+    }
+
+    public static class SaveStateWonders7 extends GameMetrics.SaveStateOnEvent {
+
+        public SaveStateWonders7(String[] args) {
+            super(args);
+        }
+
+        @Override
+        protected boolean isValidSave(Event e) {
+            return e.type == Event.GameEvent.ROUND_OVER;
+        }
+
+        @Override
+        protected AbstractGameStateContainer getGSContainer(AbstractGameState gs) {
+            return new Wonders7GameStateContainer((Wonders7GameState) gs);
+        }
+
+        @Override
+        public Set<IGameEvent> getDefaultEventTypes() {
+            return Collections.singleton(Event.GameEvent.ROUND_OVER);
         }
     }
 

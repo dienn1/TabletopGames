@@ -11,7 +11,6 @@ import games.wonders7.cards.Wonder7Board;
 
 import java.util.*;
 
-import static core.CoreConstants.VisibilityMode.VISIBLE_TO_ALL;
 import static games.wonders7.Wonders7Constants.Resource.*;
 import static games.wonders7.cards.Wonder7Card.CardType.*;
 
@@ -234,7 +233,7 @@ public class Wonders7GameState extends AbstractGameState {
     }
 
     public int cardsOfType(Wonder7Card.Type type, int player) {
-        return (int) playedCards.get(player).getComponents().stream().filter(c -> c.type == type).count();
+        return (int) playedCards.get(player).getComponents().stream().filter(c -> c.buildingType == type).count();
     }
 
     public Wonders7GameParameters getParams() {
