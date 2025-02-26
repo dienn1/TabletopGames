@@ -1,5 +1,9 @@
 package games.seasaltpaper;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import core.AbstractGameState;
+import core.AbstractGameStateContainer;
 import core.interfaces.IGameEvent;
 import evaluation.listeners.MetricsGameListener;
 import evaluation.metrics.AbstractMetric;
@@ -12,9 +16,10 @@ import games.seasaltpaper.cards.CardSuite;
 import games.seasaltpaper.cards.CardType;
 import games.seasaltpaper.cards.SeaSaltPaperCard;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.*;
 
 public class SeaSaltPaperMetrics implements IMetricsCollection {
 
@@ -164,5 +169,52 @@ public class SeaSaltPaperMetrics implements IMetricsCollection {
             }
             return columns;
         }
+    }
+
+    public static class SaveStateSSP extends GameMetrics.SaveStateOnEvent {
+
+        int turnSaveCycle;
+
+        public SaveStateSSP(String[] args) {
+            super(args);
+            if (args.length != 2) {
+                throw new AssertionError("INVALID NUMBER OF ARGUMENTS FOR SaveStatePerNTurns: args=" + Arrays.toString(args));
+            }
+            turnSaveCycle = Integer.parseInt(args[1]);
+        }
+
+        @Override
+        protected boolean isValidSave(Event e) {
+            if (e.type == Event.GameEvent.TURN_OVER) {
+                return e.state.getTurnCounter() % turnSaveCycle == 0;
+            }
+            return true;
+        }
+
+        @Override
+        protected AbstractGameStateContainer getGSContainer(AbstractGameState gs) {
+            return new SSPGameStateContainer((SeaSaltPaperGameState) gs);
+        }
+
+        @Override
+        public Set<IGameEvent> getDefaultEventTypes() {
+            return Set.of(Event.GameEvent.ROUND_OVER, Event.GameEvent.TURN_OVER);
+        }
+
+//        @Override
+//        protected void gameStateToJson(AbstractGameState gs) {
+//            Gson gson = new GsonBuilder().setPrettyPrinting().create();
+//            SeaSaltPaperGameState sspgs = (SeaSaltPaperGameState) gs ;
+//            SSPGameStateContainer gsContainer = new SSPGameStateContainer(sspgs);
+//            String fileName = gs.getGameType().name() + gs.getGameID() + "-" + gs.getRoundCounter() + "-" + gs.getTurnCounter() + ".json";
+//            File jsonToWrite = new File(gameStatesDir, fileName);
+//            try (FileWriter f = new FileWriter(jsonToWrite)) {
+//                gson.toJson(gsContainer, f);
+//            } catch (IOException e) {
+//                throw new RuntimeException(e);
+//            }
+//        }
+
+
     }
 }

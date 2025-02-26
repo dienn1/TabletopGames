@@ -1,5 +1,7 @@
 package evaluation.metrics;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import core.*;
 import core.actions.AbstractAction;
 import core.interfaces.IComponentContainer;
@@ -7,12 +9,11 @@ import core.interfaces.IGameEvent;
 import evaluation.listeners.MetricsGameListener;
 import evaluation.summarisers.TAGStatSummary;
 import evaluation.summarisers.TAGSummariser;
-import games.wonders7.actions.BuildFromDiscard;
-import games.wonders7.actions.BuildStage;
-import games.wonders7.actions.DiscardCard;
-import games.wonders7.actions.PlayCard;
 import utilities.Pair;
 
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.*;
 
 import static evaluation.metrics.Event.GameEvent.*;
@@ -533,6 +534,60 @@ public class GameMetrics implements IMetricsCollection {
 
         // Initialize actionsTracked, have to implement this
         protected abstract void initializeActionsTracked();
+    }
+
+    public static abstract class SaveStateOnEvent extends AbstractMetric {
+
+        protected String savePath = "";
+        protected File gameStatesDir;
+
+        public SaveStateOnEvent(String[] args) {
+            super(args);
+            if (args.length == 0) {
+                throw new AssertionError("INVALID NUMBER OF ARGUMENTS FOR SaveStatePerNTurns: args=" + Arrays.toString(args));
+            }
+            savePath = args[0];
+            gameStatesDir = new File(savePath, "gameStates");
+            if (gameStatesDir.exists()) {
+//                System.out.println("WARNING:" + gameStatesDir.getPath() + " ALREADY EXIST, NEW GAME STATES MAY OVERWRITE THE ORIGINAL");
+                throw new RuntimeException(gameStatesDir.getPath() + " ALREADY EXIST, DELETE OR MOVE THE DIRECTORY SOMEWHERE ELSE");
+            }
+            else if (!gameStatesDir.mkdir()) {
+                throw new RuntimeException("CANNOT CREATE DIRECTORY FOR " + gameStatesDir.getPath());
+            }
+        }
+
+        @Override
+        protected final boolean _run(MetricsGameListener listener, Event e, Map<String, Object> records) {
+            if (isValidSave(e)) {
+                gameStateToJson(e.state);
+            }
+            return false;
+        }
+
+        protected abstract boolean isValidSave(Event e);
+
+        protected final void gameStateToJson(AbstractGameState gs) {
+            Gson gson = new GsonBuilder().setPrettyPrinting().create();
+            AbstractGameStateContainer gsContainer = getGSContainer(gs);
+            String fileName = gs.getGameType().name() + "-" + gs.getGameID() + "-" + gs.getRoundCounter() + "-" + gs.getTurnCounter() + ".json";
+            File jsonToWrite = new File(gameStatesDir, fileName);
+            try (FileWriter f = new FileWriter(jsonToWrite)) {
+                gson.toJson(gsContainer, f);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        protected abstract AbstractGameStateContainer getGSContainer(AbstractGameState gs);
+
+        @Override
+        public abstract Set<IGameEvent> getDefaultEventTypes();
+
+        @Override
+        public final Map<String, Class<?>> getColumns(int nPlayersPerGame, Set<String> playerNames) {
+            return new HashMap<>();
+        }
     }
 
     /**
