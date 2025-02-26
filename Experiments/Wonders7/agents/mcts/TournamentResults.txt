@@ -1,6 +1,0 @@
-Game: Wonders7, Players: 4, Mode: RANDOM, TotalGames: 10, GamesPerMatchup: 10
-wonders7-4P-64 got 10.00 points. wonders7-4P-64 won 90.0% of the 10 games of the tournament. wonders7-4P-64 won 22.5% of the 40 games it played during the tournament.
-
----- Ranking ---- (+/- are standard errors on the mean calculated using a Normal approximation) 
-wonders7-4P-64: Win rate 0.25 +/- 0.066	Mean Ordinal 2.43 +/- 0.18
-

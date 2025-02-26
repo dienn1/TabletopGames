@@ -1,7 +1,7 @@
 {
   "game": "SeaSaltPaper",
   "playerDirectory" : "Experiments/SeaSaltPaper/agents/mcts/players",
-  "nPlayers" : 2,
+  "nPlayers" : 4,
   "matchups" : 10,
   "verbose"  : true,
   "listener" : "Experiments/SeaSaltPaper/agents/mcts/seasaltpaperMetric.json",

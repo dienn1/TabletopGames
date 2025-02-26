@@ -8,6 +8,10 @@
     ],
     [
       {"class": "evaluation.metrics.GameMetrics$FinalScore" },
-      {"class": "evaluation.metrics.GameMetrics$ScoresPerRound"}
+      {"class": "evaluation.metrics.GameMetrics$ScoresPerRound"},
+      {"class": "games.seasaltpaper.SeaSaltPaperMetrics$ActionsCount"},
+      {"class": "games.seasaltpaper.SeaSaltPaperMetrics$cardTypeCount"},
+      {"class": "games.seasaltpaper.SeaSaltPaperMetrics$cardSuiteCount"},
+      {"class": "games.seasaltpaper.SeaSaltPaperMetrics$cardColorCount"}
     ]]
 }

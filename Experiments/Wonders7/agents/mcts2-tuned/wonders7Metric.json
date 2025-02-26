@@ -10,6 +10,8 @@
       {"class": "evaluation.metrics.GameMetrics$FinalScore" },
       {"class": "evaluation.metrics.GameMetrics$ScoresPerRound"},
       {"class": "games.wonders7.metrics.Wonders7Metrics$ActionsCount"},
-      {"class": "games.wonders7.metrics.Wonders7Metrics$CardTypeCount"}
+      {"class": "games.wonders7.metrics.Wonders7Metrics$CardTypeCount"},
+      {"class": "games.wonders7.metrics.Wonders7Metrics$Resources"},
+      {"class": "games.wonders7.metrics.Wonders7Metrics$Boards"}
     ]]
 }
