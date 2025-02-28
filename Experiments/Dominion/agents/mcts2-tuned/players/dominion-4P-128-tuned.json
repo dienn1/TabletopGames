@@ -1,17 +1,26 @@
 {
-  "budgetType": "BUDGET_TIME",
-  "rolloutLength": 30,
-  "opponentTreePolicy": "MultiTree",
-  "MASTGamma": 0.5,
-  "heuristic": {
-    "class": "players.heuristics.ScoreHeuristic"
+  "budgetType" : "BUDGET_TIME",
+  "rolloutLengthPerPlayer" : true,
+  "rolloutTermination" : "END_TURN",
+  "oppModelType" : "MAST",
+  "rolloutLength" : 30,
+  "opponentTreePolicy" : "MultiTree",
+  "MASTGamma" : 0.5,
+  "useMASTAsActionHeuristic" : true,
+  "heuristic" : {
+    "heuristicType" : "LEADER",
+    "class" : "players.heuristics.CoarseTunableHeuristic"
   },
-  "K": 1,
-  "exploreEpsilon": 0.1,
-  "treePolicy": "UCB_Tuned",
-  "MAST": "Both",
-  "rolloutType": "MAST",
-  "information": "Information_Set",
-  "class": "players.mcts.MCTSParams",
-  "budget": 128
+  "FPU" : 1.0,
+  "K" : 1.0,
+  "exploreEpsilon" : 0.03,
+  "maxTreeDepth" : 1,
+  "treePolicy" : "UCB_Tuned",
+  "reuseTree" : true,
+  "MAST" : "Both",
+  "rolloutType" : "MAST",
+  "backupPolicy" : "MaxMC",
+  "maxBackupThreshold" : 30,
+  "class" : "players.mcts.MCTSParams",
+  "budget" : 128
 }
