@@ -1,0 +1,10 @@
+{
+  "game": "Dominion",
+  "playerDirectory" : "Experiments/Dominion/seeds/players",
+  "nPlayers" : 4,
+  "matchups" : 10,
+  "verbose"  : true,
+  "listener" : "Experiments/Dominion/seeds/seed2/dominionMetric.json",
+  "destDir" : "Experiments/Dominion/seeds/seed2",
+  "distinctRandomSeeds": 1
+}

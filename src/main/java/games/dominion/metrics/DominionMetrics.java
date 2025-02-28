@@ -13,6 +13,7 @@ import games.dominion.actions.DominionAction;
 import games.dominion.actions.DominionAttackAction;
 import games.dominion.actions.TrashCard;
 import games.dominion.cards.CardType;
+import org.apache.xmlbeans.impl.store.DomImpl;
 
 import java.util.*;
 
@@ -211,6 +212,44 @@ public class DominionMetrics implements IMetricsCollection {
         @Override
         public Set<IGameEvent> getDefaultEventTypes() {
             return Collections.singleton(Event.GameEvent.ROUND_OVER);
+        }
+    }
+
+    public static class GameParams extends AbstractMetric {
+
+        @Override
+        protected boolean _run(MetricsGameListener listener, Event e, Map<String, Object> records) {
+            DominionParameters params = (DominionParameters) e.state.getGameParameters();
+            records.put("HAND_SIZE", params.HAND_SIZE);
+            records.put("PILES_EXHAUSTED_FOR_GAME_END", params.PILES_EXHAUSTED_FOR_GAME_END);
+            records.put("KINGDOM_CARDS_OF_EACH_TYPE", params.KINGDOM_CARDS_OF_EACH_TYPE);
+            records.put("CURSE_CARDS_PER_PLAYER", params.CURSE_CARDS_PER_PLAYER);
+            records.put("STARTING_COPPER", params.STARTING_COPPER);
+            records.put("STARTING_ESTATES", params.STARTING_ESTATES);
+            records.put("COPPER_SUPPLY", params.COPPER_SUPPLY);
+            records.put("SILVER_SUPPLY", params.SILVER_SUPPLY);
+            records.put("GOLD_SUPPLY", params.GOLD_SUPPLY);
+            return true;
+        }
+
+        @Override
+        public Set<IGameEvent> getDefaultEventTypes() {
+            return Collections.singleton(Event.GameEvent.GAME_OVER);
+        }
+
+        @Override
+        public Map<String, Class<?>> getColumns(int nPlayersPerGame, Set<String> playerNames) {
+            Map<String, Class<?>> columns = new HashMap<>();
+            columns.put("HAND_SIZE", Integer.class);
+            columns.put("PILES_EXHAUSTED_FOR_GAME_END", Integer.class);
+            columns.put("KINGDOM_CARDS_OF_EACH_TYPE", Integer.class);
+            columns.put("CURSE_CARDS_PER_PLAYER", Integer.class);
+            columns.put("STARTING_COPPER", Integer.class);
+            columns.put("STARTING_ESTATES", Integer.class);
+            columns.put("COPPER_SUPPLY", Integer.class);
+            columns.put("SILVER_SUPPLY", Integer.class);
+            columns.put("GOLD_SUPPLY", Integer.class);
+            return columns;
         }
     }
 }

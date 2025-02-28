@@ -102,7 +102,7 @@ public class Wonders7Metrics implements IMetricsCollection {
                 }
                 if (a instanceof PlayCard p) {
                     Wonder7Card card = Wonder7Card.factory(p.cardType);
-                    cardTypeCount.put(card.buildingType.name(), cardTypeCount.getOrDefault(card.buildingType.name(), 0) + 1);
+                    cardTypeCount.put(card.type.name(), cardTypeCount.getOrDefault(card.type.name(), 0) + 1);
                 }
                 return false;
             }

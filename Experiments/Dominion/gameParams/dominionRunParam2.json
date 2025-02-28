@@ -1,0 +1,10 @@
+{
+  "game": "Dominion",
+  "playerDirectory" : "Experiments/Dominion/gameParams/players",
+  "nPlayers" : 4,
+  "matchups" : 10,
+  "verbose"  : true,
+  "listener" : "Experiments/Dominion/gameParams/param2/dominionMetric.json",
+  "destDir" : "Experiments/Dominion/gameParams/param2",
+  "gameParams": "Experiments/Dominion/gameParams/param2/dominionParam.json"
+}

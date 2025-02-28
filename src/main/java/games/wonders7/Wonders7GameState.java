@@ -247,7 +247,7 @@ public class Wonders7GameState extends AbstractGameState {
     }
 
     public int cardsOfType(Wonder7Card.Type type, int player) {
-        return (int) playedCards.get(player).getComponents().stream().filter(c -> c.buildingType == type).count();
+        return (int) playedCards.get(player).getComponents().stream().filter(c -> c.type == type).count();
     }
 
     public Wonders7GameParameters getParams() {
