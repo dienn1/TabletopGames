@@ -29,16 +29,35 @@ public class Wonder7Card extends Card {
     }
 
     public enum CardType {
-        LumberYard, StonePit, ClayPool, OreVein, TreeFarm, Excavation, ClayPit, TimberYard, ForestCave, Mine, Sawmill, Quarry, Brickyard, Foundry,
-        Loom, Glassworks, Press,
-        Workshop, Scriptorium, Apothecary, Dispensary, Laboratory, Library, School, Observatory, University, Academy, Study, Lodge,
-        Baths, Altar, Theatre, Pawnshop, Statue, Aqueduct, Courthouse, Temple, TownHall, Senate, Pantheon, Palace, Gardens,
-        Tavern, EastTradingPost, WestTradingPost, Marketplace, Caravansery, Forum, Ludus, ChamberOfCommerce, Arena, Vineyard, Bazaar, Haven, Lighthouse,
-        Stockade, Barracks, GuardTower, Walls, TrainingGround, Stables, ArcheryRange, SiegeWorkshop, Fortifications, Arsenal, Circus, Castrum,
-        WorkersGuild, CraftsmenGuild, MagistratesGuild, TradersGuild, SpiesGuild, PhilosophersGuild, ShipownersGuild, BuildersGuild, DecoratorsGuild, ScientistsGuild
+        LumberYard(1), StonePit(1), ClayPool(1), OreVein(1), TreeFarm(1), Excavation(1),
+        ClayPit(1), TimberYard(1), ForestCave(1), Mine(1),
+        Sawmill(2), Quarry(2), Brickyard(2), Foundry(2),
+        Loom(1), Glassworks(1), Press(1),
+        LoomAge2(2), GlassworksAge2(2), PressAge2(2),
+        Workshop(1), Scriptorium(1), Apothecary(1),
+        Dispensary(2), Laboratory(2), Library(2), School(2),
+        Observatory(3), University(3), Academy(3), Study(3), Lodge(3),
+        Baths(1), Altar(1), Theatre(1), Well(1),
+        Statue(2), Aqueduct(2), Courthouse(2), Temple(2),
+        TownHall(3), Senate(3), Pantheon(3), Palace(3), Gardens(3),
+        Tavern(1), EastTradingPost(1), WestTradingPost(1), Marketplace(1),
+        Caravansery(2), Forum(2), Vineyard(2), Bazaar(2),
+        ChamberOfCommerce(3), Arena(3),  Haven(3), Lighthouse(3), Ludus(3),
+        Stockade(1), Barracks(1), GuardTower(1),
+        Walls(2), TrainingGround(2), Stables(2), ArcheryRange(2),
+        SiegeWorkshop(3), Fortifications(3), Arsenal(3), Circus(3), Castrum(3),
+        WorkersGuild(3), CraftsmenGuild(3), MagistratesGuild(3), TradersGuild(3), SpiesGuild(3),
+        PhilosophersGuild(3), ShipownersGuild(3), BuildersGuild(3), DecoratorsGuild(3), ScientistsGuild(3);
+
+        public final int age;
+
+        CardType(int age) {
+            this.age = age;
+        }
+
     }
 
-    public final Type buildingType;  // Different type of cards, brown cards, grey cards...)
+    public final Type type;  // Different type of cards, brown cards, grey cards...)
     public final CardType cardType; // Name of card
     public final Map<Resource, Integer> constructionCost; // The resources required to construct structure
     public final Map<Resource, Integer> resourcesProduced; // Resources the card creates
@@ -76,17 +95,17 @@ public class Wonder7Card extends Card {
                 return new Wonder7Card(cardType, RawMaterials, Map.of(Coin, 1), Map.of(Clay, 2));
             case Foundry:
                 return new Wonder7Card(cardType, RawMaterials, Map.of(Coin, 1), Map.of(Ore, 2));
-            case Loom:
+            case Loom, LoomAge2:
                 return new Wonder7Card(cardType, ManufacturedGoods, emptyMap(), Map.of(Textile, 1));
-            case Glassworks:
+            case Glassworks, GlassworksAge2:
                 return new Wonder7Card(cardType, ManufacturedGoods, emptyMap(), Map.of(Glass, 1));
-            case Press:
+            case Press, PressAge2:
                 return new Wonder7Card(cardType, ManufacturedGoods, emptyMap(), Map.of(Papyrus, 1));
-            case Pawnshop, Baths, Altar, Theatre:
+            case Well, Baths, Altar, Theatre:
                 return new Wonder7Card(cardType, CivilianStructures, emptyMap(), Map.of(Victory, 3));
             case Statue:
                 return new Wonder7Card(cardType, CivilianStructures, Map.of(Ore, 2, Wood, 1), Map.of(Victory, 4),
-                        List.of(CardType.Pawnshop));
+                        List.of(CardType.Well));
             case Aqueduct:
                 return new Wonder7Card(cardType, CivilianStructures, Map.of(Stone, 3), Map.of(Victory, 5),
                         List.of(CardType.Baths));
@@ -276,7 +295,7 @@ public class Wonder7Card extends Card {
     }
 
     // A card with a card effect (either instantaneous, or end of game VP)
-    public Wonder7Card(CardType cardType, Type buildingType,
+    public Wonder7Card(CardType cardType, Type type,
                        Map<Wonders7Constants.Resource, Integer> constructionCost,
                        Map<Wonders7Constants.Resource, Integer> resourcesProduced,
                        List<CardEffect> instantEffects,
@@ -284,7 +303,7 @@ public class Wonder7Card extends Card {
                        List<CardType> prerequisiteCard) {
         super(cardType.name());
         this.cardType = cardType;
-        this.buildingType = buildingType;
+        this.type = type;
         this.constructionCost = constructionCost;
         this.resourcesProduced = resourcesProduced;
         this.instantEffects = instantEffects;
@@ -292,21 +311,21 @@ public class Wonder7Card extends Card {
         this.prerequisiteCard = prerequisiteCard;
     }
 
-    public Wonder7Card(CardType cardType, Type buildingType,
+    public Wonder7Card(CardType cardType, Type type,
                        Map<Wonders7Constants.Resource, Integer> constructionCost,
                        Map<Wonders7Constants.Resource, Integer> resourcesProduced) {
-        this(cardType, buildingType, constructionCost, resourcesProduced, emptyList(), emptyList(), emptyList());
+        this(cardType, type, constructionCost, resourcesProduced, emptyList(), emptyList(), emptyList());
     }
 
-    public Wonder7Card(CardType cardType, Type buildingType,
+    public Wonder7Card(CardType cardType, Type type,
                        Map<Wonders7Constants.Resource, Integer> constructionCost,
                        Map<Wonders7Constants.Resource, Integer> resourcesProduced,
                        List<CardType> prerequisiteCard) {
-        this(cardType, buildingType, constructionCost, resourcesProduced, emptyList(), emptyList(), prerequisiteCard);
+        this(cardType, type, constructionCost, resourcesProduced, emptyList(), emptyList(), prerequisiteCard);
     }
 
 
-    protected Wonder7Card(CardType cardType, Type buildingType,
+    protected Wonder7Card(CardType cardType, Type type,
                           Map<Resource, Integer> constructionCost,
                           Map<Resource, Integer> resourcesProduced,
                           List<CardType> prerequisiteCard,
@@ -315,7 +334,7 @@ public class Wonder7Card extends Card {
                           int componentID) {
         super(cardType.name(), componentID);
         this.cardType = cardType;
-        this.buildingType = buildingType;
+        this.type = type;
         this.constructionCost = constructionCost;
         this.resourcesProduced = resourcesProduced;
         this.prerequisiteCard = prerequisiteCard;
@@ -349,7 +368,7 @@ public class Wonder7Card extends Card {
         String cost = mapToStr(constructionCost);
         String makes = mapToStr(resourcesProduced);
         return "{" + cardType +
-                "(" + buildingType + ")" +
+                "(" + type + ")" +
                 (!cost.isEmpty() ? ":cost=" + cost : ",free") +
                 (!makes.isEmpty() ? ",makes=" + makes : "") + "}  ";
     }
@@ -379,7 +398,7 @@ public class Wonder7Card extends Card {
         Wonder7Board wonder = wgs.getPlayerWonderBoard(player);
         if (wonder.wonderType() == TheStatueOfZeusInOlympia  && wonder.getSide() == 0 && wonder.wonderStage > 2) {
             // if this is the first card of the type, then it is buildable for free
-            if (wgs.getPlayedCards(player).getComponents().stream().noneMatch(c -> c.buildingType == buildingType))
+            if (wgs.getPlayedCards(player).getComponents().stream().noneMatch(c -> c.type == type))
                 return true;
         }
         // then check for Olympia night side (first slot means first card is free)
@@ -402,6 +421,22 @@ public class Wonder7Card extends Card {
             if (cardType == card.cardType) {
                 // Player already has an identical structure, can't play another
                 return true;
+            }
+            // then the special cases for Manufactured resources, as the only ones wit identical cards in different Ages
+            if (cardType == CardType.Loom || cardType == CardType.LoomAge2) {
+                if (card.cardType == CardType.Loom || card.cardType == CardType.LoomAge2) {
+                    return true;
+                }
+            }
+            if (cardType == CardType.Glassworks || cardType == CardType.GlassworksAge2) {
+                if (card.cardType == CardType.Glassworks || card.cardType == CardType.GlassworksAge2) {
+                    return true;
+                }
+            }
+            if (cardType == CardType.Press || cardType == CardType.PressAge2) {
+                if (card.cardType == CardType.Press || card.cardType == CardType.PressAge2) {
+                    return true;
+                }
             }
         }
         return false;
@@ -569,7 +604,7 @@ public class Wonder7Card extends Card {
 
     @Override
     public Card copy() {
-        return new Wonder7Card(cardType, buildingType, constructionCost, resourcesProduced, prerequisiteCard, instantEffects, endGameEffects, componentID);
+        return new Wonder7Card(cardType, type, constructionCost, resourcesProduced, prerequisiteCard, instantEffects, endGameEffects, componentID);
     }
 
     @Override
