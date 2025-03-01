@@ -10,5 +10,5 @@
 	"class" : "players.mcts.MCTSParams",
 	"exploreEpsilon" : 0.03,
 	"maxTreeDepth" : 3,
-	"budget" : 64
+	"budget" : 128
 }
