@@ -453,6 +453,9 @@ public class GameMetrics implements IMetricsCollection {
                 return false;
             }
             if (e.type == Event.GameEvent.GAME_OVER) {
+                for (int i=0; i<e.state.getNPlayers(); i++) {
+                    scoreArrayPerRound.add(e.state.getGameScore(i));
+                }
                 String scoreArrayStr = scoreArrayPerRound.toString();
                 records.put("ScoresPerRound", scoreArrayStr);
                 return true;
@@ -544,10 +547,10 @@ public class GameMetrics implements IMetricsCollection {
         public SaveStateOnEvent(String[] args) {
             super(args);
             if (args.length == 0) {
-                throw new AssertionError("INVALID NUMBER OF ARGUMENTS FOR SaveStatePerNTurns: args=" + Arrays.toString(args));
+                throw new AssertionError("INVALID NUMBER OF ARGUMENTS FOR SaveStateOnEvent: args=" + Arrays.toString(args));
             }
             savePath = args[0];
-            gameStatesDir = new File(savePath, "gameStates");
+            gameStatesDir = new File(savePath, "rawGameStates");
             if (gameStatesDir.exists()) {
 //                System.out.println("WARNING:" + gameStatesDir.getPath() + " ALREADY EXIST, NEW GAME STATES MAY OVERWRITE THE ORIGINAL");
                 throw new RuntimeException(gameStatesDir.getPath() + " ALREADY EXIST, DELETE OR MOVE THE DIRECTORY SOMEWHERE ELSE");
