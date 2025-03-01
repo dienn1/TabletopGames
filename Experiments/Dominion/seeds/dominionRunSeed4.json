@@ -6,5 +6,6 @@
   "verbose"  : true,
   "listener" : "Experiments/Dominion/seeds/seed4/dominionMetric.json",
   "destDir" : "Experiments/Dominion/seeds/seed4",
-  "distinctRandomSeeds": 1
+  "distinctRandomSeeds": 1,
+  "seed": -2306552
 }
