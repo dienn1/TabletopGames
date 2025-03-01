@@ -16,5 +16,5 @@
   "rolloutType" : "MAST",
   "maxBackupThreshold" : 3000,
   "class" : "players.mcts.MCTSParams",
-  "budget" : 64
+  "budget" : 128
 }

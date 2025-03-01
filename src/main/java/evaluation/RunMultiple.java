@@ -9,12 +9,12 @@ public class RunMultiple {
     private static List<String> getConfigs(String gameName, String[] agentTypes, int paramCount, int seedCount) {
         String dir = "Experiments/" + gameName;
         return new ArrayList<>(){{
-//            for (String agent : agentTypes) {
-//                add(dir + "/agents/" + gameName.toLowerCase() + "Run" + agent + ".json");
-//            }
-//            for (int i = 1; i <= paramCount; i++) {
-//                add(dir + "/gameParams/" + gameName.toLowerCase() + "Run" + "Param" + i + ".json");
-//            }
+            for (String agent : agentTypes) {
+                add(dir + "/agents/" + gameName.toLowerCase() + "Run" + agent + ".json");
+            }
+            for (int i = 1; i <= paramCount; i++) {
+                add(dir + "/gameParams/" + gameName.toLowerCase() + "Run" + "Param" + i + ".json");
+            }
             for (int i = 1; i <= seedCount; i++) {
                 add(dir + "/seeds/" + gameName.toLowerCase() + "Run" + "Seed" + i + ".json");
             }
@@ -35,7 +35,9 @@ public class RunMultiple {
         List<String> configs = getConfigs(gameName, agentTypes, paramCount, seedCount);
         long t = System.currentTimeMillis();
         for (String configPath : configs) {
+            System.out.println("Running " + configPath);
             RunGames.main(new String[]{"config="+configPath});
+            System.out.println("---------------------------------------------------------");
         }
         System.out.println("FISNIHED RUNNING IN " + (System.currentTimeMillis() - t)/1000 + " SECONDS");
     }
