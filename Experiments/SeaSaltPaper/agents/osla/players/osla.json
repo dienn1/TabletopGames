@@ -1,6 +1,6 @@
 {
 	"class":"players.simple.OSLAHeuristic",
 	"heuristic" : {
-		"class" : "players.heuristics.PureScoreHeuristic"
+		"class" : "games.seasaltpaper.heuristics.ScoreAndHandHeuristic"
 	}
 }

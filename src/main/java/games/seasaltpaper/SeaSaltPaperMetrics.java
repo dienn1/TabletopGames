@@ -200,21 +200,57 @@ public class SeaSaltPaperMetrics implements IMetricsCollection {
         public Set<IGameEvent> getDefaultEventTypes() {
             return Set.of(Event.GameEvent.ROUND_OVER, Event.GameEvent.TURN_OVER);
         }
+    }
 
-//        @Override
-//        protected void gameStateToJson(AbstractGameState gs) {
-//            Gson gson = new GsonBuilder().setPrettyPrinting().create();
-//            SeaSaltPaperGameState sspgs = (SeaSaltPaperGameState) gs ;
-//            SSPGameStateContainer gsContainer = new SSPGameStateContainer(sspgs);
-//            String fileName = gs.getGameType().name() + gs.getGameID() + "-" + gs.getRoundCounter() + "-" + gs.getTurnCounter() + ".json";
-//            File jsonToWrite = new File(gameStatesDir, fileName);
-//            try (FileWriter f = new FileWriter(jsonToWrite)) {
-//                gson.toJson(gsContainer, f);
-//            } catch (IOException e) {
-//                throw new RuntimeException(e);
-//            }
-//        }
+    public static class GameParams extends AbstractMetric {
 
+        @Override
+        protected boolean _run(MetricsGameListener listener, Event e, Map<String, Object> records) {
+            SeaSaltPaperParameters params = (SeaSaltPaperParameters) e.state.getGameParameters();
+            records.put("numberOfCardsDraw", params.numberOfCardsDraw);
+            records.put("numberOfCardsDiscard", params.numberOfCardsDiscard);
+            records.put("roundStopCondition", params.roundStopCondition);
+            records.put("collectorBonusSHELL", params.collectorBonusDict.get(CardSuite.SHELL).toString());
+            records.put("collectorBonusOCTOPUS", params.collectorBonusDict.get(CardSuite.OCTOPUS).toString());
+            records.put("collectorBonusPENGUIN", params.collectorBonusDict.get(CardSuite.PENGUIN).toString());
+            records.put("collectorBonusSAILOR", params.collectorBonusDict.get(CardSuite.SAILOR).toString());
+            records.put("BOAT_DUO_BONUS", params.duoBonusDict.get(CardSuite.BOAT));
+            records.put("FISH_DUO_BONUS", params.duoBonusDict.get(CardSuite.FISH));
+            records.put("CRAB_DUO_BONUS", params.duoBonusDict.get(CardSuite.CRAB));
+            records.put("SWIMMER_SHARK_DUO_BONUS", params.duoBonusDict.get(CardSuite.SWIMMER));
+            records.put("BOAT_MULTIPLIER", params.multiplierDict.get(CardSuite.BOAT));
+            records.put("FISH_MULTIPLIER",  params.multiplierDict.get(CardSuite.FISH));
+            records.put("CRAB_MULTIPLIER",  params.multiplierDict.get(CardSuite.CRAB));
+            records.put("PENGUIN_MULTIPLIER",  params.multiplierDict.get(CardSuite.PENGUIN));
+            records.put("SAILOR_MULTIPLIER",  params.multiplierDict.get(CardSuite.SAILOR));
+            return true;
+        }
 
+        @Override
+        public Set<IGameEvent> getDefaultEventTypes() {
+            return Collections.singleton(Event.GameEvent.GAME_OVER);
+        }
+
+        @Override
+        public Map<String, Class<?>> getColumns(int nPlayersPerGame, Set<String> playerNames) {
+            Map<String, Class<?>> columns = new HashMap<>();
+            columns.put("numberOfCardsDraw", Integer.class);
+            columns.put("numberOfCardsDiscard", Integer.class);
+            columns.put("roundStopCondition", Integer.class);
+            columns.put("collectorBonusSHELL", String.class);
+            columns.put("collectorBonusOCTOPUS", String.class);
+            columns.put("collectorBonusPENGUIN", String.class);
+            columns.put("collectorBonusSAILOR", String.class);
+            columns.put("BOAT_DUO_BONUS", Integer.class);
+            columns.put("FISH_DUO_BONUS", Integer.class);
+            columns.put("CRAB_DUO_BONUS", Integer.class);
+            columns.put("SWIMMER_SHARK_DUO_BONUS", Integer.class);
+            columns.put("BOAT_MULTIPLIER", Integer.class);
+            columns.put("FISH_MULTIPLIER", Integer.class);
+            columns.put("CRAB_MULTIPLIER", Integer.class);
+            columns.put("PENGUIN_MULTIPLIER", Integer.class);
+            columns.put("SAILOR_MULTIPLIER", Integer.class);
+            return columns;
+        }
     }
 }
