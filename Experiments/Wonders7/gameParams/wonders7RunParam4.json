@@ -1,0 +1,10 @@
+{
+  "game": "Wonders7",
+  "playerDirectory" : "Experiments/Wonders7/gameParams/players",
+  "nPlayers" : 4,
+  "matchups" : 10,
+  "verbose"  : true,
+  "listener" : "Experiments/Wonders7/gameParams/param4/wonders7Metric.json",
+  "destDir" : "Experiments/Wonders7/gameParams/param4",
+  "gameParams": "Experiments/Wonders7/gameParams/param4/wonders7Param.json"
+}

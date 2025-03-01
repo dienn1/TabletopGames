@@ -102,7 +102,7 @@ public class Wonders7Metrics implements IMetricsCollection {
                 }
                 if (a instanceof PlayCard p) {
                     Wonder7Card card = Wonder7Card.factory(p.cardType);
-                    cardTypeCount.put(card.type.name(), cardTypeCount.getOrDefault(card.type.name(), 0) + 1);
+                    cardTypeCount.put(card.buildingType.name(), cardTypeCount.getOrDefault(card.buildingType.name(), 0) + 1);
                 }
                 return false;
             }
@@ -215,6 +215,34 @@ public class Wonders7Metrics implements IMetricsCollection {
         @Override
         public Set<IGameEvent> getDefaultEventTypes() {
             return Collections.singleton(Event.GameEvent.ROUND_OVER);
+        }
+    }
+
+    public static class GameParams extends AbstractMetric {
+
+        @Override
+        protected boolean _run(MetricsGameListener listener, Event e, Map<String, Object> records) {
+            Wonders7GameParameters params = (Wonders7GameParameters) e.state.getGameParameters();
+            records.put("nCostNeighbourResource", params.nCostNeighbourResource);
+            records.put("nCostDiscountedResource", params.nCostDiscountedResource);
+            records.put("nCoinsDiscard", params.nCoinsDiscard);
+            records.put("startingCoins", params.startingCoins);
+            return true;
+        }
+
+        @Override
+        public Set<IGameEvent> getDefaultEventTypes() {
+            return Collections.singleton(Event.GameEvent.GAME_OVER);
+        }
+
+        @Override
+        public Map<String, Class<?>> getColumns(int nPlayersPerGame, Set<String> playerNames) {
+            Map<String, Class<?>> columns = new HashMap<>();
+            columns.put("nCostNeighbourResource", Integer.class);
+            columns.put("nCostDiscountedResource", Integer.class);
+            columns.put("nCoinsDiscard", Integer.class);
+            columns.put("startingCoins", Integer.class);
+            return columns;
         }
     }
 
