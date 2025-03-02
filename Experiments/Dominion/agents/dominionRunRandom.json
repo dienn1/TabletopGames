@@ -2,7 +2,7 @@
   "game": "Dominion",
   "playerDirectory" : "Experiments/Dominion/agents/random/players",
   "nPlayers" : 4,
-  "matchups" : 10,
+  "matchups" : 500,
   "verbose"  : true,
   "listener" : "Experiments/Dominion/agents/random/dominionMetric.json",
   "destDir" : "Experiments/Dominion/agents/random"
