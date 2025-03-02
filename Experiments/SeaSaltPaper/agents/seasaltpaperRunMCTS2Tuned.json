@@ -2,7 +2,7 @@
   "game": "SeaSaltPaper",
   "playerDirectory" : "Experiments/SeaSaltPaper/agents/mcts2-tuned/players",
   "nPlayers" : 4,
-  "matchups" : 10,
+  "matchups" : 2,
   "verbose"  : true,
   "listener" : "Experiments/SeaSaltPaper/agents/mcts2-tuned/seasaltpaperMetric.json",
   "destDir" : "Experiments/SeaSaltPaper/agents/mcts2-tuned"

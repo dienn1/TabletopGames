@@ -14,7 +14,7 @@
       {"class": "games.seasaltpaper.SeaSaltPaperMetrics$cardSuiteCount"},
       {"class": "games.seasaltpaper.SeaSaltPaperMetrics$cardColorCount"},
       {"class": "games.seasaltpaper.SeaSaltPaperMetrics$SaveStateSSP",
-        "args": [["Experiments/SeaSaltPaper/agents/mcts", "4"]]
+        "args": [["Experiments/SeaSaltPaper/agents/mcts1", "4"]]
       }
     ]]
 }
