@@ -16,7 +16,7 @@
       {"class": "games.dominion.metrics.DominionMetrics$DominionActionValue"},
       {"class": "evaluation.metrics.GameMetrics$ScoresPerRound"},
       {"class": "games.dominion.metrics.DominionMetrics$SaveStateDominion",
-      "args": [["Experiments/Dominion/agents/mcts2"]]
+      "args": [["Experiments/Dominion/agents/mcts1"]]
       }
     ]]
 }
