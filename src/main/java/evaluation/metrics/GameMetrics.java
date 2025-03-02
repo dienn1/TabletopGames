@@ -546,6 +546,7 @@ public class GameMetrics implements IMetricsCollection {
 
         public SaveStateOnEvent(String[] args) {
             super(args);
+
             if (args.length == 0) {
                 throw new AssertionError("INVALID NUMBER OF ARGUMENTS FOR SaveStateOnEvent: args=" + Arrays.toString(args));
             }
@@ -584,8 +585,15 @@ public class GameMetrics implements IMetricsCollection {
 
         protected abstract AbstractGameStateContainer getGSContainer(AbstractGameState gs);
 
+        protected abstract Set<IGameEvent> getSaveEventTypes();
+
         @Override
-        public abstract Set<IGameEvent> getDefaultEventTypes();
+        public final Set<IGameEvent> getDefaultEventTypes() {
+            Set<IGameEvent> events = new HashSet<>();
+            events.add(GAME_OVER);
+            events.addAll(getSaveEventTypes());
+            return events;
+        }
 
         @Override
         public final Map<String, Class<?>> getColumns(int nPlayersPerGame, Set<String> playerNames) {

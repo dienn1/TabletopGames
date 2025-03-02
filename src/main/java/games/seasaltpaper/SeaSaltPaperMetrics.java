@@ -197,7 +197,7 @@ public class SeaSaltPaperMetrics implements IMetricsCollection {
         }
 
         @Override
-        public Set<IGameEvent> getDefaultEventTypes() {
+        public Set<IGameEvent> getSaveEventTypes() {
             return Set.of(Event.GameEvent.ROUND_OVER, Event.GameEvent.TURN_OVER);
         }
     }

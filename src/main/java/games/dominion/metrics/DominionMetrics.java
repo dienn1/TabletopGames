@@ -210,7 +210,7 @@ public class DominionMetrics implements IMetricsCollection {
         }
 
         @Override
-        public Set<IGameEvent> getDefaultEventTypes() {
+        public Set<IGameEvent> getSaveEventTypes() {
             return Collections.singleton(Event.GameEvent.ROUND_OVER);
         }
     }

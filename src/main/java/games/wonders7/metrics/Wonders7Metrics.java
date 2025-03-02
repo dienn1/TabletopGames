@@ -213,7 +213,7 @@ public class Wonders7Metrics implements IMetricsCollection {
         }
 
         @Override
-        public Set<IGameEvent> getDefaultEventTypes() {
+        public Set<IGameEvent> getSaveEventTypes() {
             return Collections.singleton(Event.GameEvent.ROUND_OVER);
         }
     }
