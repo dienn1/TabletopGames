@@ -569,7 +569,10 @@ public class GameMetrics implements IMetricsCollection {
             return false;
         }
 
-        protected abstract boolean isValidSave(Event e);
+        // Should return true unless some specific conditions required
+        protected boolean isValidSave(Event e) {
+            return true;
+        }
 
         protected final void gameStateToJson(AbstractGameState gs) {
             Gson gson = new GsonBuilder().setPrettyPrinting().create();

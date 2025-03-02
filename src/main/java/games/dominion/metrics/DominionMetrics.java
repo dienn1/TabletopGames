@@ -199,10 +199,6 @@ public class DominionMetrics implements IMetricsCollection {
             super(args);
         }
 
-        @Override
-        protected boolean isValidSave(Event e) {
-            return e.type == Event.GameEvent.ROUND_OVER;
-        }
 
         @Override
         protected AbstractGameStateContainer getGSContainer(AbstractGameState gs) {

@@ -203,11 +203,6 @@ public class Wonders7Metrics implements IMetricsCollection {
         }
 
         @Override
-        protected boolean isValidSave(Event e) {
-            return e.type == Event.GameEvent.ROUND_OVER;
-        }
-
-        @Override
         protected AbstractGameStateContainer getGSContainer(AbstractGameState gs) {
             return new Wonders7GameStateContainer((Wonders7GameState) gs);
         }
