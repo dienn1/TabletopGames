@@ -3,7 +3,7 @@
   "playerDirectory" : "Experiments/Dominion/agents/mcts/players",
   "nPlayers" : 4,
   "matchups" : 500,
-  "verbose"  : true,
+  "verbose"  : false,
   "listener" : "Experiments/Dominion/agents/mcts/dominionMetric.json",
   "destDir" : "Experiments/Dominion/agents/mcts"
 }

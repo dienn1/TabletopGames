@@ -3,7 +3,7 @@
   "playerDirectory" : "Experiments/Dominion/gameParams/players",
   "nPlayers" : 4,
   "matchups" : 500,
-  "verbose"  : true,
+  "verbose"  : false,
   "listener" : "Experiments/Dominion/gameParams/param1/dominionMetric.json",
   "destDir" : "Experiments/Dominion/gameParams/param1",
   "gameParams": "Experiments/Dominion/gameParams/param1/dominionParam.json"

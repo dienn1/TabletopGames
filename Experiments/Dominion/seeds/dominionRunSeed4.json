@@ -3,7 +3,7 @@
   "playerDirectory" : "Experiments/Dominion/seeds/players",
   "nPlayers" : 4,
   "matchups" : 500,
-  "verbose"  : true,
+  "verbose"  : false,
   "listener" : "Experiments/Dominion/seeds/seed4/dominionMetric.json",
   "destDir" : "Experiments/Dominion/seeds/seed4",
   "distinctRandomSeeds": 1,
