@@ -2,8 +2,8 @@
   "game": "Wonders7",
   "playerDirectory" : "Experiments/Wonders7/agents/mcts2-tuned/players",
   "nPlayers" : 4,
-  "matchups" : 500,
-  "verbose"  : false,
+  "matchups" : 2,
+  "verbose"  : true,
   "listener" : "Experiments/Wonders7/agents/mcts2-tuned/wonders7Metric.json",
   "destDir" : "Experiments/Wonders7/agents/mcts2-tuned"
 }

@@ -14,7 +14,7 @@
       {"class": "games.wonders7.metrics.Wonders7Metrics$Resources"},
       {"class": "games.wonders7.metrics.Wonders7Metrics$Boards"},
       {"class": "games.wonders7.metrics.Wonders7Metrics$SaveStateWonders7",
-        "args":  [["Experiments/Wonders7/agents/mcts2"]]
+        "args":  [["Experiments/Wonders7/agents/mcts1-tuned"]]
       }
     ]]
 }
