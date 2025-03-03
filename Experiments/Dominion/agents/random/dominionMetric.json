@@ -17,7 +17,6 @@
       {"class": "evaluation.metrics.GameMetrics$ScoresPerRound"},
       {"class": "games.dominion.metrics.DominionMetrics$SaveStateDominion",
       "args": [["Experiments/Dominion/agents/random"]]
-      },
-      {"class": "games.dominion.metrics.DominionMetrics$GameParams"}
+      }
     ]]
 }
