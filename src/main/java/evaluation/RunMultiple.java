@@ -22,7 +22,7 @@ public class RunMultiple {
     }
 
     public static void main(String[] args) {
-        String gameName = "Dominion";
+        String gameName = "SeaSaltPaper";
         String[] agentTypes = new String[] {
                 "MCTS1",
                 "MCTS1Tuned",
