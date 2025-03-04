@@ -11,6 +11,6 @@
 	"budgetType" : "BUDGET_TIME",
 	"budget" : 64,
 	"heuristic" : {
- 		"class" : "players.heuristics.ScoreHeuristic"
+ 		"class" : "games.seasaltpaper.heuristics.ScoreAndHandHeuristic"
 	}
 }
