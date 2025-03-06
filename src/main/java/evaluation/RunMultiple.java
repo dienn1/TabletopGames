@@ -9,9 +9,9 @@ public class RunMultiple {
     private static List<String> getConfigs(String gameName, String[] agentTypes, int paramCount, int seedCount) {
         String dir = "Experiments/" + gameName;
         return new ArrayList<>(){{
-//            for (String agent : agentTypes) {
-//                add(dir + "/agents/" + gameName.toLowerCase() + "Run" + agent + ".json");
-//            }
+            for (String agent : agentTypes) {
+                add(dir + "/agents/" + gameName.toLowerCase() + "Run" + agent + ".json");
+            }
             for (int i = 1; i <= paramCount; i++) {
                 add(dir + "/gameParams/" + gameName.toLowerCase() + "Run" + "Param" + i + ".json");
             }
@@ -33,6 +33,9 @@ public class RunMultiple {
         int paramCount = 4;
         int seedCount = 4;
         List<String> configs = getConfigs(gameName, agentTypes, paramCount, seedCount);
+
+        configs.add("Experiments/Wonders7/agents/wonders7RunOSLA.json"); // TODO REMOVE THIS
+
         long t = System.currentTimeMillis();
         for (String configPath : configs) {
             System.out.println("Running " + configPath);

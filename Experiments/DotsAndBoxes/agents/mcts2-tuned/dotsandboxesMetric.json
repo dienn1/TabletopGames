@@ -8,5 +8,8 @@
     ],
     [
       {"class": "evaluation.metrics.GameMetrics$FinalScore" },
+      {"class": "games.dotsboxes.DBMetrics$SaveStateDB",
+        "args":  [["Experiments/DotsAndBoxes/agents/mcts2-tuned"]]
+      }
     ]]
 }
