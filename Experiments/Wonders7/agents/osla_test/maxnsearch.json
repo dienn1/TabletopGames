@@ -1,0 +1,10 @@
+{
+	"class": "players.search.MaxNSearchPlayer",
+	"heuristic" : {
+		"class" : "players.heuristics.ScoreHeuristic"
+	},
+	"budgetType" : "BUDGET_TIME",
+	"budget": 1000,
+	"searchUnit": "TURN",
+	"searchDepth": 10
+}

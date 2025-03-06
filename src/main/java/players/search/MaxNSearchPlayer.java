@@ -42,6 +42,9 @@ public class MaxNSearchPlayer extends AbstractPlayer implements IHasStateHeurist
     public MaxNSearchPlayer(MaxNSearchParameters parameters) {
         super(parameters, "MinMaxSearch");
     }
+    public MaxNSearchPlayer() {
+        this(new MaxNSearchParameters());
+    }
 
     @Override
     public MaxNSearchParameters getParameters() {

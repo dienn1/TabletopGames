@@ -1,0 +1,7 @@
+{
+  "game": "Wonders7",
+  "playerDirectory" : "Experiments/Wonders7/agents/osla_test/players",
+  "nPlayers" : 4,
+  "matchups" : 10,
+  "verbose"  : true
+}

@@ -2,6 +2,7 @@ package players.simple;
 
 import core.interfaces.IStateHeuristic;
 import players.heuristics.GameDefaultHeuristic;
+import players.heuristics.ScoreHeuristic;
 import players.search.MaxNSearchParameters;
 import players.search.MaxNSearchPlayer;
 
@@ -24,10 +25,10 @@ public class SuperOSLAPlayer extends MaxNSearchPlayer {
 
     private static MaxNSearchParameters constructParameters(IStateHeuristic heuristic) {
         MaxNSearchParameters params = new MaxNSearchParameters();
-        params.setParameterValue("BUDGET_TYPE", "BUDGET_TIME");
-        params.setParameterValue("BUDGET", 100); // 100ms as timeout
+        params.setParameterValue("budgetType", "BUDGET_TIME");
+        params.setParameterValue("budget", 100); // 100ms as timeout
         params.setParameterValue("searchDepth", 1);
-        params.setParameterValue("searchUnit", "ACTION");
+        params.setParameterValue("searchUnit", "ROUND");
         if (heuristic != null)
             params.setParameterValue("heuristic", heuristic);
         else
