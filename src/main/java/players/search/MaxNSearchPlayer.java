@@ -152,6 +152,7 @@ public class MaxNSearchPlayer extends AbstractPlayer implements IHasStateHeurist
                 case MACRO_ACTION ->
                         state.getCurrentPlayer() != stateCopy.getCurrentPlayer() ? searchDepth - 1 : searchDepth;
                 case TURN -> state.getTurnCounter() != stateCopy.getTurnCounter() ? searchDepth - 1 : searchDepth;
+                case ROUND -> state.getRoundCounter() != stateCopy.getRoundCounter() ? searchDepth - 1 : searchDepth;
             };
 
             // recurse - we are here just interested in the value of stateCopy, and hence of taking action

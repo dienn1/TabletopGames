@@ -1,0 +1,5 @@
+{
+  "class": "games.connect4.Connect4GameParameters",
+  "gridSize": 6,
+  "winCount": 4
+}

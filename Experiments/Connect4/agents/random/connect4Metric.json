@@ -7,6 +7,9 @@
       {"enum" : "evaluation.metrics.IDataLogger$ReportType", "value" : "Summary"}
     ],
     [
-      {"class": "evaluation.metrics.GameMetrics$FinalScore" }
+      {"class": "evaluation.metrics.GameMetrics$FinalScore" },
+      {"class": "games.connect4.Connect4Metrics$SaveStateConnect4",
+        "args":  [["Experiments/Connect4/agents/random"]]
+      }
     ]]
 }

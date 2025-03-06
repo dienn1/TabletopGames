@@ -19,10 +19,10 @@ public class Wonders7GameParameters extends TunableParameters {
 
     public Wonders7GameParameters() {
         addTunableParameter("nWonderCardsPerPlayer", 7);
-        addTunableParameter("nCostNeighbourResource", 2);   // 1, 2, 3
-        addTunableParameter("nCostDiscountedResource", 1);  // 0, 1, 2
-        addTunableParameter("nCoinsDiscard", 3);    // 2, 3, 4
-        addTunableParameter("startingCoins", 3);    // 1, 3, 5
+        addTunableParameter("nCostNeighbourResource", 2);   // 1, 2, 3, 5, 10
+        addTunableParameter("nCostDiscountedResource", 1);  // 0, 1, 2, 4, 6
+        addTunableParameter("nCoinsDiscard", 3);    // 2, 4, 6, 8
+        addTunableParameter("startingCoins", 3);    // 1, 3, 5, 10, 12
         addTunableParameter("wonderShuffleSeed", -1);
         addTunableParameter("cardShuffleSeed", -1);
         _reset();

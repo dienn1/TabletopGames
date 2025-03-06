@@ -9,7 +9,7 @@
     [
       {"class": "evaluation.metrics.GameMetrics$FinalScore" },
       {"class": "games.connect4.Connect4Metrics$SaveStateConnect4",
-        "args":  [["Experiments/Connect4/agents/mcts2-tuned"]]
+        "args":  [["Experiments/Connect4/agents/mcts1-tuned"]]
       }
     ]]
 }
