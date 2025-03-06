@@ -2,8 +2,8 @@
   "game": "DotsAndBoxes",
   "playerDirectory" : "Experiments/DotsAndBoxes/agents/random/players",
   "nPlayers" : 2,
-  "matchups" : 10,
-  "verbose"  : true,
+  "matchups" : 500,
+  "verbose"  : false,
   "listener" : "Experiments/DotsAndBoxes/agents/random/dotsAndBoxesMetric.json",
   "destDir" : "Experiments/DotsAndBoxes/agents/random"
 }

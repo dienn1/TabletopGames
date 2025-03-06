@@ -1,0 +1,10 @@
+{
+  "game": "CantStop",
+  "playerDirectory" : "Experiments/CantStop/gameParams/players",
+  "nPlayers" : 4,
+  "matchups" : 10,
+  "verbose"  : true,
+  "listener" : "Experiments/CantStop/gameParams/param1/cantstopMetric.json",
+  "destDir" : "Experiments/CantStop/gameParams/param1",
+  "gameParams": "Experiments/CantStop/gameParams/param1/cantstopParam.json"
+}

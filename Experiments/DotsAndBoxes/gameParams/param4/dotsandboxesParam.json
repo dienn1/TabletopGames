@@ -1,0 +1,5 @@
+{
+  "class": "games.connect4.DBParameters",
+  "gridWidth": 19,
+  "gridHeight": 5
+}
