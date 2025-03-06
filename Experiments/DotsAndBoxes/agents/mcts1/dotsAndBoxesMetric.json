@@ -9,7 +9,7 @@
     [
       {"class": "evaluation.metrics.GameMetrics$FinalScore" },
       {"class": "games.dotsboxes.DBMetrics$SaveStateDB",
-        "args":  [["Experiments/DotsAndBoxes/agents/random"]]
+        "args":  [["Experiments/DotsAndBoxes/agents/mcts1"]]
       }
     ]]
 }
