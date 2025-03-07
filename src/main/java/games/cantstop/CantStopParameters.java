@@ -67,6 +67,7 @@ public class CantStopParameters extends TunableParameters {
         TEN_MAX = (int) getParameterValue("TEN_MAX");
         ELEVEN_MAX = (int) getParameterValue("ELEVEN_MAX");
         TWELVE_MAX = (int) getParameterValue("TWELVE_MAX");
+        
     }
 
     public int maxValue(int number) {
