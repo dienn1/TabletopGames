@@ -22,7 +22,10 @@ public class RunMultiple {
     }
 
     public static void main(String[] args) {
-        String gameName = "DotsAndBoxes";
+        List<String> gameNames = new ArrayList<>(){{
+            add("DotsAndBoxes");
+            add("CantStop");
+        }};
         String[] agentTypes = new String[] {
                 "MCTS1",
                 "MCTS1Tuned",
@@ -32,7 +35,10 @@ public class RunMultiple {
         };
         int paramCount = 4;
         int seedCount = 4;
-        List<String> configs = getConfigs(gameName, agentTypes, paramCount, seedCount);
+        List<String> configs = new ArrayList<>();
+        for (String name : gameNames) {
+            configs.addAll(getConfigs(name, agentTypes, paramCount, seedCount));
+        }
         long t = System.currentTimeMillis();
         for (String configPath : configs) {
             System.out.println("Running " + configPath);
