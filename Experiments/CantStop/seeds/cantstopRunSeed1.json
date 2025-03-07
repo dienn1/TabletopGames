@@ -2,11 +2,10 @@
   "game": "CantStop",
   "playerDirectory" : "Experiments/CantStop/seeds/players",
   "nPlayers" : 4,
-  "matchups" : 10,
-  "verbose"  : true,
+  "matchups" : 500,
+  "verbose"  : false,
   "listener" : "Experiments/CantStop/seeds/seed1/cantstopMetric.json",
   "destDir" : "Experiments/CantStop/seeds/seed1",
-  "gameParams": "Experiments/CantStop/seeds/seed1/cantstopParam.json",
   "distinctRandomSeeds": 1,
-  "seed": 73409153
+  "seed": 88195754
 }

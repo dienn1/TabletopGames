@@ -41,7 +41,7 @@ public class Dice extends Component {
         put(d20, new Dice(d20));
     }};
 
-    public final Type type;
+    public final Type diceType;
     public final int nSides; // Number of sides
     protected int value;  // Current value after last roll
 
@@ -49,20 +49,20 @@ public class Dice extends Component {
         this(d6);  // By default d6
     }
 
-    public Dice(Type type) {
+    public Dice(Type diceType) {
         super(CoreConstants.ComponentType.DICE);
-        this.type = type;
-        this.nSides = type.nSides;
+        this.diceType = diceType;
+        this.nSides = diceType.nSides;
     }
     public Dice(int nSides) {
         super(CoreConstants.ComponentType.DICE);
         this.nSides = nSides;
-        this.type = Type.sidesToType(nSides);
+        this.diceType = Type.sidesToType(nSides);
     }
 
-    private Dice(Type type, int nSides, int value, int ID) {
+    private Dice(Type diceType, int nSides, int value, int ID) {
         super(CoreConstants.ComponentType.DICE, ID);
-        this.type = type;
+        this.diceType = diceType;
         this.nSides = nSides;
         this.value = value;
     }
@@ -98,7 +98,7 @@ public class Dice extends Component {
 
     @Override
     public Dice copy() {
-        Dice copy = new Dice(type, nSides, value, componentID);
+        Dice copy = new Dice(diceType, nSides, value, componentID);
         copyComponentTo(copy);
         return copy;
     }

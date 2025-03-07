@@ -2,8 +2,8 @@
   "game": "CantStop",
   "playerDirectory" : "Experiments/CantStop/agents/random/players",
   "nPlayers" : 4,
-  "matchups" : 10,
-  "verbose"  : true,
+  "matchups" : 500,
+  "verbose"  : false,
   "listener" : "Experiments/CantStop/agents/random/cantstopMetric.json",
   "destDir" : "Experiments/CantStop/agents/random"
 }

@@ -9,21 +9,21 @@ public class RunMultiple {
     private static List<String> getConfigs(String gameName, String[] agentTypes, int paramCount, int seedCount) {
         String dir = "Experiments/" + gameName;
         return new ArrayList<>(){{
-            for (String agent : agentTypes) {
-                add(dir + "/agents/" + gameName.toLowerCase() + "Run" + agent + ".json");
-            }
-            for (int i = 1; i <= paramCount; i++) {
-                add(dir + "/gameParams/" + gameName.toLowerCase() + "Run" + "Param" + i + ".json");
-            }
-//            for (int i = 1; i <= seedCount; i++) {
-//                add(dir + "/seeds/" + gameName.toLowerCase() + "Run" + "Seed" + i + ".json");
+//            for (String agent : agentTypes) {
+//                add(dir + "/agents/" + gameName.toLowerCase() + "Run" + agent + ".json");
 //            }
+//            for (int i = 1; i <= paramCount; i++) {
+//                add(dir + "/gameParams/" + gameName.toLowerCase() + "Run" + "Param" + i + ".json");
+//            }
+            for (int i = 1; i <= seedCount; i++) {
+                add(dir + "/seeds/" + gameName.toLowerCase() + "Run" + "Seed" + i + ".json");
+            }
         }};
     }
 
     public static void main(String[] args) {
         List<String> gameNames = new ArrayList<>(){{
-            add("DotsAndBoxes");
+//            add("DotsAndBoxes");
             add("CantStop");
         }};
         String[] agentTypes = new String[] {

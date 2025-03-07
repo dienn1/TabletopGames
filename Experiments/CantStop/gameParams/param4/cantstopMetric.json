@@ -9,6 +9,7 @@
     [
       {"class": "evaluation.metrics.GameMetrics$FinalScore" },
       {"class":  "games.cantstop.CantStopMetrics$SaveStateCantStop",
-      "args": [["Experiments/CantStop/agents/osla"]]}
+      "args": [["Experiments/CantStop/gameParams/param4"]]
+      }
     ]]
 }
