@@ -11,10 +11,6 @@ public class DBGameStateContainer extends AbstractGameStateContainer {
     HashSet<DBEdge> edges;
     // List of all cells possible
     HashSet<DBCell> cells;
-    // Mapping from each edge to the cells it neighbours
-    HashMap<DBEdge, HashSet<DBCell>> edgeToCellMap;
-    // Mapping from each cell to its edges
-    HashMap<DBCell, HashSet<DBEdge>> cellToEdgesMap;
 
     // Mutable state:
     int[] nCellsPerPlayer;
@@ -24,8 +20,6 @@ public class DBGameStateContainer extends AbstractGameStateContainer {
         super(gs);
         edges = gs.edges;
         cells = gs.cells;
-        edgeToCellMap = gs.edgeToCellMap;
-        cellToEdgesMap = gs.cellToEdgesMap;
         nCellsPerPlayer = gs.nCellsPerPlayer;
         cellToOwnerMap = gs.cellToOwnerMap;  // Mapping from each cell to its owner, if complete
         edgeToOwnerMap = gs.edgeToOwnerMap;  // Mapping from each edge to its owner, if placed
