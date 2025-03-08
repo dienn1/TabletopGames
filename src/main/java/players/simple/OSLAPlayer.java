@@ -44,7 +44,7 @@ public class OSLAPlayer extends AbstractPlayer {
         for (int actionIndex = 0; actionIndex < actions.size(); actionIndex++) {
             AbstractAction action = actions.get(actionIndex);
             AbstractGameState gsCopy = gs.copy();
-            getForwardModel().next(gsCopy, action);
+            getForwardModel().next(gsCopy, action.copy());
 
             if (heuristic != null) {
                 valState[actionIndex] = heuristic.evaluateState(gsCopy, playerID);

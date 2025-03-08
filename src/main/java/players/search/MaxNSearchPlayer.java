@@ -146,7 +146,7 @@ public class MaxNSearchPlayer extends AbstractPlayer implements IHasStateHeurist
         Map<AbstractAction, double[]> actionValues = new HashMap<>();
         for (AbstractAction action : actions) {
             AbstractGameState stateCopy = state.copy();
-            getForwardModel().next(stateCopy, action);
+            getForwardModel().next(stateCopy, action.copy());
             // if we are at the bottom, then save a bit of time by not calculating the valid actions (which we'll never try)
             List<AbstractAction> nextActions = searchDepth > 0 ? getForwardModel().computeAvailableActions(stateCopy) : List.of();
 
