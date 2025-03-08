@@ -28,7 +28,7 @@ public class SuperOSLAPlayer extends MaxNSearchPlayer {
         params.setParameterValue("budgetType", "BUDGET_TIME");
         params.setParameterValue("budget", 100); // 100ms as timeout
         params.setParameterValue("searchDepth", 1);
-        params.setParameterValue("searchUnit", "ROUND");
+        params.setParameterValue("searchUnit", "ACTION");
         if (heuristic != null)
             params.setParameterValue("heuristic", heuristic);
         else
