@@ -16,6 +16,9 @@ import games.pandemic.PandemicForwardModel;
 import gui.AbstractGUIManager;
 import gui.GUI;
 import gui.GamePanel;
+import org.checkerframework.checker.units.qual.C;
+import players.ComparisonPlayer;
+import players.PlayerParameters;
 import players.basicMCTS.BasicMCTSPlayer;
 import players.human.ActionController;
 import players.human.HumanConsolePlayer;
@@ -39,6 +42,9 @@ import java.util.List;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
+
+import static utilities.JSONUtils.loadClassFromJSON;
+import static utilities.JSONUtils.loadJSONFile;
 
 
 public class Game {
@@ -851,8 +857,8 @@ public class Game {
      * and then run this class.
      */
     public static void main(String[] args) {
-        String gameType = Utils.getArg(args, "game", "SeaSaltPaper");
-        boolean useGUI = Utils.getArg(args, "gui", true);
+        String gameType = Utils.getArg(args, "game", "DotsAndBoxes");
+        boolean useGUI = Utils.getArg(args, "gui", false);
         int turnPause = Utils.getArg(args, "turnPause", 0);
         long seed = Utils.getArg(args, "seed", System.currentTimeMillis());
         ActionController ac = new ActionController();
@@ -872,24 +878,6 @@ public class Game {
 //        players.add(new BasicMCTSPlayer());
 //        players.add(new BasicMCTSPlayer());
 
-        MCTSParams params = new MCTSParams();
-//        params.rolloutTermination = MCTSEnums.RolloutTermination.END_ROUND;
-//        params.rolloutTermination = MCTSEnums.RolloutTermination.END_TURN;
-//        params.rolloutLength = 1;
-//        params.heuristic = new LeadHeuristic();
-//        params.reuseTree = true;
-//        params.normaliseRewards = false;
-        params.heuristic = AbstractGameState::getHeuristicScore;
-        params.maxTreeDepth = 10;
-        MCTSParams params2 = new MCTSParams();
-        params2.maxTreeDepth = 10;
-        params2.heuristic = new ScoreAndHandHeuristic();
-        players.add(new MCTSPlayer(params2));
-        players.add(new MCTSPlayer(params));
-        players.add(new MCTSPlayer(params));
-        players.add(new MCTSPlayer(params));
-//        MCTSParams mcts_params = new MCTSParams();
-//        players.add(new MCTSPlayer(mcts_params));
 //        players.add(new OSLAPlayer());
 //        players.add(new RMHCPlayer());
 //        players.add(new HumanGUIPlayer(ac));
@@ -897,6 +885,12 @@ public class Game {
 //        players.add(new HumanGUIPlayer(ac));
 //        players.add(new HumanConsolePlayer());
 //        players.add(new FirstActionPlayer());
+
+        String outputPath = "Experiments";
+        String playersPath = "Experiments/DotsAndBoxes/agents/tournament-test/players";
+        ComparisonPlayer comparisonPlayer = new ComparisonPlayer(playersPath, outputPath);
+        players.add(comparisonPlayer);
+        players.add(new RandomPlayer());
 
         /* Game parameter configuration. Set to null to ignore and use default parameters */
         String gameParams = null;
@@ -906,7 +900,7 @@ public class Game {
 
         /* Run multiple games */
         long t = System.currentTimeMillis();
-        int n = 100;
+        int n = 10;
         ArrayList<GameType> games = new ArrayList<>();
         games.add(GameType.SeaSaltPaper);
 //        runMany(games, players, 100L, n, false, true, null, turnPause);
