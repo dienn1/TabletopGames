@@ -4,7 +4,6 @@ import core.AbstractForwardModel;
 import core.AbstractGameState;
 import core.AbstractPlayer;
 import core.actions.AbstractAction;
-import core.interfaces.IActionHeuristic;
 import evaluation.listeners.IGameListener;
 import core.interfaces.IStateHeuristic;
 import evaluation.metrics.Event;
@@ -14,13 +13,17 @@ import utilities.Pair;
 import utilities.Utils;
 
 import java.util.*;
-import java.util.function.BiFunction;
-import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+import static java.util.stream.Collectors.toSet;
 import static players.mcts.MCTSEnums.OpponentTreePolicy.*;
 import static players.mcts.MCTSEnums.OpponentTreePolicy.MultiTree;
+import static players.mcts.MCTSEnums.SelectionPolicy.ROBUST;
+import static players.mcts.MCTSEnums.SelectionPolicy.SIMPLE;
+import static players.mcts.MCTSEnums.TreePolicy.EXP3;
+import static players.mcts.MCTSEnums.TreePolicy.RegretMatching;
+import static utilities.Utils.pdf;
 
 public class MCTSPlayer extends AbstractPlayer implements IAnyTimePlayer, IHasStateHeuristic {
 
@@ -294,6 +297,49 @@ public class MCTSPlayer extends AbstractPlayer implements IAnyTimePlayer, IHasSt
             throw new AssertionError(String.format("Unexpectedly large number of children: %d with action size of %d", root.children.size(), actions.size()));
         lastAction = new Pair<>(gameState.getCurrentPlayer(), root.bestAction());
         return lastAction.b.copy();
+    }
+
+    /**
+     * Get softmax policy of possible actions based on the selection criteria (e.g. value, regret, n_visits, ucb)
+     * @param possibleActions
+     * @return
+     */
+    public double[] getSoftmaxPolicyVector(List<AbstractAction> possibleActions) {
+        double[] policy = new double[possibleActions.size()];
+        Arrays.fill(policy, 0);
+        SingleTreeNode currentRoot = root;
+        if (root instanceof MultiTreeNode multiRoot) {
+            currentRoot = multiRoot.getRoot(multiRoot.decisionPlayer);
+        }
+        MCTSParams params = getParameters();
+        MCTSEnums.SelectionPolicy selectionPolicy = params.selectionPolicy;
+        if (params.treePolicy == RegretMatching) {
+            return currentRoot.regretMatchingPolicy();
+        }
+        if (params.selectionPolicy == ROBUST &&
+                Arrays.stream(currentRoot.actionVisits()).boxed().collect(toSet()).size() == 1) {
+            selectionPolicy = SIMPLE;
+        }
+        // TODO implement EXP3 Policy?
+        int decisionPlayer = currentRoot.decisionPlayer;
+        for (int i = 0; i < possibleActions.size(); i++) {
+            AbstractAction a = possibleActions.get(i);
+            if (currentRoot.actionValues.containsKey(a)) {
+                double value;
+                if (selectionPolicy == ROBUST) {
+                    value = currentRoot.actionValues.get(a).nVisits;
+                }
+                else {
+                    value = currentRoot.actionValues.get(a).totValue[decisionPlayer]/currentRoot.actionValues.get(a).nVisits;
+                }
+                policy[i] = value;
+            }
+        }
+        // SoftMax
+        for (int i = 0; i < policy.length; i++) {
+            policy[i] = Math.exp(policy[i]);
+        }
+        return pdf(policy);
     }
 
     // ONLY USE FOR IF A NESTED MCTSPlayer IN ANOTHER AbstractPlayer WHO DOES NOT ALWAYS RETURN THE MOVE CHOSEN BY MCTSPlayer

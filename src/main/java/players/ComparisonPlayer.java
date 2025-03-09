@@ -8,7 +8,6 @@ import core.interfaces.ITunableParameters;
 import evaluation.metrics.Event;
 import org.json.simple.JSONObject;
 import players.mcts.MCTSPlayer;
-import utilities.JSONUtils;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -18,17 +17,20 @@ import java.util.Map;
 
 import static utilities.JSONUtils.loadClassFromJSON;
 import static utilities.JSONUtils.loadJSONObjectsFromDirectory;
+import static utilities.Utils.pdf;
 
 public class ComparisonPlayer extends AbstractPlayer {
 
     List<AbstractPlayer> playersCompared;
     List<String> playerNames;
 
-    String outputPath;
+    final String outputPath;
 
     float[] agreementMatrix;
 
-    String csv_name = "AgreementMatrix.csv";
+    final String csv_name = "AgreementMatrix.csv";
+
+    final int nSamples = 10;
 
     int playerCount;
     int decisionCount = 0;
@@ -47,35 +49,31 @@ public class ComparisonPlayer extends AbstractPlayer {
         super(new PlayerParameters(), "ComparisonPlayer");
         playerNames = new ArrayList<>();
         Map<String, JSONObject> playersJSON = loadJSONObjectsFromDirectory(playersDir, true, "");
-        List<AbstractPlayer> players = new ArrayList<>();
+        playersCompared = new ArrayList<>();
         for (Map.Entry<String, JSONObject> entry : playersJSON.entrySet()) {
             Object thing = loadClassFromJSON(entry.getValue());
             if (thing instanceof PlayerParameters playerParams) {
                 AbstractPlayer p = playerParams.instantiate();
                 p.setName(entry.getKey());
-                players.add(p);
+                playersCompared.add(p);
                 playerNames.add(entry.getKey());
             }
             else if (thing instanceof ITunableParameters<?> params) {
                 Object instance = params.instantiate();
                 if (instance instanceof AbstractPlayer p) {
                     p.setName(entry.getKey());
-                    players.add(p);
+                    playersCompared.add(p);
                     playerNames.add(entry.getKey());
                 }
             }
             else if (thing instanceof AbstractPlayer p) {
                 p.setName(entry.getKey());
-                players.add(p);
+                playersCompared.add(p);
                 playerNames.add(entry.getKey());
             }
         }
-        this.playersCompared = new ArrayList<>();
-        for (AbstractPlayer p : players) {
-            this.playersCompared.add(p.copy());
-        }
         this.outputPath = outputPath;
-        this.playerCount = players.size();
+        this.playerCount = playersCompared.size();
         System.out.println(playerNames);
     }
 
@@ -110,23 +108,28 @@ public class ComparisonPlayer extends AbstractPlayer {
         if (possibleActions.size() == 1) {
             return possibleActions.get(0);
         }
+        long t = System.nanoTime();
         decisionCount++;
-        List<AbstractAction> actions = new ArrayList<>();
-        for (int i = 0; i < playerCount; i++) {
-            AbstractAction a = playersCompared.get(i).getAction(gameState.copy(), possibleActions);
-            if (!possibleActions.contains(a)) {
-                throw new AssertionError("Action: " + a.toString() + " played by " + playerNames.get(i) + " that was not in the list of available actions: " + possibleActions);
+//        List<AbstractAction> actions = getComparedPlayerActions(gameState, possibleActions);
+//        simpleAgreementMatrixUpdate(actions);
+//        AbstractAction chosenAction = actions.get(getRnd().nextInt(actions.size()));    // Choose from compared players' actions
+        List<double[]> policies = new ArrayList<>();
+        for (int i = 0; i < playersCompared.size(); i++) {
+            if (playersCompared.get(i) instanceof MCTSPlayer mctsP) {
+                policies.add(getMCTSPolicy(gameState, possibleActions, mctsP));
             }
-            actions.add(a);
-        }
-        for (int i = 0; i < playerCount; i++) {
-            for (int j = 0; j < playerCount; j++) {
-                if (actions.get(i).equals(actions.get(j))) {
-                    agreementMatrix[i * playerCount + j] += 1;
-                }
+            else {
+                policies.add(samplePlayerPolicy(gameState, possibleActions, playersCompared.get(i)));
             }
         }
-        AbstractAction chosenAction = actions.get(getRnd().nextInt(actions.size()));
+        policyAgreementMatrixUpdate(policies);
+        System.out.println("TIME SPENT: " + (System.nanoTime() - t)/1000000 + "ms");
+        for (int i = 0; i < policies.size() ; i++) {
+            System.out.println(playerNames.get(i) + " " + Arrays.toString(pdf(policies.get(i))));
+        }
+        System.out.println("--------------------");
+
+        AbstractAction chosenAction = possibleActions.get(getRnd().nextInt(possibleActions.size())); // OR CHOOSE RANDOM
         // Set lastAction for MCTSPlayer in case did not choose the one they returned
         for (AbstractPlayer p : playersCompared) {
             if (p instanceof MCTSPlayer mctsP) {
@@ -135,6 +138,122 @@ public class ComparisonPlayer extends AbstractPlayer {
         }
         return chosenAction;
     }
+
+
+    private double[] samplePlayerPolicy(AbstractGameState gameState, List<AbstractAction> possibleActions, AbstractPlayer player) {
+        double[] policy = new double[possibleActions.size()];
+        Arrays.fill(policy, 0);
+        for (int i = 0; i < nSamples - 1; i++) {
+            AbstractPlayer pCopy = player.copy();
+            AbstractAction a = pCopy.getAction(gameState.copy(), possibleActions);
+            int aIndex = possibleActions.indexOf(a);
+            if (aIndex < 0) {
+                throw new AssertionError("PLAYER RETURN AN ACTION NOT IN POSSIBLE ACTIONS");
+            }
+            policy[aIndex] += 1;
+        }
+        // Let the actual player make decision to modify its internal state (if at all)
+        AbstractAction a = player.getAction(gameState.copy(), possibleActions);
+        int aIndex = possibleActions.indexOf(a);
+        if (aIndex < 0) {
+            throw new AssertionError("PLAYER RETURN AN ACTION NOT IN POSSIBLE ACTIONS");
+        }
+        policy[aIndex] += 1;
+        return policy;
+    }
+
+
+    private double[] getMCTSPolicy(AbstractGameState gameState, List<AbstractAction> possibleActions, MCTSPlayer player) {
+        player.getAction(gameState.copy(), possibleActions);
+        return player.getSoftmaxPolicyVector(possibleActions);
+    }
+
+    private List<AbstractAction> getComparedPlayerActions(AbstractGameState gameState, List<AbstractAction> possibleActions) {
+        List<AbstractAction> actions = new ArrayList<>();
+        for (int i = 0; i < playerCount; i++) {
+            AbstractAction a = playersCompared.get(i).getAction(gameState.copy(), possibleActions);
+            if (!possibleActions.contains(a)) {
+                throw new AssertionError("Action: " + a.toString() + " played by " + playerNames.get(i) + " that was not in the list of available actions: " + possibleActions);
+            }
+            actions.add(a);
+        }
+        return actions;
+    }
+
+    private void simpleAgreementMatrixUpdate(List<AbstractAction> chosenActions) {
+        for (int i = 0; i < playerCount; i++) {
+            for (int j = 0; j < playerCount; j++) {
+                if (chosenActions.get(i).equals(chosenActions.get(j))) {
+                    agreementMatrix[i * playerCount + j] += 1;
+                }
+            }
+        }
+    }
+
+    private void policyAgreementMatrixUpdate(List<double[]> policies) {
+        for (int i = 0; i < playerCount; i++) {
+            for (int j = i; j < playerCount; j++) {
+                if (i == j) {
+                    agreementMatrix[i * playerCount + j] += 1;
+                }
+                else {
+                    agreementMatrix[i * playerCount + j] += jensenShannonDistance(policies.get(i), policies.get(j));
+                    agreementMatrix[j * playerCount + i] = agreementMatrix[i * playerCount + j];
+                }
+            }
+        }
+    }
+
+    // TODO get these into a separate class?
+    private double jensenShannonDistance(double[] p, double[] q) {
+        p = pdf(p); q = pdf(q);
+        double[] m = mix(p, q);
+        double jsd = 0;
+        for (int i = 0; i < p.length ; i++) {
+            if (Double.compare(0f, m[i]) == 0) {
+                continue;
+            }
+            if (Double.compare(0f, p[i]) != 0) {
+                jsd += p[i] * logBase2(p[i] / m[i]);
+            }
+            if (Double.compare(0f, q[i]) != 0) {
+                jsd += q[i] * logBase2(q[i]/m[i]);
+            }
+        }
+        jsd = (float) Math.sqrt(jsd * 0.5);
+//        System.out.println(jsd);
+        return jsd;
+    }
+
+    // WHY IS THERE NO LOG BASE 2 IN JAVA
+    private double logBase2(double x) {
+        return (float) (Math.log(x) / Math.log(2));
+    }
+
+    private void normalize(float[] p) {
+        float sum = 0;
+        for (float f : p) {
+            sum += f;
+        }
+        if (Float.compare(1f, sum) == 0) {  // Already normalized
+            return;
+        }
+        if (Float.compare(0f, sum) == 0) {
+            throw new AssertionError("EMPTY POLICY!!!");
+        }
+        for (int i = 0; i < p.length; i++) {
+            p[i] /= sum;
+        }
+    }
+
+    private double[] mix(double[] p, double[] q) {
+        double[] m = new double[p.length];
+        for (int i = 0; i < m.length; i++) {
+            m[i] = p[i] + q[i];
+        }
+        return pdf(m);
+    }
+
 
     @Override
     public ComparisonPlayer copy() {
