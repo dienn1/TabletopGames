@@ -1,10 +1,13 @@
 package players;
 
+import core.AbstractForwardModel;
 import core.AbstractGameState;
 import core.AbstractPlayer;
 import core.actions.AbstractAction;
 import core.interfaces.ITunableParameters;
+import evaluation.metrics.Event;
 import org.json.simple.JSONObject;
+import players.mcts.MCTSPlayer;
 import utilities.JSONUtils;
 
 import java.io.*;
@@ -43,23 +46,27 @@ public class ComparisonPlayer extends AbstractPlayer {
     public ComparisonPlayer(String playersDir, String outputPath) {
         super(new PlayerParameters(), "ComparisonPlayer");
         playerNames = new ArrayList<>();
-        Map<String, JSONObject> playersJSON = loadJSONObjectsFromDirectory(playersDir, false, "");
+        Map<String, JSONObject> playersJSON = loadJSONObjectsFromDirectory(playersDir, true, "");
         List<AbstractPlayer> players = new ArrayList<>();
         for (Map.Entry<String, JSONObject> entry : playersJSON.entrySet()) {
             Object thing = loadClassFromJSON(entry.getValue());
             if (thing instanceof PlayerParameters playerParams) {
-                players.add(playerParams.instantiate());
+                AbstractPlayer p = playerParams.instantiate();
+                p.setName(entry.getKey());
+                players.add(p);
                 playerNames.add(entry.getKey());
             }
             else if (thing instanceof ITunableParameters<?> params) {
                 Object instance = params.instantiate();
                 if (instance instanceof AbstractPlayer p) {
-                    players.add(p.copy());
+                    p.setName(entry.getKey());
+                    players.add(p);
                     playerNames.add(entry.getKey());
                 }
             }
             else if (thing instanceof AbstractPlayer p) {
-                players.add(p.copy());
+                p.setName(entry.getKey());
+                players.add(p);
                 playerNames.add(entry.getKey());
             }
         }
@@ -83,7 +90,7 @@ public class ComparisonPlayer extends AbstractPlayer {
             Arrays.fill(agreementMatrix, 0);
         }
         for (AbstractPlayer p : playersCompared) {
-            p.initializePlayer(gameState);
+            p.initializePlayer(gameState.copy());
         }
     }
 
@@ -94,7 +101,7 @@ public class ComparisonPlayer extends AbstractPlayer {
 //        }
         toCSV();
         for (AbstractPlayer p : playersCompared) {
-            p.finalizePlayer(gameState);
+            p.finalizePlayer(gameState.copy());
         }
     }
 
@@ -106,12 +113,7 @@ public class ComparisonPlayer extends AbstractPlayer {
         decisionCount++;
         List<AbstractAction> actions = new ArrayList<>();
         for (int i = 0; i < playerCount; i++) {
-            playersCompared.get(i).setForwardModel(this.getForwardModel());
-            List<AbstractAction> possibleActionsCopy = new ArrayList<>();
-            for (AbstractAction a : possibleActions) {
-                possibleActionsCopy.add(a.copy());
-            }
-            AbstractAction a = playersCompared.get(i).getAction(gameState.copy(-1), possibleActionsCopy);
+            AbstractAction a = playersCompared.get(i).getAction(gameState.copy(), possibleActions);
             if (!possibleActions.contains(a)) {
                 throw new AssertionError("Action: " + a.toString() + " played by " + playerNames.get(i) + " that was not in the list of available actions: " + possibleActions);
             }
@@ -124,17 +126,25 @@ public class ComparisonPlayer extends AbstractPlayer {
                 }
             }
         }
-
-        return actions.get(getRnd().nextInt(actions.size()));
+        AbstractAction chosenAction = actions.get(getRnd().nextInt(actions.size()));
+        // Set lastAction for MCTSPlayer in case did not choose the one they returned
+        for (AbstractPlayer p : playersCompared) {
+            if (p instanceof MCTSPlayer mctsP) {
+                mctsP.setLastAction(chosenAction);
+            }
+        }
+        return chosenAction;
     }
 
     @Override
     public ComparisonPlayer copy() {
+        System.out.println("AAAAA");
         ComparisonPlayer ret = new ComparisonPlayer(playersCompared, outputPath);
         ret.decisionCount = decisionCount;
         if (agreementMatrix != null) {
             ret.agreementMatrix = agreementMatrix.clone();
         }
+        ret.setForwardModel(this.getForwardModel());
         return ret;
     }
 
@@ -187,5 +197,29 @@ public class ComparisonPlayer extends AbstractPlayer {
             throw new RuntimeException(e);
         }
         return matrix;
+    }
+
+    @Override
+    public void setForwardModel(AbstractForwardModel model) {
+        super.setForwardModel(model);
+        for (AbstractPlayer p : playersCompared) {
+            p.setForwardModel(model);
+        }
+    }
+
+    @Override
+    public void registerUpdatedObservation(AbstractGameState gameState) {
+        super.registerUpdatedObservation(gameState);
+        for (AbstractPlayer p : playersCompared) {
+            p.registerUpdatedObservation(gameState.copy());
+        }
+    }
+
+    @Override
+    public void onEvent(Event event) {
+        super.onEvent(event);
+        for (AbstractPlayer p : playersCompared) {
+            p.onEvent(event);
+        }
     }
 }

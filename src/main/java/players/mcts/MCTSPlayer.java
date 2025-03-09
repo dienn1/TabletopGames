@@ -296,6 +296,11 @@ public class MCTSPlayer extends AbstractPlayer implements IAnyTimePlayer, IHasSt
         return lastAction.b.copy();
     }
 
+    // ONLY USE FOR IF A NESTED MCTSPlayer IN ANOTHER AbstractPlayer WHO DOES NOT ALWAYS RETURN THE MOVE CHOSEN BY MCTSPlayer
+    public void setLastAction(AbstractAction action) {
+        lastAction.b = action.copy();
+    }
+
     @Override
     public void finalizePlayer(AbstractGameState state) {
         getParameters().getRolloutStrategy().onEvent(Event.createEvent(Event.GameEvent.GAME_OVER, state));
