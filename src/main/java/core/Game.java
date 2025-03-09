@@ -886,11 +886,37 @@ public class Game {
 //        players.add(new HumanConsolePlayer());
 //        players.add(new FirstActionPlayer());
 
-        String outputPath = "Experiments";
-        String playersPath = "Experiments/DotsAndBoxes/agents/tournament-test/players";
-        ComparisonPlayer comparisonPlayer = new ComparisonPlayer(playersPath, outputPath);
-        players.add(comparisonPlayer);
-        players.add(new RandomPlayer());
+        List<String> gameNames = new ArrayList<>(){{
+            add("Wonders7");
+            add("Dominion");
+            add("SeaSaltPaper");
+            add("CantStop");
+            add("Connect4");
+            add("DotsAndBoxes");
+        }};
+        for (String name: gameNames) {
+            players.clear();
+            String playersPath = "Experiments/" + name + "/agents/agreementTest";
+            ComparisonPlayer comparisonPlayer = new ComparisonPlayer(playersPath, playersPath);
+            players.add(comparisonPlayer);
+            int n_random = (name.equals("Connect4") || name.equals("DotsAndBoxes")) ? 1 : 3;
+            for (int i = 0; i < n_random; i++)
+            {
+                players.add(new RandomPlayer());
+            }
+            long t = System.currentTimeMillis();
+            int n = 100;
+            ArrayList<GameType> games = new ArrayList<>();
+            games.add(GameType.valueOf(name));
+            long[] seeds = new long[n];
+            Random rnd = new Random();
+            for (int i = 0; i < n; i++) {
+                seeds[i] = rnd.nextInt();
+            }
+            runMany(games, players, n, seeds, null, false, null, 0);
+            System.out.println("FISNIHED RUNNING IN " + (System.currentTimeMillis() - t)/1000 + " SECONDS");
+            System.out.println("---------------------------------------------------");
+        }
 
         /* Game parameter configuration. Set to null to ignore and use default parameters */
         String gameParams = null;
@@ -899,18 +925,18 @@ public class Game {
 //        runOne(GameType.valueOf(gameType), gameParams, players, seed, false, null, useGUI ? ac : null, turnPause);
 
         /* Run multiple games */
-        long t = System.currentTimeMillis();
-        int n = 10;
-        ArrayList<GameType> games = new ArrayList<>();
-        games.add(GameType.SeaSaltPaper);
-//        runMany(games, players, 100L, n, false, true, null, turnPause);
-        long[] seeds = new long[n];
-        Random rnd = new Random();
-        for (int i = 0; i < n; i++) {
-            seeds[i] = rnd.nextInt();
-        }
-        runMany(games, players, n, seeds, null, false, null, 0);
+//        long t = System.currentTimeMillis();
+//        int n = 10;
+//        ArrayList<GameType> games = new ArrayList<>();
+//        games.add(GameType.SeaSaltPaper);
+////        runMany(games, players, 100L, n, false, true, null, turnPause);
+//        long[] seeds = new long[n];
+//        Random rnd = new Random();
+//        for (int i = 0; i < n; i++) {
+//            seeds[i] = rnd.nextInt();
+//        }
+//        runMany(games, players, n, seeds, null, false, null, 0);
 //        runMany(new ArrayList<GameType>() {{add(Uno);}}, players, 100L, 100, false, false, null, turnPause);
-        System.out.println("FISNIHED RUNNING IN " + (System.currentTimeMillis() - t)/1000 + " SECONDS");
+//        System.out.println("FISNIHED RUNNING IN " + (System.currentTimeMillis() - t)/1000 + " SECONDS");
     }
 }

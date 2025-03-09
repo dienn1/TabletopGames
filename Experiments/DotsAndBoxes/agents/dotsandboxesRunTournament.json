@@ -1,7 +1,0 @@
-{
-  "game": "DotsAndBoxes",
-  "playerDirectory" : "Experiments/DotsAndBoxes/agents/tournament-test/players",
-  "nPlayers" : 2,
-  "matchups" : 100,
-  "verbose"  : true
-}

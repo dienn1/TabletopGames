@@ -1,0 +1,7 @@
+{
+	"class": "players.search.MaxNSearchParameters",
+	"budgetType": "BUDGET_TIME",
+	"budget": 100,
+	"searchDepth": 1,
+	"searchUnit": "ROUND"
+}
