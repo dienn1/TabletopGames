@@ -125,11 +125,11 @@ public class ComparisonPlayer extends AbstractPlayer {
             }
         }
         policyAgreementMatrixUpdate(policies);
-        System.out.println("TIME SPENT: " + (System.nanoTime() - t)/1000000 + "ms");
-        for (int i = 0; i < policies.size() ; i++) {
-            System.out.println(playerNames.get(i) + " " + Arrays.toString(policies.get(i)));
-        }
-        System.out.println("--------------------");
+//        System.out.println("TIME SPENT: " + (System.nanoTime() - t)/1000000 + "ms");
+//        for (int i = 0; i < policies.size() ; i++) {
+//            System.out.println(playerNames.get(i) + " " + Arrays.toString(policies.get(i)));
+//        }
+//        System.out.println("--------------------");
 
         AbstractAction chosenAction = possibleActions.get(getRnd().nextInt(possibleActions.size())); // OR CHOOSE RANDOM
         // Set lastAction for MCTSPlayer in case did not choose the one they returned
@@ -167,7 +167,7 @@ public class ComparisonPlayer extends AbstractPlayer {
 
     private double[] getMCTSPolicy(AbstractGameState gameState, List<AbstractAction> possibleActions, MCTSPlayer player) {
         player.getAction(gameState.copy(), possibleActions);
-        return player.getPolicyVector(possibleActions);
+        return player.getPolicyVector(possibleActions, 0.1);
     }
 
     private List<AbstractAction> getComparedPlayerActions(AbstractGameState gameState, List<AbstractAction> possibleActions) {

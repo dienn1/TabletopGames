@@ -22,7 +22,7 @@ import static players.mcts.MCTSEnums.OpponentTreePolicy.MultiTree;
 import static players.mcts.MCTSEnums.SelectionPolicy.ROBUST;
 import static players.mcts.MCTSEnums.SelectionPolicy.SIMPLE;
 import static players.mcts.MCTSEnums.TreePolicy.RegretMatching;
-import static utilities.Utils.pdf;
+import static utilities.Utils.*;
 
 public class MCTSPlayer extends AbstractPlayer implements IAnyTimePlayer, IHasStateHeuristic {
 
@@ -299,11 +299,12 @@ public class MCTSPlayer extends AbstractPlayer implements IAnyTimePlayer, IHasSt
     }
 
     /**
-     * Get softmax policy of possible actions based on the selection criteria (e.g. value, regret, n_visits, ucb)
+     * Get softmax policy of possible actions based on n_visits (except for RegretMatching)
      * @param possibleActions
+     * @param temperature
      * @return
      */
-    public double[] getPolicyVector(List<AbstractAction> possibleActions) {
+    public double[] getPolicyVector(List<AbstractAction> possibleActions, double temperature) {
         double[] policy = new double[possibleActions.size()];
         Arrays.fill(policy, 0);
         SingleTreeNode currentRoot = root;
@@ -324,21 +325,15 @@ public class MCTSPlayer extends AbstractPlayer implements IAnyTimePlayer, IHasSt
         for (int i = 0; i < possibleActions.size(); i++) {
             AbstractAction a = possibleActions.get(i);
             if (currentRoot.actionValues.containsKey(a)) {
-                double value;
-                if (selectionPolicy == ROBUST) {
-                    value = currentRoot.actionValues.get(a).nVisits;
-                }
-                else {
-                    value = currentRoot.actionValues.get(a).totValue[decisionPlayer]/currentRoot.actionValues.get(a).nVisits;
-                }
-                policy[i] = value;
+                policy[i] = currentRoot.actionValues.get(a).nVisits;
             }
         }
         // SoftMax
         double max = Arrays.stream(policy).max().getAsDouble();
         for (int i = 0; i < policy.length; i++) {
-            policy[i] = Math.exp(policy[i] - max);
+            policy[i] = normalise(policy[i], 0, max);   // normalize n_visits for consistency
         }
+        policy = exponentiatePotentials(policy, temperature);
         return pdf(policy);
     }
 
