@@ -30,7 +30,7 @@ public class ComparisonPlayer extends AbstractPlayer {
 
     final String csv_name = "AgreementMatrix.csv";
 
-    final int nSamples = 10;
+    final int nSamples = 100;
 
     int playerCount;
     int decisionCount = 0;
