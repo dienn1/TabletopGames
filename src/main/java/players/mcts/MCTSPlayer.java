@@ -21,7 +21,6 @@ import static players.mcts.MCTSEnums.OpponentTreePolicy.*;
 import static players.mcts.MCTSEnums.OpponentTreePolicy.MultiTree;
 import static players.mcts.MCTSEnums.SelectionPolicy.ROBUST;
 import static players.mcts.MCTSEnums.SelectionPolicy.SIMPLE;
-import static players.mcts.MCTSEnums.TreePolicy.EXP3;
 import static players.mcts.MCTSEnums.TreePolicy.RegretMatching;
 import static utilities.Utils.pdf;
 
@@ -304,7 +303,7 @@ public class MCTSPlayer extends AbstractPlayer implements IAnyTimePlayer, IHasSt
      * @param possibleActions
      * @return
      */
-    public double[] getSoftmaxPolicyVector(List<AbstractAction> possibleActions) {
+    public double[] getPolicyVector(List<AbstractAction> possibleActions) {
         double[] policy = new double[possibleActions.size()];
         Arrays.fill(policy, 0);
         SingleTreeNode currentRoot = root;
@@ -336,8 +335,9 @@ public class MCTSPlayer extends AbstractPlayer implements IAnyTimePlayer, IHasSt
             }
         }
         // SoftMax
+        double max = Arrays.stream(policy).max().getAsDouble();
         for (int i = 0; i < policy.length; i++) {
-            policy[i] = Math.exp(policy[i]);
+            policy[i] = Math.exp(policy[i] - max);
         }
         return pdf(policy);
     }
