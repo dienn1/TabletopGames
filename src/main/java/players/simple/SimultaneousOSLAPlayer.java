@@ -31,6 +31,8 @@ public class SimultaneousOSLAPlayer extends OSLAPlayer{
         setName("SimultaneousOSLAPlayer");
     }
 
+    // TODO parameterized when to stop rolling out
+    // TODO make this RolloutOSLA?
     @Override
     protected void rollNextGameState(AbstractGameState gs, AbstractAction a) {
         int currentRound = gs.getRoundCounter();
@@ -41,6 +43,9 @@ public class SimultaneousOSLAPlayer extends OSLAPlayer{
         List<AbstractAction> actions;
         while (gs.getRoundCounter() == currentRound) {
             actions = getForwardModel().computeAvailableActions(gs);
+            if (actions.isEmpty()) {
+                break;
+            }
             getForwardModel().next(gs, randomPlayer.getAction(gs, actions));
         }
     }
