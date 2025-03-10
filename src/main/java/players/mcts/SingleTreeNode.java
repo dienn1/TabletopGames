@@ -2,7 +2,6 @@ package players.mcts;
 
 import core.*;
 import core.actions.AbstractAction;
-import core.actions.DoNothing;
 import core.interfaces.IActionHeuristic;
 import players.PlayerConstants;
 import utilities.*;
@@ -1234,6 +1233,21 @@ public class SingleTreeNode {
         int index = sampleFrom(pdf, rnd.nextDouble());
         return regretMatchingAverage.keySet().stream().skip(index).findFirst().orElseThrow(() -> new AssertionError("No action found"));
     }
+
+    protected double[] regretMatchingPolicy() {
+        double[] potentials = new double[regretMatchingAverage.size()];
+        int count = 0;
+        for (AbstractAction action : regretMatchingAverage.keySet()) {
+            if (actionsFromOpenLoopState.contains(action)) {
+                potentials[count] = regretMatchingAverage.get(action);
+            } else {
+                potentials[count] = 0.0;
+            }
+            count++;
+        }
+        return pdf(potentials);
+    }
+
 
     public int getVisits() {
         return nVisits;
