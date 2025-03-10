@@ -17,6 +17,7 @@ import java.util.Map;
 
 import static utilities.JSONUtils.loadClassFromJSON;
 import static utilities.JSONUtils.loadJSONObjectsFromDirectory;
+import static utilities.Utils.clamp;
 import static utilities.Utils.pdf;
 
 public class ComparisonPlayer extends AbstractPlayer {
@@ -167,7 +168,7 @@ public class ComparisonPlayer extends AbstractPlayer {
 
     private double[] getMCTSPolicy(AbstractGameState gameState, List<AbstractAction> possibleActions, MCTSPlayer player) {
         player.getAction(gameState.copy(), possibleActions);
-        return player.getPolicyVector(possibleActions, 0.1);
+        return player.getSoftmaxPolicy(possibleActions, 1);
     }
 
     private List<AbstractAction> getComparedPlayerActions(AbstractGameState gameState, List<AbstractAction> possibleActions) {
@@ -182,6 +183,8 @@ public class ComparisonPlayer extends AbstractPlayer {
         return actions;
     }
 
+    // Update based on if chosen actions are the same between two agents
+    // Unreliable for comparing high variance agents (e.g. OSLA and Random)
     private void simpleAgreementMatrixUpdate(List<AbstractAction> chosenActions) {
         for (int i = 0; i < playerCount; i++) {
             for (int j = 0; j < playerCount; j++) {
@@ -216,19 +219,29 @@ public class ComparisonPlayer extends AbstractPlayer {
         double[] m = mix(p, q);
         double jsd = 0;
         for (int i = 0; i < p.length ; i++) {
-            if (Double.compare(0f, m[i]) == 0) {
-                continue;
-            }
-            if (Double.compare(0f, p[i]) != 0) {
+            if (p[i] > 0.0000001) {
                 jsd += p[i] * logBase2(p[i]/m[i]);
             }
-            if (Double.compare(0f, q[i]) != 0) {
+            if (q[i] > 0.0000001) {
                 jsd += q[i] * logBase2(q[i]/m[i]);
             }
+            if (Double.isNaN(jsd)) {
+                throw new AssertionError("NaN SOMEHOW");
+            }
         }
-        jsd = Math.sqrt(jsd * 0.5);
-//        System.out.println(jsd);
-        return jsd;
+        jsd = clamp(jsd*0.5, 0, 1);
+        return Math.sqrt(jsd);
+    }
+
+    private double jaccardSimilarity(double[] p, double[] q) {
+        p = pdf(p); q = pdf(q);
+        double min_sum = 0;
+        double max_sum = 0;
+        for (int i = 0; i < p.length; i++) {
+            min_sum += Math.min(p[i], q[i]);
+            max_sum += Math.max(p[i], q[i]);
+        }
+        return min_sum/max_sum;
     }
 
     // WHY IS THERE NO LOG BASE 2 IN JAVA

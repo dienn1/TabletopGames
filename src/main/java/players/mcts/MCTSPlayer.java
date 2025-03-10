@@ -299,29 +299,18 @@ public class MCTSPlayer extends AbstractPlayer implements IAnyTimePlayer, IHasSt
     }
 
     /**
-     * Get softmax policy of possible actions based on n_visits (except for RegretMatching)
+     * Get softmax policy of possible actions based on n_visits
      * @param possibleActions
      * @param temperature
      * @return
      */
-    public double[] getPolicyVector(List<AbstractAction> possibleActions, double temperature) {
+    public double[] getSoftmaxPolicy(List<AbstractAction> possibleActions, double temperature) {
         double[] policy = new double[possibleActions.size()];
         Arrays.fill(policy, 0);
         SingleTreeNode currentRoot = root;
         if (root instanceof MultiTreeNode multiRoot) {
             currentRoot = multiRoot.getRoot(multiRoot.decisionPlayer);
         }
-        MCTSParams params = getParameters();
-        MCTSEnums.SelectionPolicy selectionPolicy = params.selectionPolicy;
-        if (params.treePolicy == RegretMatching) {
-            return currentRoot.regretMatchingPolicy();
-        }
-        if (params.selectionPolicy == ROBUST &&
-                Arrays.stream(currentRoot.actionVisits()).boxed().collect(toSet()).size() == 1) {
-            selectionPolicy = SIMPLE;
-        }
-        // TODO implement EXP3 Policy?
-        int decisionPlayer = currentRoot.decisionPlayer;
         for (int i = 0; i < possibleActions.size(); i++) {
             AbstractAction a = possibleActions.get(i);
             if (currentRoot.actionValues.containsKey(a)) {
@@ -329,10 +318,6 @@ public class MCTSPlayer extends AbstractPlayer implements IAnyTimePlayer, IHasSt
             }
         }
         // SoftMax
-        double max = Arrays.stream(policy).max().getAsDouble();
-        for (int i = 0; i < policy.length; i++) {
-            policy[i] = normalise(policy[i], 0, max);   // normalize n_visits for consistency
-        }
         policy = exponentiatePotentials(policy, temperature);
         return pdf(policy);
     }
