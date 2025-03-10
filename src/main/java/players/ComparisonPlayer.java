@@ -26,9 +26,9 @@ public class ComparisonPlayer extends AbstractPlayer {
 
     final String outputPath;
 
-    float[] agreementMatrix;
+    double[] agreementMatrix;
 
-    final String csv_name = "AgreementMatrix.csv";
+    final String csv_name;
 
     final int nSamples = 100;
 
@@ -43,10 +43,12 @@ public class ComparisonPlayer extends AbstractPlayer {
         }
         this.outputPath = outputPath;
         this.playerCount = playersCompared.size();
+        csv_name = "AgreementMatrix.csv";
     }
 
-    public ComparisonPlayer(String playersDir, String outputPath) {
+    public ComparisonPlayer(String playersDir, String outputPath, String csv_name) {
         super(new PlayerParameters(), "ComparisonPlayer");
+        this.csv_name = csv_name;
         playerNames = new ArrayList<>();
         Map<String, JSONObject> playersJSON = loadJSONObjectsFromDirectory(playersDir, true, "");
         playersCompared = new ArrayList<>();
@@ -84,7 +86,7 @@ public class ComparisonPlayer extends AbstractPlayer {
             agreementMatrix = fromCVS();
         }
         else {
-            agreementMatrix = new float[playerCount * playerCount];
+            agreementMatrix = new double[playerCount * playerCount];
             Arrays.fill(agreementMatrix, 0);
         }
         for (AbstractPlayer p : playersCompared) {
@@ -123,11 +125,11 @@ public class ComparisonPlayer extends AbstractPlayer {
             }
         }
         policyAgreementMatrixUpdate(policies);
-        System.out.println("TIME SPENT: " + (System.nanoTime() - t)/1000000 + "ms");
-        for (int i = 0; i < policies.size() ; i++) {
-            System.out.println(playerNames.get(i) + " " + Arrays.toString(pdf(policies.get(i))));
-        }
-        System.out.println("--------------------");
+//        System.out.println("TIME SPENT: " + (System.nanoTime() - t)/1000000 + "ms");
+//        for (int i = 0; i < policies.size() ; i++) {
+//            System.out.println(playerNames.get(i) + " " + Arrays.toString(pdf(policies.get(i))));
+//        }
+//        System.out.println("--------------------");
 
         AbstractAction chosenAction = possibleActions.get(getRnd().nextInt(possibleActions.size())); // OR CHOOSE RANDOM
         // Set lastAction for MCTSPlayer in case did not choose the one they returned
@@ -220,30 +222,14 @@ public class ComparisonPlayer extends AbstractPlayer {
                 jsd += q[i] * logBase2(q[i]/m[i]);
             }
         }
-        jsd = (float) Math.sqrt(jsd * 0.5);
+        jsd = Math.sqrt(jsd * 0.5);
 //        System.out.println(jsd);
         return jsd;
     }
 
     // WHY IS THERE NO LOG BASE 2 IN JAVA
     private double logBase2(double x) {
-        return (float) (Math.log(x) / Math.log(2));
-    }
-
-    private void normalize(float[] p) {
-        float sum = 0;
-        for (float f : p) {
-            sum += f;
-        }
-        if (Float.compare(1f, sum) == 0) {  // Already normalized
-            return;
-        }
-        if (Float.compare(0f, sum) == 0) {
-            throw new AssertionError("EMPTY POLICY!!!");
-        }
-        for (int i = 0; i < p.length; i++) {
-            p[i] /= sum;
-        }
+        return Math.log(x) / Math.log(2);
     }
 
     private double[] mix(double[] p, double[] q) {
@@ -293,22 +279,22 @@ public class ComparisonPlayer extends AbstractPlayer {
         }
     }
 
-    private float[] fromCVS() {
+    private double[] fromCVS() {
         File csvFile = new File(outputPath, csv_name);
-        float[] matrix = new float[playerCount * playerCount];
+        double[] matrix = new double[playerCount * playerCount];
         try (BufferedReader br = new BufferedReader(new FileReader(csvFile))) {
             String line;
             int row = 0;
             while ((line = br.readLine()) != null) {
                 String[] values = line.split(",");
                 try {
-                    float t = Float.parseFloat(values[0]);
+                    double t = Double.parseDouble(values[0]);
                 }
                 catch (NumberFormatException e) {
                     continue;
                 }
                 for (int col = 0; col < values.length; col++) {
-                    matrix[row * playerCount + col] = Float.parseFloat(values[col]);
+                    matrix[row * playerCount + col] = Double.parseDouble(values[col]);
                 }
                 row++;
             }
