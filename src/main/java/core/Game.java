@@ -32,6 +32,7 @@ import players.rmhc.RMHCPlayer;
 import players.simple.FirstActionPlayer;
 import players.simple.OSLAPlayer;
 import players.simple.RandomPlayer;
+import players.simple.SimultaneousOSLAPlayer;
 import utilities.Pair;
 import utilities.Utils;
 
@@ -894,10 +895,14 @@ public class Game {
             add("Connect4");
             add("DotsAndBoxes");
         }};
+        long t_init = System.currentTimeMillis();
+        int n = 100;
         for (String name: gameNames) {
+            System.out.println("POLICY JSD TEST " + name + " " + n + " GAMES");
             players.clear();
             String playersPath = "Experiments/" + name + "/agents/agreementTest";
-            ComparisonPlayer comparisonPlayer = new ComparisonPlayer(playersPath, playersPath);
+            String csv_name = "PolicyJSDMatrix.csv";
+            ComparisonPlayer comparisonPlayer = new ComparisonPlayer(playersPath, playersPath, csv_name);
             players.add(comparisonPlayer);
             int n_random = (name.equals("Connect4") || name.equals("DotsAndBoxes")) ? 1 : 3;
             for (int i = 0; i < n_random; i++)
@@ -905,7 +910,6 @@ public class Game {
                 players.add(new RandomPlayer());
             }
             long t = System.currentTimeMillis();
-            int n = 100;
             ArrayList<GameType> games = new ArrayList<>();
             games.add(GameType.valueOf(name));
             long[] seeds = new long[n];
@@ -917,6 +921,7 @@ public class Game {
             System.out.println("FISNIHED RUNNING IN " + (System.currentTimeMillis() - t)/1000 + " SECONDS");
             System.out.println("---------------------------------------------------");
         }
+        System.out.println("FISNIHED RUNNING EVERYTHING IN " + (System.currentTimeMillis() - t_init)/1000 + " SECONDS");
 
         /* Game parameter configuration. Set to null to ignore and use default parameters */
         String gameParams = null;
