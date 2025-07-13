@@ -26,11 +26,11 @@ public class RunMultiple {
 
     public static void main(String[] args) {
         List<String> gameNames = new ArrayList<>(){{
-//            add("Wonders7");
+            add("Wonders7");
 //            add("Dominion");
 //            add("SeaSaltPaper");
 //            add("CantStop");
-            add("Connect4");
+//            add("Connect4");
 //            add("DotsAndBoxes");
         }};
         String[] agentTypes = new String[] {
