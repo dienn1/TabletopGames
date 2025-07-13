@@ -16,8 +16,7 @@ public class RunMultiple {
             for (int i = 1; i <= paramCount; i++) {
                 add(dir + "/gameParams/" + gameName.toLowerCase() + "Run" + "Param" + i + ".json");
             }
-            if (!gameName.equals("DotsAndBoxes") && !gameName.equals("Connect4"))
-            {
+            if (!gameName.equals("DotsAndBoxes") && !gameName.equals("Connect4")) {
                 for (int i = 1; i <= seedCount; i++) {
                     add(dir + "/seeds/" + gameName.toLowerCase() + "Run" + "Seed" + i + ".json");
                 }
@@ -30,8 +29,8 @@ public class RunMultiple {
 //            add("Wonders7");
 //            add("Dominion");
 //            add("SeaSaltPaper");
-            add("CantStop");
-//            add("Connect4");
+//            add("CantStop");
+            add("Connect4");
 //            add("DotsAndBoxes");
         }};
         String[] agentTypes = new String[] {

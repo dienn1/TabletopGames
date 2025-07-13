@@ -57,4 +57,39 @@ public class Connect4Metrics implements IMetricsCollection {
         }
     }
 
+    public static class ColumnPieceCount extends AbstractMetric {
+        int maxColumns = 12;
+        @Override
+        protected boolean _run(MetricsGameListener listener, Event e, Map<String, Object> records) {
+            Connect4GameState gs = (Connect4GameState) e.state;
+            for (int i = 0; i < maxColumns; i++) {
+                records.put(Integer.toString(i), 0);
+            }
+            for (int i = 0; i < gs.getWidth(); i++) {
+                int count = 0;
+                for (int j = 0; j < gs.getHeight(); j++) {
+                    if (!gs.gridBoard.getElement(i, j).getComponentName().equals(Connect4Constants.emptyCell)) {
+                        count++;
+                    }
+                }
+                records.put(Integer.toString(i), count);
+            }
+            return true;
+        }
+
+        @Override
+        public Set<IGameEvent> getDefaultEventTypes() {
+            return Collections.singleton(Event.GameEvent.GAME_OVER);
+        }
+
+        @Override
+        public Map<String, Class<?>> getColumns(int nPlayersPerGame, Set<String> playerNames) {
+            Map<String, Class<?>> columns = new HashMap<>();
+            for (int i = 0; i < maxColumns; i++) {
+                columns.put(Integer.toString(i), Integer.class);
+            }
+            return columns;
+        }
+    }
+
 }
