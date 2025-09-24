@@ -869,11 +869,11 @@ public class Game {
 
         List<String> gameNames = new ArrayList<>(){{
             add("Wonders7");
-            add("Dominion");
-            add("SeaSaltPaper");
-            add("CantStop");
-            add("Connect4");
-            add("DotsAndBoxes");
+//            add("Dominion");
+//            add("SeaSaltPaper");
+//            add("CantStop");
+//            add("Connect4");
+//            add("DotsAndBoxes");
         }};
         long t_init = System.currentTimeMillis();
         int n = 100;
