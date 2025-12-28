@@ -389,7 +389,8 @@ public class ExpertIteration {
             if (actionSearchSettings != null) {
                 if (actionSearchSpace != null) {   // on first iteration we have results of action search
                     // we can use the action search settings to initialise the value search settings
-                    fixSSDimensions(ntbea, valueSearchSpace, actionSearchSettings, actionSearchSpace);
+                    fixSSDimensions(ntbea, valueSearchSpace, actionSearchSettings, actionSearchSpace,
+                            Set.of("valueHeuristic", "actionHeuristic", "rolloutPolicy.actionHeuristic"));
                 }
                 // as well as the old action-tuned settings, we also use the old action heuristic for which they were tuned
                 if (oldActionHeuristic != null) {
@@ -418,8 +419,8 @@ public class ExpertIteration {
 
             if (valueSearchSettings != null && valueSearchSpace != null) {
                 // we can use the value search settings to initialise the action search settings
-                fixSSDimensions(ntbea, actionSearchSpace, valueSearchSettings, valueSearchSpace);
-
+                fixSSDimensions(ntbea, actionSearchSpace, valueSearchSettings, valueSearchSpace,
+                        Set.of("valueHeuristic", "actionHeuristic", "rolloutPolicy.actionHeuristic"));
                 // and also make sure we include the state heuristic in the action search
                 ntbea.fixTunableParameter("heuristic", stateHeuristic);
             }
@@ -435,14 +436,39 @@ public class ExpertIteration {
         agents.add(newTunedPlayer);
     }
 
-    private void fixSSDimensions(NTBEA ntbea, ITPSearchSpace<?> actionSearchSpace, int[] valueSearchSettings, ITPSearchSpace<?> valueSearchSpace) {
-        List<String> actionNames = actionSearchSpace.getDimensions();
-        for (int i = 0; i < valueSearchSettings.length; i++) {
-            if (!actionNames.contains(valueSearchSpace.name(i))) {
+    public static void fixSSDimensions(NTBEA ntbea,
+                                       ITPSearchSpace<?> searchSpaceToFix,
+                                       int[] searchSettings,
+                                       ITPSearchSpace<?> referenceSearchSpace,
+                                       Set<String> exclusions) {
+        List<String> actionNames = searchSpaceToFix.getDimensions();
+        for (int i = 0; i < searchSettings.length; i++) {
+            if (!actionNames.contains(referenceSearchSpace.name(i))) {
                 // usually we will have different parameters in the two searches, but if there is overlap we
                 // 'forget' the previous value
                 // otherwise we fix the non-optimised settings to the value search settings
-                ntbea.fixTunableParameter(valueSearchSpace.name(i), valueSearchSpace.value(i, valueSearchSettings[i]));
+                ntbea.fixTunableParameter(referenceSearchSpace.name(i), referenceSearchSpace.value(i, searchSettings[i]));
+            }
+        }
+
+        // Safety check for non-tuned parameters that differ between the two search spaces
+        Map<String, Object> toFixNonTuned = searchSpaceToFix.getNonTunedParametersAndValues(exclusions);
+        Map<String, Object> referenceNonTuned = referenceSearchSpace.getNonTunedParametersAndValues(exclusions);
+
+        for (String param : toFixNonTuned.keySet()) {
+            boolean failure = false;
+            if (referenceNonTuned.containsKey(param)) {
+                Object toFixVal = toFixNonTuned.get(param);
+                Object refVal = referenceNonTuned.get(param);
+
+                if (toFixVal != null && !toFixVal.equals(refVal)) {
+                    System.err.printf("Warning: Non-tuned parameter '%s' has different values: ToFixSS=%s, ReferenceSS=%s%n",
+                            param, toFixVal, refVal);
+                    failure = true;
+                }
+            }
+            if (failure) {
+                throw new AssertionError("Incompatible Action and Value default parameters - adjust search spaces");
             }
         }
     }

@@ -93,6 +93,10 @@ import games.puertorico.PuertoRicoForwardModel;
 import games.puertorico.PuertoRicoGameState;
 import games.puertorico.PuertoRicoParameters;
 import games.puertorico.gui.PuertoRicoGUI;
+import games.powergrid.PowerGridForwardModel;
+import games.powergrid.PowerGridGameState;
+import games.powergrid.PowerGridParameters;
+import games.powergrid.gui.PowerGridGUI;
 import games.resistance.ResForwardModel;
 import games.resistance.ResGameState;
 import games.resistance.ResParameters;
@@ -140,6 +144,10 @@ import gametemplate.GTForwardModel;
 import gametemplate.GTGUIManager;
 import gametemplate.GTGameState;
 import gametemplate.GTParameters;
+import games.pickomino.PickominoForwardModel;
+import games.pickomino.PickominoGUIManager;
+import games.pickomino.PickominoGameState;
+import games.pickomino.PickominoParameters;
 import gui.AbstractGUIManager;
 import gui.GamePanel;
 import gui.*;
@@ -280,6 +288,10 @@ public enum GameType {
             Arrays.asList(Strategy, Economic, Manufacturing, TerritoryBuilding),
             Arrays.asList(EndGameBonus, TilePlacement, RoleSelection, EngineBuilding, TableauBuilding),
             PuertoRicoGameState.class, PuertoRicoForwardModel.class, PuertoRicoParameters.class, PuertoRicoGUI.class),
+    PowerGrid(3, 6,
+    		Arrays.asList(Strategy, Economic, Manufacturing, TerritoryBuilding),
+            Arrays.asList(EndGameBonus, TilePlacement, EngineBuilding),
+            PowerGridGameState.class, PowerGridForwardModel.class, PowerGridParameters.class, PowerGridGUI.class),
     Wonders7(3, 7,
             Arrays.asList(Strategy, Civilization, Ancient, Cards, CityBuilding, Economic),
             Arrays.asList(ClosedDrafting, HandManagement, NeighbourScope, SetCollection, SimultaneousActionSelection, VariablePlayerPowers),
@@ -325,7 +337,8 @@ public enum GameType {
     Chess(2, 2,
             Arrays.asList(Strategy, Abstract),
             Arrays.asList(GridMovement),
-            ChessGameState.class, ChessForwardModel.class, ChessParameters.class, ChessGUIManager.class),;
+            ChessGameState.class, ChessForwardModel.class, ChessParameters.class, ChessGUIManager.class),
+    Pickomino(2, 7, Collections.singletonList(Dice), Collections.singletonList(DiceRolling), PickominoGameState.class, PickominoForwardModel.class, PickominoParameters.class, PickominoGUIManager.class);
 
 
     // Core classes where the game is defined
