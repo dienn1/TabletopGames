@@ -200,9 +200,6 @@
                 <version>2.22.2</version>
                 <configuration>
                     <argLine>@{argLine} -javaagent:${org.mockito:mockito-core:jar}</argLine>
-                    <excludes>
-            <!---            <exclude>test.players.mcts.MultiTreeMCTSTests</exclude> -->
-                    </excludes>
                 </configuration>
                 <dependencies>
                     <dependency>
@@ -233,7 +230,11 @@
                 <version>3.3.0</version>
                 <executions>
                     <execution>
-                        <id>TAG</id>
+                        <id>make-assembly</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
                         <configuration>
                             <descriptorRefs>
                                 <descriptorRef>jar-with-dependencies</descriptorRef>
@@ -244,11 +245,8 @@
                                 </manifest>
                             </archive>
                             <finalName>TAG</finalName>
+                            <appendAssemblyId>false</appendAssemblyId>
                         </configuration>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>single</goal>
-                        </goals>
                     </execution>
                 </executions>
             </plugin>
