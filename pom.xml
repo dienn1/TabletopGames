@@ -233,113 +233,17 @@
                 <version>3.3.0</version>
                 <executions>
                     <execution>
-                        <id>frontend</id>
+                        <id>TAG</id>
                         <configuration>
                             <descriptorRefs>
                                 <descriptorRef>jar-with-dependencies</descriptorRef>
                             </descriptorRefs>
                             <archive>
                                 <manifest>
-                                    <mainClass>gui.Frontend</mainClass>
+                                    <mainClass>core.TAG</mainClass>
                                 </manifest>
                             </archive>
-                            <finalName>FrontEnd</finalName>
-                            <appendAssemblyId>false</appendAssemblyId>
-                        </configuration>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>single</goal>
-                        </goals>
-                    </execution>
-                    <execution>
-                        <id>RunGames</id>
-                        <configuration>
-                            <descriptorRefs>
-                                <descriptorRef>jar-with-dependencies</descriptorRef>
-                            </descriptorRefs>
-                            <archive>
-                                <manifest>
-                                    <mainClass>evaluation.RunGames</mainClass>
-                                </manifest>
-                            </archive>
-                            <finalName>RunGames</finalName>
-                            <appendAssemblyId>false</appendAssemblyId>
-                        </configuration>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>single</goal>
-                        </goals>
-                    </execution>
-                    <execution>
-                        <id>ParameterSearch</id>
-                        <configuration>
-                            <descriptorRefs>
-                                <descriptorRef>jar-with-dependencies</descriptorRef>
-                            </descriptorRefs>
-                            <archive>
-                                <manifest>
-                                    <mainClass>evaluation.optimisation.ParameterSearch</mainClass>
-                                </manifest>
-                            </archive>
-                            <finalName>ParameterSearch</finalName>
-                            <appendAssemblyId>false</appendAssemblyId>
-                        </configuration>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>single</goal>
-                        </goals>
-                    </execution>
-                    <execution>
-                        <id>OneStepDeviations</id>
-                        <configuration>
-                            <descriptorRefs>
-                                <descriptorRef>jar-with-dependencies</descriptorRef>
-                            </descriptorRefs>
-                            <archive>
-                                <manifest>
-                                    <mainClass>evaluation.optimisation.OneStepDeviations</mainClass>
-                                </manifest>
-                            </archive>
-                            <finalName>OneStepDeviations</finalName>
-                            <appendAssemblyId>false</appendAssemblyId>
-                        </configuration>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>single</goal>
-                        </goals>
-                    </execution>
-                    <execution>
-                        <id>ExpertIteration</id>
-                        <configuration>
-                            <descriptorRefs>
-                                <descriptorRef>jar-with-dependencies</descriptorRef>
-                            </descriptorRefs>
-                            <archive>
-                                <manifest>
-                                    <mainClass> evaluation.ExpertIteration</mainClass>
-                                </manifest>
-                            </archive>
-                            <finalName>ExpertIteration</finalName>
-                            <appendAssemblyId>false</appendAssemblyId>
-                        </configuration>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>single</goal>
-                        </goals>
-                    </execution>
-                    <execution>
-                        <id>SkillLadder</id>
-                        <configuration>
-                            <descriptorRefs>
-                                <descriptorRef>jar-with-dependencies</descriptorRef>
-                            </descriptorRefs>
-                            <archive>
-                                <manifest>
-                                    <mainClass>evaluation.tournaments.SkillLadder</mainClass>
-                                </manifest>
-                            </archive>
-                            <finalName>SkillLadder</finalName>
-                            <appendAssemblyId>false</appendAssemblyId>
+                            <finalName>TAG</finalName>
                         </configuration>
                         <phase>package</phase>
                         <goals>
