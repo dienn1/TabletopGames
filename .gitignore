@@ -26,6 +26,7 @@
 hs_err_pid*
 
 .idea/
+.settings/
 target/
 *.iml
 *.kotlin_module
