@@ -3,19 +3,16 @@ package players.decorators;
 import core.AbstractGameState;
 import core.actions.AbstractAction;
 import core.interfaces.IPlayerDecorator;
+import players.mcts.MCTSEnums;
 
 import java.util.List;
 import java.util.Random;
 
 public class FirstRandomMoves implements IPlayerDecorator {
 
-    TIME type;
+    MCTSEnums.RolloutIncrement type;
     int randomUntil;
     Random rnd;
-
-    public enum TIME {
-        TICK, TURN, ROUND
-    }
 
     public FirstRandomMoves(int n, String type) {
         this(n, type, System.currentTimeMillis());
@@ -23,7 +20,7 @@ public class FirstRandomMoves implements IPlayerDecorator {
 
     public FirstRandomMoves(int n, String type, long seed) {
         this.randomUntil = n;
-        this.type = TIME.valueOf(type.toUpperCase());
+        this.type = MCTSEnums.RolloutIncrement.valueOf(type.toUpperCase());
         rnd = new Random(seed);
     }
 
