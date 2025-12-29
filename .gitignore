@@ -5,7 +5,8 @@
 *.log
 
 # Eclipse metadata
-.classpath
+.classpath/
+.project/
 
 # BlueJ files
 *.ctxt
