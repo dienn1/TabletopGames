@@ -29,7 +29,7 @@ public class LearnFromData {
     IStateFeatureVector stateFeatures;
     IActionFeatureVector actionFeatures;
     String data;
-    boolean debug = false;
+    boolean debug = true;
     int maxRecords = 10000;
 
 
@@ -196,6 +196,11 @@ public class LearnFromData {
                         adjustedASF.setBuckets(underlyingIndex, asf.getBuckets(underlyingIndex) + BUCKET_INCREMENT);
 
                         FeatureAnalysisResult result = processNewFeature(adjustedASF, outputFile, rawData, learner, n);
+                        if (debug) {
+                            System.out.printf("\tConsidered interaction: %s, new BIC: %.2f%n",
+                                    firstFeature + " (Buckets: " + result.adjustedASF.getBuckets(underlyingIndex) + ")",
+                                    result.newBIC);
+                        }
 
                         if (result.newBIC < bestBIC) {
                             bestBIC = result.newBIC;

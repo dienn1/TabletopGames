@@ -114,27 +114,41 @@ public class ExpertIteration {
         pl.run();
     }
 
-    private int restartIteration() {
+    /**
+     * Returns a pair of numbers.
+     * The first is the number of completed iterations (through to generation of tuned agents)
+     * The second is the number of partially completed iterations that generated full data, but not tuned agents
+     * The second number will be one higher than the first if the previous iteration failed in the tuning phase.
+     */
+    private Pair<Integer, Integer> checkCompletedIterations() {
         // Automatically determine restart iteration by checking for existing ValueNTBEA and ActionNTBEA json files
-        int restartAtIteration = 0;
+        int completedIterations = 0;
         while (true) {
             boolean valueExists = false, actionExists = false;
             if (stateLearnerFile != null) {
-                String valueFile = dataDir + File.separator + String.format("ValueNTBEA_%02d.json", restartAtIteration);
+                String valueFile = dataDir + File.separator + String.format("ValueNTBEA_%02d.json", completedIterations);
                 valueExists = new File(valueFile).exists();
             }
             if (actionLearnerFile != null) {
-                String actionFile = dataDir + File.separator + String.format("ActionNTBEA_%02d.json", restartAtIteration);
+                String actionFile = dataDir + File.separator + String.format("ActionNTBEA_%02d.json", completedIterations);
                 actionExists = new File(actionFile).exists();
             }
-            if ((stateLearnerFile != null && !valueExists) && (actionLearnerFile != null && !actionExists)) {
-                break;
+            boolean agentsOKForState = stateLearnerFile == null || valueExists;
+            boolean agentsOKForAction = actionLearnerFile == null || actionExists;
+            if (!agentsOKForState || !agentsOKForAction) {
+                // we now check to see if the data has been gathered for the next iteration
+                String stateDataFile = dataDir + File.separator + String.format("State_%s_%02d.txt", prefix, completedIterations);
+                String actionDataFile = dataDir + File.separator + String.format("Action_%s_%02d.txt", prefix, completedIterations);
+                boolean dataOKForState = stateLearnerFile == null || new File(stateDataFile).exists();
+                boolean dataOKForAction = actionLearnerFile == null || new File(actionDataFile).exists();
+                if (dataOKForState && dataOKForAction) {
+                    return new Pair<>(completedIterations, completedIterations + 1);
+                } else {
+                    return new Pair<>(completedIterations, completedIterations);
+                }
             }
-            if (stateLearnerFile != null && !valueExists) break;
-            if (actionLearnerFile != null && !actionExists) break;
-            restartAtIteration++;
+            completedIterations++;
         }
-        return restartAtIteration;
     }
 
     public void run() {
@@ -146,11 +160,19 @@ public class ExpertIteration {
 
         IActionHeuristic currentActionHeuristic = null;
 
-        int restartAtIteration = restartIteration();
+        Pair<Integer, Integer> completedIterations = checkCompletedIterations();
+        int restartAtIteration = completedIterations.a;
+        boolean restartWithTuning = completedIterations.b > 0 && !Objects.equals(completedIterations.a, completedIterations.b);
+        iter = restartAtIteration;
 
+        if (restartWithTuning) {
+            if (stateLearnerFile != null)
+                stateDataFilesByIteration[iter] = dataDir + File.separator + String.format("State_%s_%02d.txt", prefix, iter);
+            if (actionLearnerFile != null)
+                actionDataFilesByIteration[iter] = dataDir + File.separator + String.format("Action_%s_%02d.txt", prefix, iter);
+        }
         if (restartAtIteration > 0) {
             // we are restarting the process, so we need to load the data files from the previous iteration
-            iter = restartAtIteration;
             if (stateLearnerFile != null) {
                 stateDataFilesByIteration[iter - 1] = dataDir + File.separator + String.format("State_%s_%02d.txt", prefix, iter - 1);
             }
@@ -179,7 +201,12 @@ public class ExpertIteration {
         do {
             long iterationStartTime = System.currentTimeMillis();
             // learn the heuristics from the data
-            finished = gatherDataAndCheckConvergence();
+            // it is possible we skip this if restarting (as the data is still there from the previous run)
+            if (restartWithTuning) {
+                restartWithTuning = false;
+            } else {
+                finished = gatherDataAndCheckConvergence();
+            }
 
             long dataGatheringTime = System.currentTimeMillis() - iterationStartTime;
             if (finished)

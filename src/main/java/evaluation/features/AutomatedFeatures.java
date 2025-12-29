@@ -143,15 +143,23 @@ public class AutomatedFeatures implements IStateFeatureVector, IActionFeatureVec
             throw new IllegalArgumentException("Invalid feature indices for interaction: " + first + ", " + second);
         }
         List<Integer> interactionIndices = new ArrayList<>();
+        int numberOfInteractions = 0;
         if (interactions.get(first) != null) {
             interactionIndices.addAll(interactions.get(first));
+            numberOfInteractions+=interactions.get(first).size();
         } else {
             interactionIndices.add(first);
+            numberOfInteractions++;
         }
         if (interactions.get(second) != null) {
             interactionIndices.addAll(interactions.get(second));
+            numberOfInteractions+=interactions.get(second).size();
         } else {
             interactionIndices.add(second);
+            numberOfInteractions++;
+        }
+        if (interactionIndices.size() != numberOfInteractions) {
+            throw new AssertionError("Invalid interaction indices for interaction: " + first + ", " + second);
         }
         addFeature(
                 new AutomatedFeatures.ColumnDetails(
@@ -598,7 +606,7 @@ public class AutomatedFeatures implements IStateFeatureVector, IActionFeatureVec
             // do the same for RANGE, RAW and ENUM features
             for (int i = newColumnDetails.size()-1; i >= 0; i--) {
                 ColumnDetails column = newColumnDetails.get(i);
-                if (column.type == featureType.RAW || column.type == featureType.ENUM || column.type == featureType.RANGE) {
+                if (column.type == featureType.RAW || column.type == featureType.ENUM) {
                     if (!featureNames.contains(column.name)) {
                         // we do not want to write this column, so we remove it from the newDataColumns
                         newDataColumns.remove(i);
