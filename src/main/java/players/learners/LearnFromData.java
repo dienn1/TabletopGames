@@ -29,7 +29,7 @@ public class LearnFromData {
     IStateFeatureVector stateFeatures;
     IActionFeatureVector actionFeatures;
     String data;
-    boolean debug = true;
+    boolean debug = false;
     int maxRecords = 10000;
 
 
@@ -160,6 +160,7 @@ public class LearnFromData {
 
             String[] rawData = dataFiles;
             AutomatedFeatures bestFeatures;
+            FeatureAnalysisResult bestResult = null;
 
             // we check for any zero coefficients in startingHeuristic
             // and exclude those features from the search
@@ -189,7 +190,7 @@ public class LearnFromData {
                         if (!excludedBucketFeatures.contains(underlyingFeature))
                             continue;  // we only consider RANGE features for interactions once the bucketing is fixed
                     }
-                    if (type1 == AutomatedFeatures.featureType.RAW && !excludedBucketFeatures.contains(firstFeature)) {
+                    if (type1 == RAW && !excludedBucketFeatures.contains(firstFeature)) {
                         // once a feature is below the base AIC, we save time by not checking it for bucketing again
                         AutomatedFeatures adjustedASF = asf.copy();
                         int underlyingIndex = asf.getUnderlyingIndex(i);
@@ -203,6 +204,7 @@ public class LearnFromData {
                         }
 
                         if (result.newBIC < bestBIC) {
+                            bestResult =  result;
                             bestBIC = result.newBIC;
                             bestFeatures = result.adjustedASF;
                             startingHeuristic = result.newHeuristic;
@@ -255,6 +257,7 @@ public class LearnFromData {
 //                                        Arrays.stream(result.newHeuristic.coefficients()).mapToObj(d -> String.format("%.2f", d)).collect(joining("|")) : "[]");
 
                         if (result.newBIC < bestBIC) {
+                            bestResult =  result;
                             bestBIC = result.newBIC;
                             bestFeatures = result.adjustedASF;
                             startingHeuristic = result.newHeuristic;
@@ -284,6 +287,7 @@ public class LearnFromData {
 //                            result.newHeuristic.coefficients() != null ?
 //                                    Arrays.stream(result.newHeuristic.coefficients()).mapToObj(d -> String.format("%.2f", d)).collect(joining("|")) : "[]");
                     if (result.newBIC < bestBIC) {
+                        bestResult = result;
                         bestBIC = result.newBIC;
                         bestFeatures = result.adjustedASF;
                         startingHeuristic = result.newHeuristic;
@@ -313,10 +317,12 @@ public class LearnFromData {
                     System.out.println("No feature changes improved BIC");
                 } else {
                     System.out.printf("Best feature with BIC: %.2f is %s%n", bestBIC, bestFeatureDescription);
-                    if (debug) {
+                    if (debug && bestResult != null) {
                         System.out.printf("\tCoefficients: %s%n",
-                                glm.coefficients() != null ?
-                                        Arrays.stream(glm.coefficients()).mapToObj(d -> String.format("%.2f", d)).collect(joining("|")) : "[]");
+                                bestResult.newHeuristic.getModel().coefficients() != null ?
+                                        Arrays.stream(glm.coefficients())
+                                                .mapToObj(d -> String.format("%.2f", d))
+                                                .collect(joining("|")) : "[]");
                     }
                     asf = bestFeatures;
                 }
@@ -329,7 +335,7 @@ public class LearnFromData {
                     startTime = System.currentTimeMillis();
                     bicMultiplier = bicMultiplier + baseBicMultiplier;
                     // then adjust current bestBIC to reflect the new multiplier
-                    bestBIC = bicFromAic(glm.getModel().summary().aic(), asf.names().length, n);
+                    bestBIC = bicFromAic(bestResult.newHeuristic.getModel().summary().aic(), asf.names().length, n);
                 }
             } while (bestFeatures != null);
 
