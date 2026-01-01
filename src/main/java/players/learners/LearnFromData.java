@@ -119,14 +119,11 @@ public class LearnFromData {
         String dataFileName = "";
         if (learnedThing instanceof IToFile toFile) {
             // replace any suffix with a ".data"
-            // TODO: May need to distinguish here between a simple file, and a directory
             dataFileName = outputFileName.replaceAll("\\.[^.]+$", "");
             toFile.writeToFile(dataFileName);
         }
         if (learnedThing instanceof IToJSON toJSON) {
             JSONObject json = toJSON.toJSON();
-            if (!dataFileName.isEmpty())
-                json.put("file", dataFileName);
             JSONUtils.writeJSON(json, outputFileName);
             // this next line is to ensure that the filtering of INTERACTIVE features is taken account of in the returned heuristic
             // toJSON has also filtered the ASF into two components, one for the state values and one for action values

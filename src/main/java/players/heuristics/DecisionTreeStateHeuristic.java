@@ -58,6 +58,9 @@ public class DecisionTreeStateHeuristic extends AbstractDecisionTreeHeuristic
     public JSONObject toJSON() {
         JSONObject json = new JSONObject();
         json.put("class", "players.heuristics.DecisionTreeStateHeuristic");
+        if (!modelDirectory.isEmpty()) {
+            json.put("file", modelDirectory);
+        }
 
         JSONObject featuresJson = new JSONObject();
         if (stateFeatures instanceof IToJSON toJSON) {
@@ -80,6 +83,8 @@ public class DecisionTreeStateHeuristic extends AbstractDecisionTreeHeuristic
 
     @Override
     public void writeToFile(String file) {
+        if (modelDirectory.isEmpty())
+            modelDirectory = file;
         try {
             drModel.write().overwrite().save(file);
             BufferedWriter writer = new BufferedWriter(new java.io.FileWriter(file + File.separator + "Description.txt"));

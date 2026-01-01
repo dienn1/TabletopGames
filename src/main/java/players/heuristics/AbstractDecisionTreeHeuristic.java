@@ -18,6 +18,7 @@ public abstract class AbstractDecisionTreeHeuristic {
     }
 
     protected DecisionTreeRegressionModel drModel;
+    protected String modelDirectory = "";
 
     public AbstractDecisionTreeHeuristic(DecisionTreeRegressionModel drModel) {
         this.drModel = drModel;
@@ -25,6 +26,7 @@ public abstract class AbstractDecisionTreeHeuristic {
 
     public AbstractDecisionTreeHeuristic(String directory) {
         // load in the Decision Tree model from the directory
+        modelDirectory = directory;
         if (directory == null || directory.isEmpty()) {
             System.out.println("No directory specified for Decision Tree model");
             return;

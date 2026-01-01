@@ -58,6 +58,11 @@ public class DecisionTreeActionHeuristic extends AbstractDecisionTreeHeuristic
     @Override
     public double[] evaluateAllActions(List<AbstractAction> actions, AbstractGameState state) {
         if (drModel == null) return new double[actions.size()];  // no model, no prediction (this is fine)
+        if (stateFeatures == null) {
+            // in this case we used the default implementation, as there is no
+            // benefit from a single pass for the state features
+            return IActionHeuristic.super.evaluateAllActions(actions, state);
+        }
         // First we get the state features once
         int playerId = state.getCurrentPlayer();
         double[] stateFeatures = this.stateFeatures.doubleVector(state, playerId);
@@ -82,6 +87,8 @@ public class DecisionTreeActionHeuristic extends AbstractDecisionTreeHeuristic
 
     @Override
     public void writeToFile(String file) {
+        if (modelDirectory.isEmpty())
+            modelDirectory = file;
         try {
             drModel.write().overwrite().save(file);
             BufferedWriter writer = new BufferedWriter(new java.io.FileWriter(file + File.separator + "Description.txt"));
@@ -105,7 +112,9 @@ public class DecisionTreeActionHeuristic extends AbstractDecisionTreeHeuristic
     public JSONObject toJSON() {
         JSONObject json = new JSONObject();
         json.put("class", "players.heuristics.DecisionTreeActionHeuristic");
-
+        if (!modelDirectory.isEmpty()) {
+            json.put("file", modelDirectory);
+        }
         if (stateFeatures != null) {
             JSONObject featuresJson = new JSONObject();
             if (stateFeatures instanceof IToJSON toJSON) {
