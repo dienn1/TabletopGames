@@ -44,15 +44,16 @@ public class DecisionTreeActionHeuristic extends AbstractDecisionTreeHeuristic
         if (drModel == null) return 0;  // no model, no prediction (this is fine
         // get the features for the state and action
         int playerId = state.getCurrentPlayer();
-        double[] stateFeatures = this.stateFeatures.doubleVector(state, playerId);
         double[] actionFeatures = this.actionFeatures.doubleVector(action, state, playerId);
-        // combine the features
-        double[] features = new double[stateFeatures.length + actionFeatures.length];
-        System.arraycopy(stateFeatures, 0, features, 0, stateFeatures.length);
-        System.arraycopy(actionFeatures, 0, features, stateFeatures.length, actionFeatures.length);
-        // return the prediction from the model
-
-        return drModel.predict(Vectors.dense(features));
+        if (stateFeatures != null) {
+            double[] stateFeatures = this.stateFeatures.doubleVector(state, playerId);
+            double[] features = new double[stateFeatures.length + actionFeatures.length];
+            System.arraycopy(stateFeatures, 0, features, 0, stateFeatures.length);
+            System.arraycopy(actionFeatures, 0, features, stateFeatures.length, actionFeatures.length);
+            return drModel.predict(Vectors.dense(features));
+        } else {
+            return drModel.predict(Vectors.dense(actionFeatures));
+        }
     }
 
     @Override
