@@ -37,7 +37,7 @@ public class ExpertIteration {
     IStateFeatureVector stateFeatureVector;
     IActionFeatureVector actionFeatureVector;
     FeatureListener stateListener, actionListener;
-    int nPlayers, matchups, iterations, iter, bicMultiplier, bicTimer, expertTime;
+    int nPlayers, matchups, iterations, iter, bicMultiplier, bicTimer, expertTime, maxRecords;
     double sampleRate;
     String[] stateDataFilesByIteration;
     String[] actionDataFilesByIteration;
@@ -72,6 +72,7 @@ public class ExpertIteration {
         bicTimer = (int) config.get(RunArg.bicTimer);
         sampleRate = (double) config.get(RunArg.sampleRate);
         expertTime = (int) config.get(RunArg.expertTime);
+        maxRecords = (int) config.get(RunArg.maxRecords);
 
         params = AbstractParameters.createFromFile(gameToPlay, (String) config.get(RunArg.gameParams));
 
@@ -379,6 +380,7 @@ public class ExpertIteration {
                     loadClass(stateLearnerFile),
                     bicMultiplier,
                     bicTimer);
+            learnFromData.setMaxRecords(maxRecords);
             stateHeuristic = (IStateHeuristic) learnFromData.learn();
         }
         if (actionLearnerFile != null) {
@@ -391,7 +393,7 @@ public class ExpertIteration {
                     loadClass(actionLearnerFile),
                     bicMultiplier,
                     bicTimer);
-            learnFromData.setMaxRecords((int) config.get(RunArg.maxRecords));
+            learnFromData.setMaxRecords(maxRecords);
             actionHeuristic = (IActionHeuristic) learnFromData.learn();
         }
         return Pair.of(stateHeuristic, actionHeuristic);
