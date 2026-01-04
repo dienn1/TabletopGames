@@ -12,9 +12,12 @@ import utilities.Pair;
 import utilities.Utils;
 
 import java.util.*;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 public class AutomatedFeatures implements IStateFeatureVector, IActionFeatureVector, IToJSON {
+
+    public static boolean debug = false;
 
     public enum featureType {
         RAW, ENUM, STRING, RANGE, INTERACTION, TARGET
@@ -146,14 +149,14 @@ public class AutomatedFeatures implements IStateFeatureVector, IActionFeatureVec
         int numberOfInteractions = 0;
         if (interactions.get(first) != null) {
             interactionIndices.addAll(interactions.get(first));
-            numberOfInteractions+=interactions.get(first).size();
+            numberOfInteractions += interactions.get(first).size();
         } else {
             interactionIndices.add(first);
             numberOfInteractions++;
         }
         if (interactions.get(second) != null) {
             interactionIndices.addAll(interactions.get(second));
-            numberOfInteractions+=interactions.get(second).size();
+            numberOfInteractions += interactions.get(second).size();
         } else {
             interactionIndices.add(second);
             numberOfInteractions++;
@@ -251,7 +254,7 @@ public class AutomatedFeatures implements IStateFeatureVector, IActionFeatureVec
         copy.interactions = new ArrayList<>(this.interactions);
         copy.featureRanges = new ArrayList<>(this.featureRanges);
         copy.featureIndices = new ArrayList<>(this.featureIndices);
-        copy.buckets = Arrays.copyOf(this.buckets, this.buckets.length);
+        copy.buckets = buckets.clone();
         return copy;
     }
 
@@ -448,7 +451,7 @@ public class AutomatedFeatures implements IStateFeatureVector, IActionFeatureVec
             Class<?> columnType = underlyingTypes[i];
 
             if (!headers.contains(columnName)) {
-             //   System.out.println("Missing column: " + columnName);
+                //        System.out.println("Underlying data " + inputFiles[0] + " is missing column: " + columnName);
                 continue;
             }
 
@@ -456,42 +459,57 @@ public class AutomatedFeatures implements IStateFeatureVector, IActionFeatureVec
             underlyingIndexToDataIndex.put(i, columnIndex);
 
             if (columnType.equals(Boolean.class)) {
-                // Boolean column: Just add raw column directly
+                // Boolean column: Just add raw column directly (no bucketing is relevant here)
                 newColumnDetails.add(new ColumnDetails(
                         columnName, featureType.RAW, null, null, i, columnType, null
                 ));
                 newDataColumns.add(validateBooleanColumnData(dataColumns.get(columnIndex)));
+                if (debug) System.out.println("Adding Boolean column " + columnName);
             } else if (columnType.equals(Double.class) || columnType.equals(double.class) ||
                     columnType.equals(Integer.class) || columnType.equals(int.class)) {
                 // Numeric column: Check for RAW column and a RANGE column for each BUCKET
-                // Does header contain the column name (RAW) and one RANGE column for each bucket?
+                // The RAW data has to be present, so we can always copy that over
+                // Add RAW feature for column
+                newColumnDetails.add(new ColumnDetails(
+                        columnName, featureType.RAW, null, null, i, columnType, null
+                ));
+                if (columnType.equals(Double.class) || columnType.equals(double.class)) {
+                    newDataColumns.add(validateDoubleColumnData(dataColumns.get(columnIndex)));
+                } else {
+                    newDataColumns.add(validateIntColumnData(dataColumns.get(columnIndex)));
+                }
+                if (debug) System.out.println("Adding Numeric column " + columnName);
+
+                // then we check for buckets in the data
                 List<String> expectedBucketColumns = IntStream.range(0, getBuckets(i))
                         .mapToObj(b -> columnName + "_B" + b)
                         .toList();
                 boolean copiedColumns = false;
-                if (headers.contains(columnName) && new HashSet<>(headers).containsAll(expectedBucketColumns)) {
-                    // then we can pull over the RAW and RANGE columns from the starting features
+                // If there is only one bucket, then this is the same as not bucketing
+                if (expectedBucketColumns.size() > 1 && new HashSet<>(headers).containsAll(expectedBucketColumns)) {
+                    // then we can pull over the RANGE columns from the starting features without any recalculation
                     int finalI = i;
-                    List<ColumnDetails> original = startingFeatures.stream().filter(r -> r.underlyingIndex == finalI).toList();
+                    List<ColumnDetails> original = startingFeatures.stream()
+                            .filter(r -> r.type == featureType.RANGE && r.underlyingIndex == finalI)
+                            .toList();
                     if (original.size() == 1 + getBuckets(i)) {
                         for (ColumnDetails columnDetail : original) {
                             newColumnDetails.add(columnDetail);
-                            if (columnDetail.type == featureType.RAW) {
-                                newDataColumns.add(dataColumns.get(columnIndex));
-                            } else if (columnDetail.type == featureType.RANGE) {
-                                // we need to find the range in the data
-                                int bucketIndex = Integer.parseInt(columnDetail.name.substring(columnDetail.name.indexOf("_B") + 2));
-                                newDataColumns.add(dataColumns.get(headers.indexOf(expectedBucketColumns.get(bucketIndex))));
-                            }
+                            // we need to find the range field in the data
+                            int bucketIndex = Integer.parseInt(columnDetail.name.substring(columnDetail.name.indexOf("_B") + 2));
+                            newDataColumns.add(dataColumns.get(headers.indexOf(expectedBucketColumns.get(bucketIndex))));
+                            if (debug) System.out.println("Adding Range column " + columnName);
                         }
                         copiedColumns = true;
                     }
                 }
-                if (!copiedColumns) {
-                    List<Pair<ColumnDetails, List<?>>> missingColumns = handleMissingRawFeature(i, dataColumns.get(columnIndex));
+                if (buckets[i] > 1 && !copiedColumns) {
+                    // We did not find the data in the file, so we calculate it (mostly the buckets)
+                    List<Pair<ColumnDetails, List<?>>> missingColumns = handleMissingRangeFeatures(i, dataColumns.get(columnIndex));
                     for (Pair<ColumnDetails, List<?>> missingColumn : missingColumns) {
                         newColumnDetails.add(missingColumn.a);
                         newDataColumns.add(missingColumn.b);
+                        if (debug) System.out.println("Adding Range column " + columnName);
                     }
                 }
             } else if (columnType.isEnum()) {
@@ -522,6 +540,8 @@ public class AutomatedFeatures implements IStateFeatureVector, IActionFeatureVec
                                 expectedEnumColumn, featureType.ENUM, Enum.valueOf(enumClass, expectedEnum), null, i, Boolean.class, null
                         ));
                         newDataColumns.add(dataColumns.get(enumIndex));
+                        if (debug) System.out.println("Adding Enum column " + columnName);
+
                     }
                 } else {
                     // recalculate
@@ -529,6 +549,7 @@ public class AutomatedFeatures implements IStateFeatureVector, IActionFeatureVec
                     for (Pair<ColumnDetails, List<?>> missingColumn : missingColumns) {
                         newColumnDetails.add(missingColumn.a);
                         newDataColumns.add(missingColumn.b);
+                        if (debug) System.out.println("Adding Enum column " + columnName);
                     }
                 }
             } else {
@@ -604,7 +625,7 @@ public class AutomatedFeatures implements IStateFeatureVector, IActionFeatureVec
             // in this case we do not want to write any data for features that are not in featureNames
             // this has already been covered for Interaction features, so we just need to
             // do the same for RANGE, RAW and ENUM features
-            for (int i = newColumnDetails.size()-1; i >= 0; i--) {
+            for (int i = newColumnDetails.size() - 1; i >= 0; i--) {
                 ColumnDetails column = newColumnDetails.get(i);
                 if (column.type == featureType.RAW || column.type == featureType.ENUM) {
                     if (!featureNames.contains(column.name)) {
@@ -669,37 +690,31 @@ public class AutomatedFeatures implements IStateFeatureVector, IActionFeatureVec
 
 
     // Stub methods for handling missing features
-    private List<Pair<ColumnDetails, List<?>>> handleMissingRawFeature(int i, List<String> columnData) {
+    private List<Pair<ColumnDetails, List<?>>> handleMissingRangeFeatures(int i, List<String> columnData) {
         List<Pair<ColumnDetails, List<?>>> newColumns = new ArrayList<>();
         String feature = underlyingNames[i];
         Class<?> columnType = underlyingTypes[i];
         Class<?> numericClass = columnType.equals(Integer.class) || columnType.equals(int.class) ?
                 Integer.class : Double.class;
-        // Add RAW feature for column
-        ColumnDetails newColumnDetails = new ColumnDetails(feature, featureType.RAW, null, null, i, columnType, null);
-        List<?> newColumnData = numericClass == Integer.class ?
-                columnData.stream().map(Integer::parseInt).toList() :
-                columnData.stream().map(Double::parseDouble).toList();
-        newColumns.add(Pair.of(newColumnDetails, newColumnData));
-        if (buckets[i] > 1) {
-            List<Pair<Number, Number>> proposedFeatureRanges = calculateFeatureRanges(columnData, buckets[i], numericClass);
-            for (int b = 0; b < proposedFeatureRanges.size(); b++) {
-                Pair<Number, Number> range = proposedFeatureRanges.get(b);
-                String rangeName = feature + "_B" + b;
-                newColumns.add(Pair.of(
-                        new ColumnDetails(rangeName, featureType.RANGE, null, range, i, numericClass, null),
-                        columnData.stream()
-                                .map(Double::parseDouble)
-                                .map(value -> {
-                                    if (value >= range.a.doubleValue() && value < range.b.doubleValue()) {
-                                        return 1;
-                                    } else {
-                                        return 0;
-                                    }
-                                }).toList()
-                ));
-            }
+
+        List<Pair<Number, Number>> proposedFeatureRanges = calculateFeatureRanges(columnData, buckets[i], numericClass);
+        for (int b = 0; b < proposedFeatureRanges.size(); b++) {
+            Pair<Number, Number> range = proposedFeatureRanges.get(b);
+            String rangeName = feature + "_B" + b;
+            newColumns.add(Pair.of(
+                    new ColumnDetails(rangeName, featureType.RANGE, null, range, i, numericClass, null),
+                    columnData.stream()
+                            .map(Double::parseDouble)
+                            .map(value -> {
+                                if (value >= range.a.doubleValue() && value < range.b.doubleValue()) {
+                                    return 1;
+                                } else {
+                                    return 0;
+                                }
+                            }).toList()
+            ));
         }
+
         return newColumns;
     }
 
@@ -892,6 +907,12 @@ public class AutomatedFeatures implements IStateFeatureVector, IActionFeatureVec
             }
         }
         return numericValues;
+    }
+
+    @Override
+    public String toString() {
+        // Just print feature names
+        return String.join(", ", featureNames);
     }
 
 }

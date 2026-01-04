@@ -287,8 +287,12 @@ public class LearnFromData {
                 AutomatedFeatures adjustedASF = asf.copy();
                 adjustedASF.removeFeature(i);
 
-                // we always use the data file from this iteration of building the model (as this has all the data)
-                FeatureAnalysisResult result = processNewFeature(adjustedASF, outputFile, new String[0], learner, n);
+                // For a feature removal we can save a bit of time by not recalculating all features
+                // We can safely use the previous iterations final file
+                String fileToUse = dataDirectory + File.separator +
+                        (iteration > 0 ? "ImproveModel_Iter_" + (iteration-1) : "ImproveModel_tmp") +
+                        ".txt";
+                FeatureAnalysisResult result = processNewFeature(adjustedASF, fileToUse, new String[0], learner, n);
 
                 if (debug)
                     System.out.printf("\tConsidered feature removal: %s, new BIC: %.2f%n", featureToRemove, result.newBIC);
@@ -333,6 +337,10 @@ public class LearnFromData {
                                             .mapToObj(d -> String.format("%.2f", d))
                                             .collect(joining("|")) : "[]");
                 }
+//                if (bestFeatureDescription.contains("Buckets")) {
+//                    debug = true;
+//                    AutomatedFeatures.debug = true;
+//                }
                 asf = bestFeatures;
             }
 
@@ -390,8 +398,13 @@ public class LearnFromData {
                                             int n) {
 
         AutomatedFeatures localASF = asf.copy();
-        if (rawData != null && rawData.length > 0)
+        if (rawData != null && rawData.length > 0) {
+            if (debug)
+                System.out.println("Processing data for " + localASF + " to file " + outputFile);
             localASF.processData(false, outputFile, maxRecords, rawData);
+            if (debug)
+                System.out.println("Finished processing data for " + localASF);
+        }
 
         if (learner.actionFeatureVector != null)
             learner.setActionFeatureVector(localASF);
