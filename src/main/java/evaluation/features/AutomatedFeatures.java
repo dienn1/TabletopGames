@@ -19,6 +19,7 @@ public class AutomatedFeatures implements IStateFeatureVector, IActionFeatureVec
 
     public static boolean debug = false;
 
+
     public enum featureType {
         RAW, ENUM, STRING, RANGE, INTERACTION, TARGET
     }
@@ -28,6 +29,8 @@ public class AutomatedFeatures implements IStateFeatureVector, IActionFeatureVec
     public final IActionFeatureVector underlyingAction;
     String[] underlyingNames;
     Class<?>[] underlyingTypes;
+
+    List<String> removedFeatureNames = new ArrayList<>();
 
     List<String> featureNames = new ArrayList<>();
     List<featureType> featureTypes = new ArrayList<>();
@@ -141,6 +144,18 @@ public class AutomatedFeatures implements IStateFeatureVector, IActionFeatureVec
         }
     }
 
+    public List<Integer> underlyingOneHotIndices(int i) {
+        // we return the underlying indices for which one of the components of this feature
+        // is a one-hot variable
+        if (getFeatureType(i) == featureType.ENUM || getFeatureType(i) == featureType.RANGE) {
+            return List.of(getUnderlyingIndex(i));
+        }
+        if (getFeatureType(i) == featureType.INTERACTION) {
+            return interactions.get(i).stream().map(this::underlyingOneHotIndices).flatMap(List::stream).collect(Collectors.toList());
+        }
+        return Collections.emptyList();
+    }
+
     public void addInteraction(int first, int second) {
         if (first < 0 || first >= featureNames.size() || second < 0 || second >= featureNames.size()) {
             throw new IllegalArgumentException("Invalid feature indices for interaction: " + first + ", " + second);
@@ -178,6 +193,10 @@ public class AutomatedFeatures implements IStateFeatureVector, IActionFeatureVec
             throw new IllegalArgumentException("Invalid feature index: " + i);
         }
         // we do not remove from buckets, underlyingNames or underlyingTypes as those are all indexed from the (unchanged) underlying vector
+
+        // we also record this name, so that if we do not insert it back in from the file in processNewFeature
+        removedFeatureNames.add(featureNames.get(i));
+
         featureNames.remove(i);
         featureTypes.remove(i);
         enumValues.remove(i);
@@ -205,6 +224,7 @@ public class AutomatedFeatures implements IStateFeatureVector, IActionFeatureVec
         }
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public JSONObject toJSON() {
         JSONObject jsonObject = new JSONObject();
@@ -255,6 +275,7 @@ public class AutomatedFeatures implements IStateFeatureVector, IActionFeatureVec
         copy.featureRanges = new ArrayList<>(this.featureRanges);
         copy.featureIndices = new ArrayList<>(this.featureIndices);
         copy.buckets = buckets.clone();
+        copy.removedFeatureNames = new ArrayList<>(this.removedFeatureNames);
         return copy;
     }
 
@@ -372,8 +393,17 @@ public class AutomatedFeatures implements IStateFeatureVector, IActionFeatureVec
         return featureIndices.get(index);
     }
 
+
+    public String getUnderlyingName(int underlyingIndex) {
+        return underlyingNames[underlyingIndex];
+    }
+
     public record ColumnDetails(String name, featureType type, Object enumValue, Pair<Number, Number> range,
                                 int underlyingIndex, Class<?> clazz, List<Integer> interaction) {
+
+        public ColumnDetails updateType(featureType newType) {
+            return new ColumnDetails(name, newType, enumValue, range, underlyingIndex, clazz, interaction);
+        }
     }
 
     public List<ColumnDetails> getColumnDetails() {
@@ -392,7 +422,7 @@ public class AutomatedFeatures implements IStateFeatureVector, IActionFeatureVec
         return columnDetails;
     }
 
-    public List<List<Object>> processData(boolean overwriteAllFeatures, String outputFile, int maxRecords, String... inputFiles) {
+    public List<List<Object>> processData(String outputFile, int maxRecords, String... inputFiles) {
         // inputFiles contain the raw data.
         // There can be two types of columns:
         // 1. Columns that refer to existing featureNames. These are detected by matching the names.
@@ -451,7 +481,7 @@ public class AutomatedFeatures implements IStateFeatureVector, IActionFeatureVec
             Class<?> columnType = underlyingTypes[i];
 
             if (!headers.contains(columnName)) {
-                //        System.out.println("Underlying data " + inputFiles[0] + " is missing column: " + columnName);
+                //            System.out.println("Underlying data " + inputFiles[0] + " is missing column: " + columnName);
                 continue;
             }
 
@@ -621,21 +651,57 @@ public class AutomatedFeatures implements IStateFeatureVector, IActionFeatureVec
             }
         }
 
-        if (!overwriteAllFeatures) {
-            // in this case we do not want to write any data for features that are not in featureNames
-            // this has already been covered for Interaction features, so we just need to
-            // do the same for RANGE, RAW and ENUM features
-            for (int i = newColumnDetails.size() - 1; i >= 0; i--) {
-                ColumnDetails column = newColumnDetails.get(i);
-                if (column.type == featureType.RAW || column.type == featureType.ENUM) {
-                    if (!featureNames.contains(column.name)) {
-                        // we do not want to write this column, so we remove it from the newDataColumns
-                        newDataColumns.remove(i);
-                        newColumnDetails.remove(i);
+
+        // The logic so far has constructed a RAW column for each underlying feature
+        // Then a RANGE column per bucket for that underlying feature
+        // And similarly a number of ENUM column per underlying feature that is an enum
+        // Then INTERACTION columns are created from the existing featureNames
+
+        // The issue now is that we are about to convert all the columns into new features
+        // This will be a problem if we have removed features (RAW, RANGE or ENUM) from featureName, as the processing
+        // of the underlying features has added them back in.
+        for (int i = newColumnDetails.size() - 1; i >= 0; i--) {
+            ColumnDetails column = newColumnDetails.get(i);
+            if (removedFeatureNames.contains(column.name)) {
+                if (column.type == featureType.RAW) {
+                    // we still need to write this column, so we switch it to TARGET
+                    // (iff it is used to derive another constructed feature)
+                    boolean rawDataIsUsed = false;
+                    for (int f = 0;  f < featureNames.size(); f++) {
+                        if (featureTypes.get(f) != featureType.RAW) {
+                            if (featureIndices.get(f) == column.underlyingIndex) {
+                                // RANGE and ENUM features
+                                rawDataIsUsed = true;
+                                break;
+                            }
+                            if (featureTypes.get(f) == featureType.INTERACTION) {
+                                if (interactions.get(f).contains(column.underlyingIndex)) {
+                                    rawDataIsUsed = true;
+                                    break;
+                                }
+                            }
+                        }
                     }
+                    if (rawDataIsUsed) {
+                        // convert it to a TARGET column to keep it in the file
+                        ColumnDetails oldDetails = newColumnDetails.get(i);
+                        ColumnDetails newDetails = oldDetails.updateType(featureType.TARGET);
+                        newColumnDetails.remove(i);
+                        newColumnDetails.add(i, newDetails);
+                    } else {
+                        // we remove it completely
+                        newColumnDetails.remove(i);
+                        newDataColumns.remove(i);
+                    }
+                } else {
+                    // we remove it completely
+                    newColumnDetails.remove(i);
+                    newDataColumns.remove(i);
                 }
             }
+
         }
+
 
         // We now have all the column, to write to file we need to convert this into a set of rows
         List<List<Object>> newDataRows = new ArrayList<>();
