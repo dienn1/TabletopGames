@@ -2,11 +2,8 @@ package players.mcts;
 
 import core.AbstractGameState;
 import core.actions.AbstractAction;
-import players.PlayerConstants;
 
 import java.util.*;
-
-import static players.PlayerConstants.*;
 
 /**
  * PI-MCTS (Perfect-Information Monte Carlo Tree Search) wrapper for MCTS
@@ -19,14 +16,11 @@ import static players.PlayerConstants.*;
  *  - Runs MCTS on each determinized root.
  *  - Aggregates action statistics to inform the final choice.
  */
-public class PISingleTreeNode extends SingleTreeNode {
+public class ForestNode extends SingleTreeNode {
     //One root MCTS tree per determinisation
     SingleTreeNode[] roots;
     AbstractGameState state;
-    //Number of determinisations(roots) to create;
-    int numDeterminizations = 1;
     MCTSPlayer mctsPlayer;
-    double epsilon = 1e-6;
 
     /**
      * Aggregated action statistics across determinisations.
@@ -36,7 +30,7 @@ public class PISingleTreeNode extends SingleTreeNode {
     Map<AbstractAction, ActionStats> accumulatedActionStats;
 
     //Instantiate A new Tree Node for PI-MCTS
-    public PISingleTreeNode(MCTSPlayer player, AbstractGameState state, Random rnd) {
+    public ForestNode(MCTSPlayer player, AbstractGameState state, Random rnd) {
 
         this.decisionPlayer = state.getCurrentPlayer();
         this.params = player.getParameters();
@@ -50,10 +44,8 @@ public class PISingleTreeNode extends SingleTreeNode {
         if (params.useMASTAsActionHeuristic) {
             params.actionHeuristic = new MASTActionHeuristic(MASTStatistics, params.MASTActionKey, params.MASTDefaultValue);
         }
-        numDeterminizations = params.numDeterminizations;
         roots = new SingleTreeNode[params.numDeterminizations];
     }
-
 
      //Run PI-MCTS search where for each determinisation, state is copied, a SingleTreeNode root is created, and MCTS search is performed.
 
@@ -88,10 +80,6 @@ public class PISingleTreeNode extends SingleTreeNode {
             {
                 return bestAction_AccumulatedResults(MCTSEnums.PerfectInformationPolicy.AverageValue);
             }
-            case TotalValue:
-            {
-                return bestAction_AccumulatedResults(MCTSEnums.PerfectInformationPolicy.TotalValue);
-            }
             case TotalVisits:
             {
                 return  bestAction_AccumulatedResults(MCTSEnums.PerfectInformationPolicy.TotalVisits);
@@ -117,7 +105,7 @@ public class PISingleTreeNode extends SingleTreeNode {
         AbstractAction bestAction_vote = null;
         double maxCount = -1;
         for (Map.Entry<AbstractAction, Integer> entry : actionCounts.entrySet()) {
-            double totValue = entry.getValue() +( rnd.nextGaussian() * epsilon);
+            double totValue = entry.getValue() +( rnd.nextGaussian() * params.noiseEpsilon);
             if (totValue > maxCount) {
                 maxCount = totValue ;
                 bestAction_vote = entry.getKey();
@@ -162,13 +150,10 @@ public class PISingleTreeNode extends SingleTreeNode {
                 double totValue = 0.0;
                 switch (policy) {
                     case AverageValue:
-                        totValue = (stats.totValue[decisionPlayer] + (rnd.nextGaussian() * epsilon)) / (stats.nVisits +( rnd.nextGaussian() * epsilon)) ;
-                        break;
-                    case TotalValue:
-                        totValue = stats.totValue[decisionPlayer] + (rnd.nextGaussian() * epsilon);
+                        totValue = (stats.totValue[decisionPlayer] + (rnd.nextGaussian() * params.noiseEpsilon)) / (stats.nVisits +( rnd.nextGaussian() * params.noiseEpsilon)) ;
                         break;
                     case TotalVisits:
-                        totValue = stats.nVisits + (rnd.nextGaussian() * epsilon) ;
+                        totValue = stats.nVisits + (rnd.nextGaussian() * params.noiseEpsilon) ;
                 }
                 if (totValue > bestValue) {
                     bestValue = totValue;

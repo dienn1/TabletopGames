@@ -146,7 +146,7 @@ public class MCTSParams extends PlayerParameters {
         treePolicy = (MCTSEnums.TreePolicy) getParameterValue("treePolicy");
         selectionPolicy = (MCTSEnums.SelectionPolicy) getParameterValue("selectionPolicy");
         opponentTreePolicy = (MCTSEnums.OpponentTreePolicy) getParameterValue("opponentTreePolicy");
-        if(opponentTreePolicy == MCTSEnums.OpponentTreePolicy.MultiTree && information == MCTSEnums.Information.Perfect_Information)
+        if(opponentTreePolicy == MCTSEnums.OpponentTreePolicy.MultiTree && numDeterminizations > 1)
         {
             System.out.println("Setting Opponent Tree Policy to OneTree as Perfect Information does not currently support MultiTree");
             opponentTreePolicy = MCTSEnums.OpponentTreePolicy.OneTree;
@@ -208,7 +208,7 @@ public class MCTSParams extends PlayerParameters {
             }
         numDeterminizations = (int) getParameterValue("numDeterminizations");
         perfectInformationPolicy = (MCTSEnums.PerfectInformationPolicy) getParameterValue("perfectInformationPolicy");
-        if (information == Perfect_Information) {
+        if (numDeterminizations > 1) {
             budget = budget / numDeterminizations;
         }
     }

@@ -7,7 +7,7 @@ public class MCTSEnums {
     }
 
     public enum Information {
-        Closed_Loop, Open_Loop, Information_Set, Perfect_Information
+        Closed_Loop, Open_Loop, Information_Set
     }
 
     public enum MASTType {
@@ -25,7 +25,7 @@ public class MCTSEnums {
     }
 
     public enum PerfectInformationPolicy{
-        SingleVote, TotalValue, AverageValue, TotalVisits
+        SingleVote, AverageValue, TotalVisits
     }
 
     public enum BackupPolicy {
