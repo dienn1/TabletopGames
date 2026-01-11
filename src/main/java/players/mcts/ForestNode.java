@@ -2,7 +2,7 @@ package players.mcts;
 
 import core.AbstractGameState;
 import core.actions.AbstractAction;
-
+import utilities.Pair;
 import java.util.*;
 
 /**
@@ -57,8 +57,10 @@ public class ForestNode extends SingleTreeNode {
         // Create determinised trees and run MCTS on each one independently.
         for (int i = 0; i < params.numDeterminizations; i++) {
             roots[i] = SingleTreeNode.createRootNode(mctsPlayer, state.copy(state.getCurrentPlayer()), rnd, mctsPlayer.getFactory());
+            roots[i].MASTStatistics = MASTStatistics;
             // MCTS on the determinised root.
             roots[i].mctsSearch(initialisationTime);
+            mergeMASTStatistics(roots[i].MASTStatistics);
         }
     }
 
@@ -162,6 +164,26 @@ public class ForestNode extends SingleTreeNode {
             }
         }
         return currentBestAction;
+    }
+
+    private void mergeMASTStatistics(List<Map<Object, Pair<Integer, Double>>> source) {
+        for (int p = 0; p < source.size(); p++) {
+            Map<Object, Pair<Integer, Double>> sourceMap = source.get(p);
+            Map<Object, Pair<Integer, Double>> targetMap = MASTStatistics.get(p);
+
+            for (Map.Entry<Object, Pair<Integer, Double>> entry : sourceMap.entrySet()) {
+                Object action = entry.getKey();
+                Pair<Integer, Double> srcStats = entry.getValue();
+
+                Pair<Integer, Double> tgtStats = targetMap.get(action);
+                if (tgtStats == null) {
+                    targetMap.put(action, new Pair<>(srcStats.a, srcStats.b));
+                } else {
+                    tgtStats.a += srcStats.a;
+                    tgtStats.b += srcStats.b;
+                }
+            }
+        }
     }
 }
 
