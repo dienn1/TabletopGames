@@ -1,6 +1,7 @@
 package players.mcts;
 
 import core.AbstractPlayer;
+import core.actions.AbstractAction;
 import core.interfaces.IGameEvent;
 import evaluation.listeners.MetricsGameListener;
 import evaluation.metrics.AbstractMetric;
@@ -29,6 +30,11 @@ public class MCTSMetrics implements IMetricsCollection {
                 TreeStatistics treeStats = new TreeStatistics(root);
                 int visits = root.getVisits();
                 if (visits == 0) visits = 1;
+                Map<AbstractAction, Double> actionValueEstimates = root.actionValueEstimates;
+                List<AbstractAction> sortedActions = actionValueEstimates.keySet().stream()
+                        .sorted(Comparator.comparingDouble(actionValueEstimates::get))
+                        .toList(); // in ascending order of value
+
                 records.put("PlayerType", mctsPlayer.toString());
                 records.put("PlayerID", e.state.getCurrentPlayer());
                 records.put("Iterations", root.getVisits());
@@ -46,6 +52,13 @@ public class MCTSMetrics implements IMetricsCollection {
                 OptionalInt maxVisits = Arrays.stream(root.actionVisits()).max();
                 records.put("maxVisitProportion", (maxVisits.isPresent() ? maxVisits.getAsInt() : 0) / (double) visits);
                 records.put("Action", e.action.getString(e.state));
+                records.put("ActionValue", actionValueEstimates.get(e.action));
+                AbstractAction secondAction = sortedActions.get(sortedActions.size() - 2);
+                records.put("SecondAction", secondAction.getString(e.state));
+                records.put("SecondActionValue", actionValueEstimates.get(secondAction));
+                AbstractAction worstAction =  sortedActions.getFirst();
+                records.put("WorstAction",  worstAction.getString(e.state));
+                records.put("WorstActionValue", actionValueEstimates.get(worstAction));
                 records.put("ActionsAtRoot", root.actionValues.size());
                 records.put("fmCalls", mctsPlayer.root.fmCallsCount / visits);
                 records.put("copyCalls", mctsPlayer.root.copyCount / visits);
@@ -80,6 +93,11 @@ public class MCTSMetrics implements IMetricsCollection {
             cols.put("NodeClashes", Integer.class);
             cols.put("maxVisitProportion", Double.class);
             cols.put("Action", String.class);
+            cols.put("ActionValue", Double.class);
+            cols.put("SecondAction", String.class);
+            cols.put("SecondActionValue", Double.class);
+            cols.put("WorstAction", String.class);
+            cols.put("WorstActionValue", Double.class);
             cols.put("ActionsAtRoot", Integer.class);
             cols.put("fmCalls", Integer.class);
             cols.put("copyCalls", Integer.class);
