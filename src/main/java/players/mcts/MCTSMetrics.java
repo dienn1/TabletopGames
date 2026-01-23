@@ -30,10 +30,10 @@ public class MCTSMetrics implements IMetricsCollection {
                 TreeStatistics treeStats = new TreeStatistics(root);
                 int visits = root.getVisits();
                 if (visits == 0) visits = 1;
-                Map<AbstractAction, Double> actionValueEstimates = root.actionValueEstimates;
+                Map<AbstractAction, ActionStats> actionValueEstimates = root.actionValues;
                 List<AbstractAction> sortedActions = actionValueEstimates.keySet().stream()
-                        .sorted(Comparator.comparingDouble(actionValueEstimates::get))
-                        .toList(); // in ascending order of value
+                        .sorted(Comparator.comparingDouble(a -> -actionValueEstimates.get(a).valueOf(e.playerID)))
+                        .toList(); // in descending order of value
 
                 records.put("PlayerType", mctsPlayer.toString());
                 records.put("PlayerID", e.state.getCurrentPlayer());
@@ -52,19 +52,19 @@ public class MCTSMetrics implements IMetricsCollection {
                 OptionalInt maxVisits = Arrays.stream(root.actionVisits()).max();
                 records.put("maxVisitProportion", (maxVisits.isPresent() ? maxVisits.getAsInt() : 0) / (double) visits);
                 records.put("Action", e.action.getString(e.state));
-                records.put("ActionValue", actionValueEstimates.get(e.action));
+                records.put("ActionValue", actionValueEstimates.get(e.action).valueOf(e.playerID));
                 if (sortedActions.size() > 1) {
-                    AbstractAction secondAction = sortedActions.get(sortedActions.size() - 2);
+                    AbstractAction secondAction = sortedActions.get(1);
                     records.put("SecondAction", secondAction.getString(e.state));
-                    records.put("SecondActionValue", actionValueEstimates.get(secondAction));
+                    records.put("SecondActionValue", actionValueEstimates.get(secondAction).valueOf(e.playerID));
                 } else {
                     records.put("SecondAction", "None");
                     records.put("SecondActionValue", 0.0);
                 }
                 // this may just be the same as the best action
-                AbstractAction worstAction = sortedActions.getFirst();
+                AbstractAction worstAction = sortedActions.getLast();
                 records.put("WorstAction", worstAction.getString(e.state));
-                records.put("WorstActionValue", actionValueEstimates.get(worstAction));
+                records.put("WorstActionValue", actionValueEstimates.get(worstAction).valueOf(e.playerID));
                 records.put("ActionsAtRoot", root.actionValues.size());
                 records.put("fmCalls", mctsPlayer.root.fmCallsCount / visits);
                 records.put("copyCalls", mctsPlayer.root.copyCount / visits);
