@@ -53,11 +53,17 @@ public class MCTSMetrics implements IMetricsCollection {
                 records.put("maxVisitProportion", (maxVisits.isPresent() ? maxVisits.getAsInt() : 0) / (double) visits);
                 records.put("Action", e.action.getString(e.state));
                 records.put("ActionValue", actionValueEstimates.get(e.action));
-                AbstractAction secondAction = sortedActions.get(sortedActions.size() - 2);
-                records.put("SecondAction", secondAction.getString(e.state));
-                records.put("SecondActionValue", actionValueEstimates.get(secondAction));
-                AbstractAction worstAction =  sortedActions.getFirst();
-                records.put("WorstAction",  worstAction.getString(e.state));
+                if (sortedActions.size() > 1) {
+                    AbstractAction secondAction = sortedActions.get(sortedActions.size() - 2);
+                    records.put("SecondAction", secondAction.getString(e.state));
+                    records.put("SecondActionValue", actionValueEstimates.get(secondAction));
+                } else {
+                    records.put("SecondAction", "None");
+                    records.put("SecondActionValue", 0.0);
+                }
+                // this may just be the same as the best action
+                AbstractAction worstAction = sortedActions.getFirst();
+                records.put("WorstAction", worstAction.getString(e.state));
                 records.put("WorstActionValue", actionValueEstimates.get(worstAction));
                 records.put("ActionsAtRoot", root.actionValues.size());
                 records.put("fmCalls", mctsPlayer.root.fmCallsCount / visits);
