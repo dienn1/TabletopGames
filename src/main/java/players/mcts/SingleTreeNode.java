@@ -801,7 +801,7 @@ public class SingleTreeNode {
                     double minTerm = Math.min(standardVar, variance + Math.sqrt(2 * Math.log(effectiveTotalVisits) / actionVisits));
                     yield params.K * Math.sqrt(Math.log(effectiveTotalVisits) / actionVisits * minTerm);
                 }
-                case UCB_E -> params.K * Math.sqrt(effectiveTotalVisits) / (actionVisits + 1.0);
+                case UCB_E -> params.K * Math.sqrt(effectiveTotalVisits) / actionVisits;
                 default -> Math.sqrt(Math.log(effectiveTotalVisits) / actionVisits);
             };
         }
