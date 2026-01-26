@@ -635,7 +635,7 @@ public class SingleTreeNode {
                     }
                     yield bestAction;
                 }
-                case UCB, AlphaGo, UCB_Tuned -> {
+                case UCB, UCB_E, UCB_Tuned -> {
                     // These take the max
                     // Find child with highest UCB value
                     AbstractAction bestAction = null;
@@ -709,7 +709,7 @@ public class SingleTreeNode {
             retValue[i] = switch (params.treePolicy) {
                 case Uniform -> 1.0;
                 case Greedy -> getFullValue(action);
-                case UCB, AlphaGo, UCB_Tuned -> ucbValue(action);
+                case UCB, UCB_E, UCB_Tuned -> ucbValue(action);
                 case RegretMatching, NoAveragingRM -> rmValue(action);
                 case EXP3 -> exp3Value(action);
             };
@@ -801,7 +801,7 @@ public class SingleTreeNode {
                     double minTerm = Math.min(standardVar, variance + Math.sqrt(2 * Math.log(effectiveTotalVisits) / actionVisits));
                     yield params.K * Math.sqrt(Math.log(effectiveTotalVisits) / actionVisits * minTerm);
                 }
-                case AlphaGo -> params.K * Math.sqrt(effectiveTotalVisits) / (actionVisits + 1.0);
+                case UCB_E -> params.K * Math.sqrt(effectiveTotalVisits) / (actionVisits + 1.0);
                 default -> Math.sqrt(Math.log(effectiveTotalVisits) / actionVisits);
             };
         }
