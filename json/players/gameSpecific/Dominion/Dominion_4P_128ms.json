@@ -2,7 +2,7 @@
   "budgetType" : "BUDGET_TIME",
   "rolloutLengthPerPlayer" : true,
   "rolloutLength" : 30,
-  "opponentTreePolicy" : "SelfOnly",
+  "opponentTreePolicy" : "OneTree",
   "MASTGamma" : 0.200,
   "heuristic" : {
     "class" : "players.heuristics.LeaderHeuristic"
@@ -11,7 +11,6 @@
   "maxTreeDepth" : 1,
   "treePolicy" : "NoAveragingRM",
   "paranoid" : true,
-  "backupPolicy" : "MaxMC",
   "MAST" : "Both",
   "rolloutType" : "MAST",
   "class" : "players.mcts.MCTSParams",
