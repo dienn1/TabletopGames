@@ -114,7 +114,7 @@ public class MCTSParams extends PlayerParameters {
         addTunableParameter("MASTDefaultValue", 0.0);
         addTunableParameter("MCGSStateKey", IStateKey.class);
         addTunableParameter("MCGSExpandAfterClash", true);
-        addTunableParameter("FPU", 1e6);
+        addTunableParameter("FPU", 1_000_000.0);
         addTunableParameter("actionHeuristic", IActionHeuristic.class,  IActionHeuristic.nullReturn);
         addTunableParameter("progressiveBias", 0.0);
         addTunableParameter("pUCT", false);
@@ -124,7 +124,7 @@ public class MCTSParams extends PlayerParameters {
         addTunableParameter("reuseTree", false);
         addTunableParameter("backupPolicy", MCTSEnums.BackupPolicy.MonteCarlo, Arrays.asList(MCTSEnums.BackupPolicy.values()));
         addTunableParameter("backupLambda", 1.0);
-        addTunableParameter("maxBackupThreshold", 1000000);
+        addTunableParameter("maxBackupThreshold", 1_000_000);
         addTunableParameter("instantiationClass", "players.mcts.MCTSPlayer");
         addTunableParameter("perfectInformationPolicy", AverageValue, Arrays.asList(MCTSEnums.PerfectInformationPolicy.values()));
         addTunableParameter("numDeterminizations", 1, Arrays.asList(1, 10, 30, 100, 300, 1000));

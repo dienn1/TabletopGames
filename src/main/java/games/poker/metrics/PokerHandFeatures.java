@@ -4,11 +4,13 @@ import core.AbstractGameState;
 import core.components.Deck;
 import core.components.FrenchCard;
 import core.interfaces.IStateFeatureVector;
+import games.poker.PokerGameParameters;
 import games.poker.PokerGameState;
 import utilities.Pair;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static java.util.stream.Collectors.counting;
 import static java.util.stream.Collectors.groupingBy;
@@ -17,7 +19,7 @@ public class PokerHandFeatures implements IStateFeatureVector {
 
     static String[] handNames = Arrays.stream(PokerGameState.PokerHand.values()).map(Enum::name).toArray(String[]::new);
     static String[] otherNames = new String[]{"HighCardValue", "TripleValue", "HighestPairValue",
-            "Round", "Turn", "OwnBid", "OpponentBid", "BidDiff"};
+            "Round", "Turn", "OwnBid", "OpponentBid", "BidDiff", "OwnMoney", "MoneyDiff", "IsAllIn"};
     static String[] allNames;
     static {
         allNames = new String[handNames.length + otherNames.length];
@@ -34,6 +36,7 @@ public class PokerHandFeatures implements IStateFeatureVector {
     public double[] doubleVector(AbstractGameState state, int playerID) {
         double[] data = new double[allNames.length];
         PokerGameState pgs = (PokerGameState) state;
+        PokerGameParameters pgp = (PokerGameParameters) state.getGameParameters();
         List<FrenchCard> cards = new ArrayList<>(pgs.getPlayerDecks().get(playerID).getComponents());
         cards.addAll(pgs.getCommunityCards().getComponents());
 
@@ -72,7 +75,7 @@ public class PokerHandFeatures implements IStateFeatureVector {
         // Turn
         data[handNames.length + 4] = pgs.getTurnCounter();
         // Own Bid
-        data[handNames.length + 5] = pgs.getPlayerBet()[playerID].getValue();
+        data[handNames.length + 5] = (double) pgs.getPlayerBet()[playerID].getValue() / pgp.nStartingMoney;
         // Opponent Bid
         double maxOpponentBid = 0;
         for (int i = 0; i < pgs.getNPlayers(); i++) {
@@ -80,10 +83,17 @@ public class PokerHandFeatures implements IStateFeatureVector {
                 maxOpponentBid = Math.max(pgs.getPlayerBet()[i].getValue(), maxOpponentBid);
             }
         }
-        data[handNames.length + 6] = maxOpponentBid;
+        data[handNames.length + 6] = maxOpponentBid / pgp.nStartingMoney;
         // Bid difference
         data[handNames.length + 7] = data[handNames.length + 5] - data[handNames.length + 6];
 
+        // Money
+        data[handNames.length + 8] = pgs.getPlayerMoney()[playerID].getValue();
+        int maxOpponentMoney = IntStream.range(0, pgs.getNPlayers())
+                .filter(i -> i != playerID).map(p -> pgs.getPlayerMoney()[p].getValue()).max().orElse(0);
+        data[handNames.length + 9] = (data[handNames.length + 8] - maxOpponentMoney) / pgp.nStartingMoney;
+
+        data[handNames.length + 10] = pgs.getPlayerAllIn()[playerID] ? 1.0 : 0.0;
         return data;
     }
 }

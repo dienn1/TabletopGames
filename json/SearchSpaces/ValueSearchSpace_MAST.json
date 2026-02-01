@@ -3,13 +3,9 @@
         "rolloutLength" : [0, 1, 3, 10, 30, 100],
         "rolloutLengthPerPlayer" : true,
         "rolloutTermination" : ["EXACT", "END_TURN", "END_ROUND"],
-        "rolloutType" : "PARAMS",
-        "rolloutPolicyParams" : {
-        	"class" : "players.simple.BoltzmannActionParams",
-        	"temperature" : 1.0,
-        	"epsilon" : 1.0
-        },
-        "MAST" : "None",
+        "rolloutType" : ["RANDOM", "MAST"],
+        "MAST" : "Both",
+        "MASTGamma" : 0.2,
         "budgetType" : "BUDGET_TIME",
         "selectionPolicy" : "SIMPLE",
         "maxTreeDepth" : [1, 3, 1000],
@@ -18,8 +14,8 @@
         "opponentTreePolicy" : ["SelfOnly", "OneTree", "MultiTree"],
         "reuseTree" : [false, true],
         "backupPolicy" : "MaxMC",
-        "maxBackupThreshold" : [3, 10, 1000000],
         "pUCT" : true,
+        "maxBackupThreshold" : [3, 10, 1000000],
         "budget" : -999,
         "epsilon" : 1e-6,
         "breakMS" : 0
