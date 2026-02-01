@@ -263,7 +263,6 @@ public class PokerGameState extends AbstractGameState implements IPrintable {
         }
         return next;
     }
-
     public void getPlayerMustCall(int playerId) {
         // Others can't check
         for (int i = 0; i < getNPlayers(); i++) {
@@ -368,6 +367,18 @@ public class PokerGameState extends AbstractGameState implements IPrintable {
         result = 31 * result + Arrays.hashCode(playerFold);
         result = 31 * result + Arrays.hashCode(playerActStreet);
         return result;
+    }
+
+    public int publicHash() {
+        // Everything except for the player hands and draw deck
+        // Techniallu we should use the sequence of bids...but this will do
+        int retValue = Objects.hash(communityCards, moneyPots, bet);
+        retValue = 31 * retValue + Arrays.hashCode(playerMoney);
+        retValue = 31 * 31 *  retValue + Arrays.hashCode(playerBet);
+        retValue = 31 * 31 * 31 * retValue + Arrays.hashCode(playerNeedsToCall);
+        retValue = 31 * 31 * 31 * 31 * retValue + Arrays.hashCode(playerFold);
+        retValue = 31 * 31 * 31 * 31 * 31 * retValue + Arrays.hashCode(playerActStreet);
+        return retValue;
     }
 
     @Override

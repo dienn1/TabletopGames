@@ -1,8 +1,9 @@
-package games.poker;
+package games.poker.metrics;
 
 import core.AbstractGameState;
 import core.components.FrenchCard;
 import evaluation.features.TunableStateFeatures;
+import games.poker.PokerGameState;
 
 import java.util.*;
 
@@ -70,7 +71,7 @@ public class PokerStateFeatures extends TunableStateFeatures {
         data[18] = data[16] - data[17];
         // Players folded
         for (int i = 0; i < pgs.getNPlayers(); i++) {
-            if (pgs.playerFold[i]) {
+            if (pgs.getPlayerFold()[i]) {
                 data[19]++;
             }
         }
