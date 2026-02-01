@@ -194,6 +194,9 @@ public class ExpertIteration {
                     String agentFileName = dataDir + File.separator + String.format("ActionNTBEA_%02d.json", previousIter);
                     newPlayer = PlayerFactory.createPlayer(agentFileName);
                 }
+                if (newPlayer == null) {
+                    throw new IllegalStateException("Could not load agent from previous iteration");
+                }
                 newPlayer.setName(String.format("NTBEA_%02d.json", previousIter));
                 agents.add(newPlayer);
             }
