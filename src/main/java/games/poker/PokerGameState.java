@@ -263,6 +263,7 @@ public class PokerGameState extends AbstractGameState implements IPrintable {
         }
         return next;
     }
+
     public void getPlayerMustCall(int playerId) {
         // Others can't check
         for (int i = 0; i < getNPlayers(); i++) {
@@ -374,7 +375,7 @@ public class PokerGameState extends AbstractGameState implements IPrintable {
         // Techniallu we should use the sequence of bids...but this will do
         int retValue = Objects.hash(communityCards, moneyPots, bet);
         retValue = 31 * retValue + Arrays.hashCode(playerMoney);
-        retValue = 31 * 31 *  retValue + Arrays.hashCode(playerBet);
+        retValue = 31 * 31 * retValue + Arrays.hashCode(playerBet);
         retValue = 31 * 31 * 31 * retValue + Arrays.hashCode(playerNeedsToCall);
         retValue = 31 * 31 * 31 * 31 * retValue + Arrays.hashCode(playerFold);
         retValue = 31 * 31 * 31 * 31 * 31 * retValue + Arrays.hashCode(playerActStreet);
@@ -506,29 +507,29 @@ public class PokerGameState extends AbstractGameState implements IPrintable {
                     return new Pair<>(Flush, numbers);
                 }
             }
-            if (numberSet.size() == 2) {
-                // Full house or four of a kind
-                int maxCount = maxCount(numberCount);
-                if (maxCount == 4) return new Pair<>(FourOfAKind, numbers);
-                if (maxCount == 3 && numbers.size() >= 3) {
-                    if (numbers.size() >= 5) return new Pair<>(FullHouse, numbers);
-                    return new Pair<>(ThreeOfAKind, numbers);
-                }
-                if (maxCount == 2 && numbers.size() >= 4) return new Pair<>(TwoPair, numbers);
-                return new Pair<>(OnePair, numbers);
-            } else if (numberSet.size() == 1 && numbers.size() > 1) {
-                int maxCount = numbers.size();
+            int maxCount = maxCount(numberCount);
+            if (numberSet.size() == 1) {
                 if (maxCount == 4) return new Pair<>(FourOfAKind, numbers);
                 if (maxCount == 3) return new Pair<>(ThreeOfAKind, numbers);
                 if (maxCount == 2) return new Pair<>(OnePair, numbers);
                 return new Pair<>(HighCard, numbers);
+            } else if (numberSet.size() == 2) {
+                // Full house or four of a kind
+                if (maxCount == 4) return new Pair<>(FourOfAKind, numbers);
+                if (maxCount == 3 && numbers.size() == 5) return new Pair<>(FullHouse, numbers);
+                if (maxCount == 3) return new Pair<>(ThreeOfAKind, numbers);
+                if (maxCount == 2 && numbers.size() >= 4) return new Pair<>(TwoPair, numbers);
+                if (maxCount == 2) return new Pair<>(OnePair, numbers);
+                return new Pair<>(HighCard, numbers);
             } else if (numberSet.size() == 3) {
                 // Three of a kind or two pair
-                int maxCount = maxCount(numberCount);
                 if (maxCount == 3) return new Pair<>(ThreeOfAKind, numbers);
-                else return new Pair<>(TwoPair, numbers);
+                if (maxCount == 2 && numbers.size() == 5) return new Pair<>(TwoPair, numbers);
+                if (maxCount == 2) return new Pair<>(TwoPair, numbers);
+                return new Pair<>(HighCard, numbers);
             } else if (numberSet.size() == 4) {
-                return new Pair<>(OnePair, numbers);
+                if (maxCount == 2) return new Pair<>(OnePair, numbers);
+                return new Pair<>(HighCard, numbers);
             } else {
                 if (consecutive && numbers.size() == 5) return new Pair<>(Straight, numbers);
                 else return new Pair<>(HighCard, numbers);

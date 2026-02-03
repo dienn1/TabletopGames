@@ -73,7 +73,7 @@ public class TestHandHeuristic {
         // names: RoyalFlush(0), StraightFlush(1), FourOfAKind(2), FullHouse(3), Flush(4), Straight(5), ThreeOfAKind(6), TwoPair(7), OnePair(8), HighCard(9)
         // plus other names: HighCardValue(10), TripleValue(11), HighestPairValue(12), etc. (total 18)
         
-        assertEquals(18, features.length);
+        assertEquals(21, features.length);
         assertEquals(0.0, features[6], 0.001); // ThreeOfAKind
         assertEquals(1.0, features[8], 0.001); // OnePair (one-hot)
         assertEquals(2.0, features[10], 0.001); // HighCardValue

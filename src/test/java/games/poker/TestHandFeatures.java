@@ -17,7 +17,7 @@ public class TestHandFeatures {
     public void setup() {
         params = new PokerGameParameters();
         fm = new PokerForwardModel();
-        state = new PokerGameState(params, 2);
+        state = new PokerGameState(params, 3);
         fm.setup(state);
     }
 
@@ -179,6 +179,29 @@ public class TestHandFeatures {
     }
 
     @Test
+    public void testOnePairNoCommunity() {
+        PokerHandFeatures features = new PokerHandFeatures();
+        state.getPlayerDecks().get(0).clear();
+        state.getPlayerDecks().get(2).clear();
+
+        state.getPlayerDecks().get(0).add(new FrenchCard(FrenchCard.FrenchCardType.King, FrenchCard.Suite.Hearts));
+        state.getPlayerDecks().get(0).add(new FrenchCard(FrenchCard.FrenchCardType.King, FrenchCard.Suite.Diamonds));
+
+        state.getPlayerDecks().get(2).add(new FrenchCard(FrenchCard.FrenchCardType.King, FrenchCard.Suite.Spades));
+        state.getPlayerDecks().get(2).add(new FrenchCard(FrenchCard.FrenchCardType.Number, FrenchCard.Suite.Spades, 9));
+
+        double[] vector = features.doubleVector(state, 0);
+        assertEquals(1.0, vector[8], 0.001); // OnePair
+        assertEquals(13.0, vector[10], 0.001); // HighCardValue
+        assertEquals(13.0, vector[12], 0.001); // HighestPairValue
+
+        vector = features.doubleVector(state, 2);
+        assertEquals(0.0, vector[8], 0.001); // OnePair
+        assertEquals(13.0, vector[10], 0.001); // HighCardValue
+        assertEquals(0.0, vector[12], 0.001); // HighestPairValue
+    }
+
+    @Test
     public void testHighCard() {
         PokerHandFeatures features = new PokerHandFeatures();
         state.getPlayerDecks().get(0).clear();
@@ -264,8 +287,8 @@ public class TestHandFeatures {
         double[] vector = features.doubleVector(state, 0);
         assertEquals(0.0, vector[13], 0.001); // Round
         assertEquals(0.0, vector[14], 0.001); // Turn
-        assertEquals(20.0, vector[15], 0.001); // OwnBid
-        assertEquals(30.0, vector[16], 0.001); // OpponentBid
-        assertEquals(-10.0, vector[17], 0.001); // BidDiff
+        assertEquals(20.0 / 50.0, vector[15], 0.001); // OwnBid
+        assertEquals(30.0 / 50.0, vector[16], 0.001); // OpponentBid
+        assertEquals(-10.0 /50.0, vector[17], 0.001); // BidDiff
     }
 }
