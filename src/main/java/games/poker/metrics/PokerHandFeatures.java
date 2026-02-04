@@ -19,7 +19,7 @@ public class PokerHandFeatures implements IStateFeatureVector {
 
     static String[] handNames = Arrays.stream(PokerGameState.PokerHand.values()).map(Enum::name).toArray(String[]::new);
     static String[] otherNames = new String[]{"HighCardValue", "TripleValue", "HighestPairValue",
-            "Round", "Turn", "OwnBid", "OpponentBid", "BidDiff", "OwnMoney", "MoneyDiff", "IsAllIn"};
+            "RoundF", "TurnF", "OwnBid", "OpponentBid", "BidDiff", "OwnMoney", "MoneyDiff", "IsAllIn"};
     static String[] allNames;
     static {
         allNames = new String[handNames.length + otherNames.length];
