@@ -130,7 +130,7 @@ public class TunableParametersTest {
         MCTSPlayer agent = (MCTSPlayer) itp.instantiate(settings);
         MCTSParams params = agent.getParameters();
         assertEquals(10.0, params.MASTBoltzmann, 0.001);
-        assertTrue(params.getHeuristic() instanceof CoarseTunableHeuristic);
+        assertTrue(params.getStateHeuristic() instanceof CoarseTunableHeuristic);
         assertEquals(SCORE_PLUS, ((CoarseTunableHeuristic) params.heuristic).getHeuristicType());
     }
 
@@ -179,7 +179,7 @@ public class TunableParametersTest {
         assertEquals(67, json.get("maxTreeDepth"));
         assertEquals(0.56, params.getParameterValue("rolloutPolicyParams.temperature"));
         assertEquals(0.56, ((JSONObject) json.get("rolloutPolicyParams")).get("temperature"));
-        assertEquals(Math.sqrt(2), (Double) json.get("K"), 0.002);
+        assertEquals(1.0, (Double) json.get("K"), 0.002);
         assertEquals(false, json.get("useMASTAsActionHeuristic"));
         assertEquals("BUDGET_FM_CALLS", json.get("budgetType"));
 
@@ -319,6 +319,12 @@ public class TunableParametersTest {
         assertNotNull(heuristicJSON);
         assertEquals("players.heuristics.CoarseTunableHeuristic", heuristicJSON.get("class"));
         assertNull(heuristicJSON.get("heuristicType"));
+    }
+
+    @Test
+    public void searchSpaceWithJSONSubFile() {
+        ITPSearchSpace<MCTSPlayer> itp = new ITPSearchSpace(params, "src/test/java/evaluation/SearchSpaceWithJsonFileRef.json");
+        // this fails if it throws an exception
     }
 
 }

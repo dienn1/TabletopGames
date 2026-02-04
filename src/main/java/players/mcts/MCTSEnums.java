@@ -24,6 +24,10 @@ public class MCTSEnums {
         UCB, UCB_Tuned, AlphaGo, EXP3, RegretMatching, NoAveragingRM, Uniform, Greedy
     }
 
+    public enum PerfectInformationPolicy{
+        SingleVote, AverageValue, TotalVisits
+    }
+
     public enum BackupPolicy {
         MonteCarlo, Lambda, MaxLambda, MaxMC
         // MonteCarlo is the standard backup policy
@@ -43,7 +47,7 @@ public class MCTSEnums {
     }
 
     public enum RolloutTermination {
-        DEFAULT, END_ACTION, END_TURN, START_ACTION, END_ROUND
+        EXACT, END_ACTION, END_TURN, START_ACTION, END_ROUND
         // ???_ACTION refers to the acting player (regardless of Turn or Round)
         // END_ACTION will stop a rollout when the player changes from the acting player; and START_ACTION will keep going until it is their action again
         // END_TURN|ROUND is triggered when the game round/turn changes

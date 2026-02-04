@@ -12,15 +12,15 @@ import utilities.JSONUtils;
 import java.util.Arrays;
 import java.util.Random;
 
-import static java.util.Collections.emptyList;
 import static players.mcts.MCTSEnums.Information.*;
 import static players.mcts.MCTSEnums.MASTType.*;
 import static players.mcts.MCTSEnums.OpponentTreePolicy.OneTree;
 import static players.mcts.MCTSEnums.RolloutIncrement.*;
-import static players.mcts.MCTSEnums.RolloutTermination.DEFAULT;
+import static players.mcts.MCTSEnums.RolloutTermination.EXACT;
 import static players.mcts.MCTSEnums.SelectionPolicy.SIMPLE;
 import static players.mcts.MCTSEnums.Strategies.*;
 import static players.mcts.MCTSEnums.TreePolicy.*;
+import static  players.mcts.MCTSEnums.PerfectInformationPolicy.*;
 
 public class MCTSParams extends PlayerParameters {
 
@@ -55,7 +55,7 @@ public class MCTSParams extends PlayerParameters {
     // It also means that at the end of the game (when rewards are possibly closer to each other, they are still scaled to [0, 1]
     public boolean maintainMasterState = false;
     public boolean discardStateAfterEachIteration = true;  // default will remove reference to OpenLoopState in backup(). Saves memory!
-    public MCTSEnums.RolloutTermination rolloutTermination = DEFAULT;
+    public MCTSEnums.RolloutTermination rolloutTermination = EXACT;
     public IStateHeuristic heuristic = AbstractGameState::getHeuristicScore;
     public IActionKey MASTActionKey;
     public IStateKey MCGSStateKey;
@@ -75,6 +75,8 @@ public class MCTSParams extends PlayerParameters {
     public double backupLambda = 1.0;
     public int maxBackupThreshold = 1000000;
     public Class<?> instantiationClass;
+    public int numDeterminizations = 1;
+    public MCTSEnums.PerfectInformationPolicy perfectInformationPolicy = AverageValue;
 
     public MCTSParams() {
         addTunableParameter("K", 1.0, Arrays.asList(0.03, 0.1, 0.3, 1.0, 3.0, 10.0, 30.0, 100.0));
@@ -85,11 +87,11 @@ public class MCTSParams extends PlayerParameters {
         addTunableParameter("maxTreeDepth", 1000, Arrays.asList(1, 3, 10, 30, 100, 1000));
         addTunableParameter("rolloutIncrementType", TICK, Arrays.asList(MCTSEnums.RolloutIncrement.values()));
         addTunableParameter("rolloutType", RANDOM, Arrays.asList(MCTSEnums.Strategies.values()));
-        addTunableParameter("oppModelType", RANDOM, Arrays.asList(MCTSEnums.Strategies.values()));
+        addTunableParameter("oppModelType", DEFAULT, Arrays.asList(MCTSEnums.Strategies.values()));
         addTunableParameter("rolloutClass", "");
         addTunableParameter("oppModelClass", "");
         addTunableParameter("rolloutPolicyParams", ITunableParameters.class);
-        addTunableParameter("rolloutTermination", DEFAULT, Arrays.asList(MCTSEnums.RolloutTermination.values()));
+        addTunableParameter("rolloutTermination", EXACT, Arrays.asList(MCTSEnums.RolloutTermination.values()));
         addTunableParameter("opponentModelParams", ITunableParameters.class);
         addTunableParameter("opponentModel", new RandomPlayer());
         addTunableParameter("information", Information_Set, Arrays.asList(MCTSEnums.Information.values()));
@@ -124,6 +126,8 @@ public class MCTSParams extends PlayerParameters {
         addTunableParameter("backupLambda", 1.0);
         addTunableParameter("maxBackupThreshold", 1000000);
         addTunableParameter("instantiationClass", "players.mcts.MCTSPlayer");
+        addTunableParameter("perfectInformationPolicy", AverageValue, Arrays.asList(MCTSEnums.PerfectInformationPolicy.values()));
+        addTunableParameter("numDeterminizations", 1, Arrays.asList(1, 10, 30, 100, 300, 1000));
     }
 
     @Override
@@ -141,6 +145,11 @@ public class MCTSParams extends PlayerParameters {
         treePolicy = (MCTSEnums.TreePolicy) getParameterValue("treePolicy");
         selectionPolicy = (MCTSEnums.SelectionPolicy) getParameterValue("selectionPolicy");
         opponentTreePolicy = (MCTSEnums.OpponentTreePolicy) getParameterValue("opponentTreePolicy");
+        if(opponentTreePolicy == MCTSEnums.OpponentTreePolicy.MultiTree && numDeterminizations > 1)
+        {
+            System.out.println("Setting Opponent Tree Policy to OneTree as Perfect Information does not currently support MultiTree");
+            opponentTreePolicy = MCTSEnums.OpponentTreePolicy.OneTree;
+        }
         exploreEpsilon = (double) getParameterValue("exploreEpsilon");
         MASTBoltzmann = (double) getParameterValue("MASTBoltzmann");
         MAST = (MCTSEnums.MASTType) getParameterValue("MAST");
@@ -195,6 +204,11 @@ public class MCTSParams extends PlayerParameters {
             System.out.println("Setting MAST to Both instead of None given use of MAST in rollout or action heuristic");
             useMAST = true;
             MAST = Both;
+            }
+        numDeterminizations = (int) getParameterValue("numDeterminizations");
+        perfectInformationPolicy = (MCTSEnums.PerfectInformationPolicy) getParameterValue("perfectInformationPolicy");
+        if (numDeterminizations > 1) {
+            budget = budget / numDeterminizations;
         }
     }
 
@@ -221,10 +235,14 @@ public class MCTSParams extends PlayerParameters {
 
     public AbstractPlayer getRolloutStrategy() {
         if (rolloutPolicy == null) {
-            if (rolloutType == PARAMS)
+            if (rolloutType == PARAMS) {
+                if (rolloutPolicyParams == null) {
+                    throw new AssertionError("Rollout policy parameters have not been set");
+                }
                 rolloutPolicy = (AbstractPlayer) rolloutPolicyParams.instantiate();
-            else
+            } else {
                 rolloutPolicy = constructStrategy(rolloutType, rolloutClass);
+            }
             rolloutPolicy.getParameters().actionSpace = actionSpace;  // TODO makes sense?
         }
         return rolloutPolicy;
@@ -235,14 +253,15 @@ public class MCTSParams extends PlayerParameters {
             case RANDOM -> new RandomPlayer(new Random(getRandomSeed()));
             case MAST -> new MASTPlayer(MASTActionKey, MASTBoltzmann, 0.0, getRandomSeed(), MASTDefaultValue);
             case CLASS ->
-                // we have a bespoke Class to instantiate
-                    JSONUtils.loadClassFromString(details);
+                // we have a bespoke Class to instantiate (for anything other than an AbstractPlayer we could just rely on the core JSON loading)
+                    JSONUtils.loadClass(details);
             case PARAMS -> throw new AssertionError("PolicyParameters have not been set");
             default -> throw new AssertionError("Unknown strategy type : " + type);
         };
     }
 
-    public IStateHeuristic getHeuristic() {
+    @Override
+    public IStateHeuristic getStateHeuristic() {
         return heuristic;
     }
 

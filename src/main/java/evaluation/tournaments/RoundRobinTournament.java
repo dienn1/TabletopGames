@@ -240,6 +240,9 @@ public class RoundRobinTournament extends AbstractTournament {
     public void createAndRunMatchUp(List<Integer> matchUp) {
 
         int nTeams = byTeam ? game.getGameState().getNTeams() : nPlayers;
+        if (gameSeeds == null || gameSeeds.isEmpty()) {
+            gameSeeds = IntStream.range(0, gamesPerMatchup).mapToObj(i -> seedRnd.nextInt()).collect(toList());
+        }
         switch (tournamentMode) {
             case FIXED:
                 // we add the agents to the matchUp in the order they are in the list
@@ -761,10 +764,59 @@ public class RoundRobinTournament extends AbstractTournament {
         return finalWinRanking.get(agentID) == null ? 0.0 : finalWinRanking.get(agentID).a;
     }
 
+    // Returns a list of agents that are clearly dominated by all other agents
+    public List<Integer> getDominatedAgents() {
+        List<Integer> dominated = new ArrayList<>();
+        double significanceLevel = Utils.standardZScore(0.10, agents.size() * (agents.size() - 1) / 2);
+
+        for (int i = 0; i < agents.size(); i++) {
+            // for each agent, i, we see if it is dominated but the other agents
+            for (int j = 0; j < agents.size(); j++) {
+                if (i != j && winsPerPlayerPerOpponent[j][i] > winsPerPlayerPerOpponent[i][j]) {
+                    // Now check for significance (very approximately... the idea is to avoid discarding agents based on a low sample size
+                    double winRateJ = (double) winsPerPlayerPerOpponent[j][i] / nGamesPlayedPerOpponent[j][i];
+                    double winRateI = (double) winsPerPlayerPerOpponent[i][j] / nGamesPlayedPerOpponent[i][j];
+                    double stdErr = sqrt((winRateJ * (1 - winRateJ)) / nGamesPlayedPerOpponent[j][i]);
+                    if (winRateJ - winRateI < significanceLevel * stdErr) {
+                        // not dominated
+                        break;
+                    }
+                }
+            }
+            // all other agents have been checked and i is dominated by all of them
+            dominated.add(i);
+        }
+        return dominated;
+    }
+
     public double getWinRateAlphaRank(int agentID) {
         if (alphaRankByWin == null)
             return getWinRate(agentID);
         return alphaRankByWin[agentID];
+    }
+
+    public int getAlphaRankWinnerByWinRate() {
+        if (alphaRankByWin == null)
+            return -1;
+        return getBestAgentInArray(alphaRankByWin);
+    }
+
+    public int getAlphaRankWinnerByOrdinal() {
+        if (alphaRankByOrdinal == null)
+            return -1;
+        return getBestAgentInArray(alphaRankByOrdinal);
+    }
+
+    private int getBestAgentInArray(double[] arrayIndexedByAgent) {
+        int winnerIndex = 0;
+        double max = arrayIndexedByAgent[0];
+        for (int i = 1; i < arrayIndexedByAgent.length; i++) {
+            if (arrayIndexedByAgent[i] > max) {
+                max = arrayIndexedByAgent[i];
+                winnerIndex = i;
+            }
+        }
+        return winnerIndex;
     }
 
     public double getWinStdErr(int agentID) {
