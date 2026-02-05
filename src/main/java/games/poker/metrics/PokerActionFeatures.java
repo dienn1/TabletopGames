@@ -4,6 +4,7 @@ import core.AbstractGameState;
 import core.actions.AbstractAction;
 import core.interfaces.IActionFeatureVector;
 import games.poker.actions.*;
+import org.checkerframework.checker.units.qual.A;
 
 public class PokerActionFeatures implements IActionFeatureVector {
 
@@ -26,6 +27,9 @@ public class PokerActionFeatures implements IActionFeatureVector {
                 break;
             case Call ignored:
                 retValue[2] = 1;
+                break;
+            case AllIn ignored:
+                retValue[3] = 1;
                 break;
             case Check ignored:
                 retValue[4] = 1;

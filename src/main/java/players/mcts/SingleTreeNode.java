@@ -215,9 +215,6 @@ public class SingleTreeNode {
                 if (params.actionHeuristic != IActionHeuristic.nullReturn) {
                     if (actionValueEstimates.isEmpty() || nVisits % params.actionHeuristicRecalculationThreshold == 0) {
                         // in this case we initialise all action values
-                        if (params.actionHeuristic == null) {
-                            throw new AssertionError("actionHeuristic is null");
-                        }
                         double[] actionValues = params.actionHeuristic.evaluateAllActions(actionsFromOpenLoopState, actionState);
                         for (int i = 0; i < actionsFromOpenLoopState.size(); i++) {
                             actionValueEstimates.put(actionsFromOpenLoopState.get(i), actionValues[i]);
@@ -231,7 +228,11 @@ public class SingleTreeNode {
                         }
                     }
                 } else {
-                    throw new AssertionError("We have no heuristic to evaluate actions, and have pUCT/PB/PW or visitInitialisation set");
+                    params.setParameterValue("pUCT", false);
+                    params.setParameterValue("progressiveBias", 0.0);
+                    params.setParameterValue("initialiseVisits", 0);
+                    params.setParameterValue("progressiveWideningConstant", 0.0);
+                    System.out.println("Warning: actionHeuristic is nullReturn, so pUCT, intialiseVisits, progressive bias and pruning are disabled");
                 }
             }
             if (params.pUCT) {
