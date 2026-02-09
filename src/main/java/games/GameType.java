@@ -5,6 +5,8 @@ import core.AbstractGameState;
 import core.AbstractParameters;
 import core.Game;
 import core.rules.AbstractRuleBasedForwardModel;
+import games.XIIScripta.XIIGUIManager;
+import games.XIIScripta.XIIParameters;
 import games.backgammon.*;
 import games.battlelore.BattleloreForwardModel;
 import games.battlelore.BattleloreGameParameters;
@@ -64,7 +66,9 @@ import games.hanabi.HanabiForwardModel;
 import games.hanabi.HanabiGameState;
 import games.hanabi.HanabiParameters;
 import games.hanabi.gui.HanabiGUIManager;
-import games.hearts.*;
+import games.hearts.HeartsForwardModel;
+import games.hearts.HeartsGameState;
+import games.hearts.HeartsParameters;
 import games.hearts.gui.HeartsGUIManager;
 import games.loveletter.LoveLetterForwardModel;
 import games.loveletter.LoveLetterGameState;
@@ -79,6 +83,10 @@ import games.pandemic.PandemicForwardModel;
 import games.pandemic.PandemicGameState;
 import games.pandemic.PandemicParameters;
 import games.pandemic.gui.PandemicGUIManager;
+import games.pentegrammai.PenteForwardModel;
+import games.pentegrammai.PenteGUIManager;
+import games.pentegrammai.PenteGameState;
+import games.pentegrammai.PenteParameters;
 import games.poker.PokerForwardModel;
 import games.poker.PokerGameParameters;
 import games.poker.PokerGameState;
@@ -87,6 +95,10 @@ import games.puertorico.PuertoRicoForwardModel;
 import games.puertorico.PuertoRicoGameState;
 import games.puertorico.PuertoRicoParameters;
 import games.puertorico.gui.PuertoRicoGUI;
+import games.powergrid.PowerGridForwardModel;
+import games.powergrid.PowerGridGameState;
+import games.powergrid.PowerGridParameters;
+import games.powergrid.gui.PowerGridGUI;
 import games.resistance.ResForwardModel;
 import games.resistance.ResGameState;
 import games.resistance.ResParameters;
@@ -134,6 +146,10 @@ import gametemplate.GTForwardModel;
 import gametemplate.GTGUIManager;
 import gametemplate.GTGameState;
 import gametemplate.GTParameters;
+import games.pickomino.PickominoForwardModel;
+import games.pickomino.PickominoGUIManager;
+import games.pickomino.PickominoGameState;
+import games.pickomino.PickominoParameters;
 import gui.AbstractGUIManager;
 import gui.GamePanel;
 import llm.DocumentSummariser;
@@ -281,6 +297,10 @@ public enum GameType {
             Arrays.asList(Strategy, Economic, Manufacturing, TerritoryBuilding),
             Arrays.asList(EndGameBonus, TilePlacement, RoleSelection, EngineBuilding, TableauBuilding),
             PuertoRicoGameState.class, PuertoRicoForwardModel.class, PuertoRicoParameters.class, PuertoRicoGUI.class),
+    PowerGrid(3, 6,
+    		Arrays.asList(Strategy, Economic, Manufacturing, TerritoryBuilding),
+            Arrays.asList(EndGameBonus, TilePlacement, EngineBuilding),
+            PowerGridGameState.class, PowerGridForwardModel.class, PowerGridParameters.class, PowerGridGUI.class),
     Wonders7(3, 7,
             Arrays.asList(Strategy, Civilization, Ancient, Cards, CityBuilding, Economic),
             Arrays.asList(ClosedDrafting, HandManagement, NeighbourScope, SetCollection, SimultaneousActionSelection, VariablePlayerPowers),
@@ -300,7 +320,15 @@ public enum GameType {
             Arrays.asList(Strategy, Abstract),
             Arrays.asList(GridMovement, DiceRolling),
             BGGameState.class, BGForwardModel.class, BGParameters.class, BGGUIManager.class),
-    Mastermind(1, 1,
+    XIIScripta(2, 2,
+            Arrays.asList(Strategy, Abstract),
+            Arrays.asList(GridMovement, DiceRolling),
+            BGGameState.class, BGForwardModel.class, XIIParameters.class, XIIGUIManager.class),
+    PenteGrammai(2, 2,
+            Arrays.asList(Strategy, Abstract),
+            Arrays.asList(GridMovement, DiceRolling),
+            PenteGameState .class, PenteForwardModel.class, PenteParameters.class, PenteGUIManager.class),
+    Mastermind(1,1,
             Arrays.asList(Simple, Abstract, CodeBreaking, Deduction),
             List.of(PatternBuilding),
             MMGameState.class, MMForwardModel.class, MMParameters.class, MMGUIManager.class),
@@ -319,7 +347,7 @@ public enum GameType {
             Arrays.asList(Strategy, Abstract),
             Arrays.asList(GridMovement),
             ChessGameState.class, ChessForwardModel.class, ChessParameters.class, ChessGUIManager.class),
-    ;
+    Pickomino(2, 7, Collections.singletonList(Dice), Collections.singletonList(DiceRolling), PickominoGameState.class, PickominoForwardModel.class, PickominoParameters.class, PickominoGUIManager.class);
 
 
     // Core classes where the game is defined

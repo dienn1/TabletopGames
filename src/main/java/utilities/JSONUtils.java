@@ -175,6 +175,9 @@ public class JSONUtils {
                 throw new AssertionError("Error constructing " + outputClass.getName() + " using JSON constructor.\n" +
                         "JSON: " + JSONUtils.prettyPrint(json, 1) + " \n: " + e.getTargetException().getMessage());
             } catch (Exception e) {
+                if (e instanceof InvocationTargetException ite) {
+                    System.out.println(ite.getTargetException().getMessage());
+                }
                 throw new AssertionError(e.getClass().getSimpleName() + " Error constructing " + outputClass.getName() + " using JSON constructor.\n" +
                         "JSON: " + JSONUtils.prettyPrint(json, 1) + " \n: " + e.getMessage());
             }
@@ -220,7 +223,6 @@ public class JSONUtils {
         return loadClassFromJSON(first).getClass();
     }
 
-    @SuppressWarnings("unchecked")
     public static void writeJSON(JSONObject json, String fileName) {
         try (FileWriter writer = new FileWriter(fileName)) {
             writer.write(JSONUtils.prettyPrint(json, 1));
