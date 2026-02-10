@@ -189,4 +189,9 @@ public class ForwardModelTestsWithMCTS {
         new ForwardModelTester("game=PowerGrid", "nGames=1", "nPlayers=4", "agent=json\\players\\mcts.json");
     }
 
+    @Test
+    public void testGoFish() {
+        new ForwardModelTester("game=GoFish", "nGames=10", "nPlayers=4", "agent=json\\players\\mcts.json");
+    }
+
 }
