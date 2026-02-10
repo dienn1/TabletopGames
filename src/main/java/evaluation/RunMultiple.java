@@ -13,32 +13,35 @@ public class RunMultiple {
             for (String agent : agentTypes) {
                 add(dir + "/agents/" + gameName.toLowerCase() + "Run" + agent + ".json");
             }
-            for (int i = 1; i <= paramCount; i++) {
-                add(dir + "/gameParams/" + gameName.toLowerCase() + "Run" + "Param" + i + ".json");
-            }
-            if (!gameName.equals("DotsAndBoxes") && !gameName.equals("Connect4")) {
-                for (int i = 1; i <= seedCount; i++) {
-                    add(dir + "/seeds/" + gameName.toLowerCase() + "Run" + "Seed" + i + ".json");
-                }
-            }
+//            for (int i = 1; i <= paramCount; i++) {
+//                add(dir + "/gameParams/" + gameName.toLowerCase() + "Run" + "Param" + i + ".json");
+//            }
+//            if (!gameName.equals("DotsAndBoxes") && !gameName.equals("Connect4")) {
+//                for (int i = 1; i <= seedCount; i++) {
+//                    add(dir + "/seeds/" + gameName.toLowerCase() + "Run" + "Seed" + i + ".json");
+//                }
+//            }
         }};
     }
 
     public static void main(String[] args) {
         List<String> gameNames = new ArrayList<>(){{
-            add("Wonders7");
+//            add("Wonders7");
 //            add("Dominion");
 //            add("SeaSaltPaper");
 //            add("CantStop");
 //            add("Connect4");
 //            add("DotsAndBoxes");
+//            add("Catan");
+            add("Uno");
         }};
         String[] agentTypes = new String[] {
-                "MCTS1",
-                "MCTS1Tuned",
-                "MCTS2Tuned",
+//                "MCTS1",
+//                "MCTS1Tuned",
+//                "MCTS2Tuned",
                 "OSLA",
-                "Random"
+                "Random",
+                "MCTS"
         };
         int paramCount = 4;
         int seedCount = 4;
