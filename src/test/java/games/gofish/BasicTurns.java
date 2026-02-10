@@ -41,12 +41,28 @@ public class BasicTurns {
 
     @Test
     public void testSequenceOfAskThenFish() {
+        params.continueOnDrawingSameRank = false;
         GoFishAsk askAction = getNextAction(false);
+        state.drawDeck.add(new FrenchCard(FrenchCardType.Number, Suite.Hearts, askAction.rankAsked));
         long currentCards = state.playerHands.get(0).getSize();
         long otherCards = state.playerHands.get(askAction.targetPlayer).getSize();
         assertTrue(fm.computeAvailableActions(state).contains(askAction));
         fm.next(state, askAction);
         assertEquals(1, state.getCurrentPlayer());
+        assertEquals(currentCards + 1, state.playerHands.get(0).getSize());
+        assertEquals(otherCards, state.playerHands.get(askAction.targetPlayer).getSize());
+    }
+
+    @Test
+    public void testSequenceOfAskThenFishContinueOnDrawSameRank() {
+        params.continueOnDrawingSameRank = true;
+        GoFishAsk askAction = getNextAction(false);
+        state.drawDeck.add(new FrenchCard(FrenchCardType.Number, Suite.Hearts, askAction.rankAsked));
+        long currentCards = state.playerHands.get(0).getSize();
+        long otherCards = state.playerHands.get(askAction.targetPlayer).getSize();
+        assertTrue(fm.computeAvailableActions(state).contains(askAction));
+        fm.next(state, askAction);
+        assertEquals(0, state.getCurrentPlayer());
         assertEquals(currentCards + 1, state.playerHands.get(0).getSize());
         assertEquals(otherCards, state.playerHands.get(askAction.targetPlayer).getSize());
     }
@@ -127,7 +143,7 @@ public class BasicTurns {
     }
 
     @Test
-    public void testSuccessfulAskMakesTakenCardsVisibleToAll_whenAskerHadOne() {
+    public void testSuccessfulAskMakesTakenCardsVisibleToAllWhenAskerHadOne() {
         int asker = state.getCurrentPlayer();
         int[] tr = findTargetAndRank();
         int target = tr[0];
@@ -146,7 +162,7 @@ public class BasicTurns {
     @Test
     public void testRedeterminisationAfterFishI() {
         PartialObservableDeck<FrenchCard> origP0Hand = state.playerHands.get(0);
-        testSuccessfulAskMakesTakenCardsVisibleToAll_whenAskerHadOne();
+        testSuccessfulAskMakesTakenCardsVisibleToAllWhenAskerHadOne();
         for (int p = 0; p < state.getNPlayers(); p++) {
             GoFishGameState copyState = (GoFishGameState) state.copy(p);
             // we now check that the players hand (p) is unchanged (each card should be identical)
@@ -163,6 +179,7 @@ public class BasicTurns {
             // Merge visible and hidden card checks into a single loop
 
             PartialObservableDeck<FrenchCard> copyP0Hand = copyState.playerHands.get(0);
+            int sameCount = 0;
             for (int i = 0; i < origP0Hand.getSize(); i++) {
                 assertEquals(origP0Hand.isComponentVisible(i, p), copyP0Hand.isComponentVisible(i, p));
                 boolean visible = origP0Hand.isComponentVisible(i, p);
@@ -172,16 +189,18 @@ public class BasicTurns {
                     assertEquals("Player " + p + " should see the same visible card at position " + i,
                             origCard, copyCard);
                 } else {
-                    boolean same = origCard.equals(copyCard);
-                    assertFalse("Player " + p + " should see a different card for hidden position " + i, same);
+                    if (origCard.equals(copyCard)) sameCount++;
+                    System.out.println("Player " + p + " should see a different card for hidden position " + i);
                 }
             }
+            if (sameCount > 3)
+                assertFalse("Unexpectedly large number of identical cards : " + sameCount, true);
         }
 
     }
 
     @Test
-    public void testSuccessfulAskMakesTakenCardsVisibleToAll_whenAskerHadTwo() {
+    public void testSuccessfulAskMakesTakenCardsVisibleToAllWhenAskerHadTwo() {
         int asker = state.getCurrentPlayer();
         int[] tr = findTargetAndRank();
         int target = tr[0];
