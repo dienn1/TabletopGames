@@ -133,4 +133,12 @@ public class ForwardModelTestsWithRandom {
         new ForwardModelTester("game=PowerGrid","nGames=1", "nPlayers=4");
         new ForwardModelTester("game=PowerGrid","nGames=1", "nPlayers=5");
     }
+
+    @Test
+    public void testGoFish() {
+        ForwardModelTester fmt = new ForwardModelTester("game=GoFish", "nGames=1", "nPlayers=2");
+        fmt = new ForwardModelTester("game=GoFish", "nGames=1", "nPlayers=3");
+        fmt = new ForwardModelTester("game=GoFish", "nGames=1", "nPlayers=4");
+        fmt = new ForwardModelTester("game=GoFish", "nGames=1", "nPlayers=5");
+    }
 }
