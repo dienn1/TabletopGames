@@ -11,7 +11,7 @@ import games.virus.components.VirusBody;
 import java.util.Objects;
 
 public class PlayOrganThief extends PlayVirusCard implements IPrintable {
-    private int                 otherPlayerId;
+    public final int                 otherPlayerId;
     private int                 otherBodyId;
     private VirusCard.OrganType organ;
 

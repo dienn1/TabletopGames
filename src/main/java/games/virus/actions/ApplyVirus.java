@@ -11,8 +11,8 @@ import games.virus.cards.VirusCard;
 import java.util.Objects;
 
 public class ApplyVirus extends PlayVirusCard implements IPrintable {
-    private VirusCard.OrganType organ;
-    private int otherPlayerId;
+    public final VirusCard.OrganType organ;
+    public final int otherPlayerId;
 
     public ApplyVirus(int deckFrom, int deckTo, int fromIndex, int bodyId, VirusCard.OrganType organ, int otherPlayerId) {
         super(deckFrom, deckTo, fromIndex, bodyId);
