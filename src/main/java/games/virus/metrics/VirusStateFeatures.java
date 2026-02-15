@@ -19,8 +19,8 @@ public class VirusStateFeatures implements IStateFeatureVector {
     static {
         allNames = new String[cardNames.length + treatmentNames.length + otherNames.length];
         System.arraycopy(cardNames, 0, allNames, 0, cardNames.length);
-        System.arraycopy(treatmentNames, 0, allNames, 0, treatmentNames.length);
-        System.arraycopy(otherNames, 0, allNames, allNames.length, otherNames.length);
+        System.arraycopy(treatmentNames, 0, allNames, cardNames.length, treatmentNames.length);
+        System.arraycopy(otherNames, 0, allNames, cardNames.length + treatmentNames.length, otherNames.length);
     }
 
     @Override

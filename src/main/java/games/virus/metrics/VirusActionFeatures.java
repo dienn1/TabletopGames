@@ -10,7 +10,7 @@ public class VirusActionFeatures implements IActionFeatureVector {
     static String[] allNames = new String[]{"AddOrgan", "ApplyMedicine", "ApplyVirus", "DrawNewPlayerHand",
             "PlayLatexGlove", "PlayMedicalError", "PlayOrganThief", "PlaySpreading", "PlayTransplant",
             "ReplaceAllCards", "ReplaceCard", "ReplaceOneCard",
-            "OpponentScore",};
+            "TargetScore",};
 
     @Override
     public String[] names() {
