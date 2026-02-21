@@ -232,7 +232,7 @@ public class SingleTreeNode {
                     params.setParameterValue("progressiveBias", 0.0);
                     params.setParameterValue("initialiseVisits", 0);
                     params.setParameterValue("progressiveWideningConstant", 0.0);
-                    System.out.println("Warning: actionHeuristic is nullReturn, so pUCT, intialiseVisits, progressive bias and pruning are disabled");
+                    //System.out.println("Warning: actionHeuristic is nullReturn, so pUCT, initialiseVisits, progressive bias and pruning are disabled");
                 }
             }
             if (params.pUCT) {

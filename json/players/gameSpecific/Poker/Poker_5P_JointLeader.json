@@ -1,0 +1,114 @@
+{
+  "budgetType" : "BUDGET_TIME",
+  "rolloutLengthPerPlayer" : true,
+  "rolloutTermination" : "END_TURN",
+  "pUCT" : true,
+  "rolloutLength" : 0,
+  "actionHeuristic" : {
+    "coefficients" : {
+      "OwnMoney:IsCheck" : 0.116,
+      "HighCard:OwnMoney:IsFold" : 0.0730,
+      "RoundF:TurnF:IsFold" : -0.0883,
+      "BIAS" : -1.60,
+      "RoundF:TurnF:IsCall" : 0.151,
+      "BidDiff:RoundF:TurnF:IsCall" : 0.462,
+      "BidDiff" : 0.173,
+      "IsFold" : 0.0210,
+      "HighCard" : -0.345,
+      "BidDiff:OwnMoney:IsFold" : -0.877,
+      "IsCall" : -0.143,
+      "OwnMoney" : -0.0690,
+      "IsAllIn" : 0.786,
+      "IsRaise" : -0.879,
+      "RoundF" : 0.0246,
+      "IsCheck" : 0.187,
+      "TurnF" : 0.195
+    },
+    "actionFeatures" : {
+      "features" : [
+      ],
+      "defaultBuckets" : 1,
+      "underlyingState" : {
+        "class" : "games.poker.metrics.PokerHandFeatures"
+      },
+      "class" : "evaluation.features.AutomatedFeatures",
+      "underlyingAction" : {
+        "class" : "games.poker.metrics.PokerActionFeatures"
+      }
+    },
+    "class" : "players.heuristics.LogisticActionHeuristic"
+  },
+  "MASTGamma" : 0.200,
+  "heuristic" : {
+    "features" : {
+      "features" : [
+        {
+          "name" : "OpponentBid_B0",
+          "range" : "[-Infinity, 0.2]",
+          "index" : 16,
+          "type" : "RANGE"
+        },
+        {
+          "name" : "OpponentBid_B1",
+          "range" : "[0.2, 0.3]",
+          "index" : 16,
+          "type" : "RANGE"
+        },
+        {
+          "name" : "OpponentBid_B2",
+          "range" : "[0.3, Infinity]",
+          "index" : 16,
+          "type" : "RANGE"
+        },
+        {
+          "name" : "MoneyDiff_B0",
+          "range" : "[-Infinity, -0.3]",
+          "index" : 19,
+          "type" : "RANGE"
+        },
+        {
+          "name" : "MoneyDiff_B2",
+          "range" : "[0.0, Infinity]",
+          "index" : 19,
+          "type" : "RANGE"
+        }                       ],
+      "defaultBuckets" : 1,
+      "underlyingState" : {
+        "class" : "games.poker.metrics.PokerHandFeatures"
+      },
+      "class" : "evaluation.features.AutomatedFeatures"
+    },
+    "coefficients" : {
+      "AllIn" : -11.9,
+      "RoundF:TurnF" : 0.136,
+      "OwnBid:RoundF:TurnF" : -0.115,
+      "BIAS" : -21.7,
+      "TurnF:MoneyDiff" : 0.654,
+      "MoneyDiff" : 29.6,
+      "OpponentBid:MoneyDiff_B0" : -4.62,
+      "OpponentBid_B1" : -0.708,
+      "OpponentBid_B2" : -1.49,
+      "OpponentBid" : 4.00,
+      "OwnMoney" : 0.179,
+      "OpponentBid_B0" : 3.49,
+      "RoundF" : 0.672,
+      "OwnBid" : 20.6,
+      "MoneyDiff_B2" : -3.26,
+      "RoundF:MoneyDiff" : 1.05,
+      "MoneyDiff_B0" : 1.77,
+      "TurnF" : -0.906
+    },
+    "class" : "players.heuristics.LinearStateHeuristic",
+    "defaultHeuristic" : {
+      "class" : "players.heuristics.LeaderHeuristic"
+    }
+  },
+  "FPU" : 100,
+  "maxTreeDepth" : 3,
+  "treePolicy" : "AlphaGo",
+  "pUCTTemperature" : 1.00,
+  "MAST" : "Both",
+  "rolloutType" : "MAST",
+  "class" : "players.mcts.MCTSParams",
+  "budget" : -999
+}

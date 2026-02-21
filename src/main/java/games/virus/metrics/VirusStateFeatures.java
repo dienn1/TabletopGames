@@ -13,8 +13,9 @@ import static games.virus.components.VirusOrgan.VirusOrganState.*;
 public class VirusStateFeatures implements IStateFeatureVector {
 
     static String[] cardNames = Utils.enumNames(VirusCard.VirusCardType.class).toArray(new String[0]);
-    static String[] treatmentNames = Utils.enumNames(VirusTreatmentCard.VirusCardType.class).toArray(new String[0]);
-    static String[] otherNames = new String[]{"HealthyOrgans", "DiseasedOrgans", "VaccinatedOrgans", "CardsInHand", "RequiredOrgansInHand", "LeaderMargin"};
+    static String[] treatmentNames = Utils.enumNames(VirusTreatmentCard.TreatmentType.class).toArray(new String[0]);
+    static String[] otherNames = new String[]{"HealthyOrgans", "DiseasedOrgans", "VaccinatedOrgans", "CardsInHand",
+            "RequiredOrgansInHand", "LeaderMargin"};
     static String[] allNames;
     static {
         allNames = new String[cardNames.length + treatmentNames.length + otherNames.length];

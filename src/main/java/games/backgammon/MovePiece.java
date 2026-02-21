@@ -101,6 +101,9 @@ public class MovePiece extends AbstractAction {
         int player = bgp.getCurrentPlayer();
         int pieces = bgp.getPiecesOnPoint(player, from);
         sb.append("Move Piece from ").append(from).append(" to ").append(to).append(" (1 of ").append(pieces).append(" pieces)");
+        if (to > -1 && bgp.getPiecesOnPoint(1 - player, to) == 1) {
+            sb.append(" [BLOT]");
+        }
         return sb.toString();
     }
 }

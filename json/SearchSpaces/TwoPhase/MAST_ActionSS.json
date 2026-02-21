@@ -5,7 +5,8 @@
         "rolloutPolicyParams" : {
                 "class" : "players.simple.BoltzmannActionParams",
                 "temperature" : [0.1, 1.0, 10.0],
-                "epsilon" : [0.0, 0.3, 1.0]
+                "epsilon" : [0.0, 0.3, 1.0],
+                "beta" : [0.0, 0.5, 1.0]
         },
         "oppModelType" : ["DEFAULT", "RANDOM"],
         "MAST" : "Both",
@@ -14,7 +15,7 @@
         "FPU" : [0.5, 1.0, 100.0, 1000000.0],
         "backupPolicy" : "MaxMC",
         "pUCT" : true,
-        "pUCTTemperature" : [0.0, 0.01, 0.1, 1.0, 10.0, 1000.0],
+        "pUCTTemperature" : [0.01, 0.1, 1.0, 10.0, 1000.0],
         "budget" : -999,
         "epsilon" : 1e-6,
         "breakMS" : 0
