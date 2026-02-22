@@ -6,7 +6,7 @@
                 "class" : "players.simple.BoltzmannActionParams",
                 "temperature" : [0.1, 1.0, 10.0],
                 "epsilon" : [0.0, 0.3, 1.0],
-                "beta" : [0.0, 0.5, 1.0]
+                "MASTBeta" : [0.0, 0.5, 1.0]
         },
         "oppModelType" : ["DEFAULT", "RANDOM"],
         "MAST" : "Both",
