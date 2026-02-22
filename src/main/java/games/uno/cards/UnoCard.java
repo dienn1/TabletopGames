@@ -11,7 +11,7 @@ public class UnoCard extends Card {
         Skip,
         Reverse,
         Draw,
-        Wild,
+        Wild
 //        SwapHands
     }
 
@@ -59,29 +59,26 @@ public class UnoCard extends Card {
 
     @Override
     public Card copy() {
-        return new UnoCard(type, color, number, drawN, componentID);
+        return this; // immutable
     }
 
     public boolean isPlayable(UnoGameState gameState) {
-        switch (type) {
-            case Number:
-                return this.number == gameState.getCurrentCard().number || this.color.equals(gameState.getCurrentColor());
-            case Skip:
-            case Reverse:
-            case Draw:
-                return this.color.equals(gameState.getCurrentColor());
-            case Wild:
+        return switch (type) {
+            case Number ->
+                    this.number == gameState.getCurrentCard().number || this.color.equals(gameState.getCurrentColor());
+            case Skip, Reverse, Draw -> this.color.equals(gameState.getCurrentColor());
+            case Wild -> {
                 if (this.drawN >= 1) {
                     int playerID = gameState.getCurrentPlayer();
                     Deck<UnoCard> playerHand = gameState.getPlayerDecks().get(playerID);
                     for (UnoCard card : playerHand.getComponents()) {
                         if (card.color.equals(gameState.getCurrentColor()))
-                            return false;
+                            yield false;
                     }
                 }
-                return true;
-        }
-        return false;
+                yield true;
+            }
+        };
     }
 
     @Override
@@ -98,7 +95,7 @@ public class UnoCard extends Card {
                 if (drawN < 1) {
                     return type.toString();
                 } else {
-                    return type.toString() + "{draw " + drawN + "}";
+                    return type + "{draw " + drawN + "}";
                 }
         }
         return null;
