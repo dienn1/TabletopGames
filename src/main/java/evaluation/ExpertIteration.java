@@ -422,7 +422,7 @@ public class ExpertIteration {
                 if (actionSearchSpace != null) {   // on first iteration we have results of action search
                     // we can use the action search settings to initialise the value search settings
                     fixSSDimensions(ntbea, valueSearchSpace, actionSearchSettings, actionSearchSpace,
-                            Set.of("heuristic", "actionHeuristic", "rolloutPolicy.actionHeuristic"));
+                            Set.of("heuristic", "actionHeuristic", "rolloutPolicyParams", "rolloutPolicyParams.actionHeuristic"));
                 }
                 // as well as the old action-tuned settings, we also use the old action heuristic for which they were tuned
                 if (oldActionHeuristic != null) {
@@ -452,7 +452,7 @@ public class ExpertIteration {
             if (valueSearchSettings != null && valueSearchSpace != null) {
                 // we can use the value search settings to initialise the action search settings
                 fixSSDimensions(ntbea, actionSearchSpace, valueSearchSettings, valueSearchSpace,
-                        Set.of("heuristic", "actionHeuristic", "rolloutPolicy.actionHeuristic"));
+                        Set.of("heuristic", "actionHeuristic", "rolloutPolicyParams", "rolloutPolicyParams.actionHeuristic"));
                 // and also make sure we include the state heuristic in the action search
                 ntbea.fixTunableParameter("heuristic", stateHeuristic);
             }
