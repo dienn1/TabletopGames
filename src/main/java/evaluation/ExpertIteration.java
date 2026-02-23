@@ -115,43 +115,6 @@ public class ExpertIteration {
         pl.run();
     }
 
-    /**
-     * Returns a pair of numbers.
-     * The first is the number of completed iterations (through to generation of tuned agents)
-     * The second is the number of partially completed iterations that generated full data, but not tuned agents
-     * The second number will be one higher than the first if the previous iteration failed in the tuning phase.
-     */
-    private Pair<Integer, Integer> checkCompletedIterations() {
-        // Automatically determine restart iteration by checking for existing ValueNTBEA and ActionNTBEA json files
-        int completedIterations = 0;
-        while (true) {
-            boolean valueExists = false, actionExists = false;
-            if (stateLearnerFile != null) {
-                String valueFile = dataDir + File.separator + String.format("ValueNTBEA_%02d.json", completedIterations);
-                valueExists = new File(valueFile).exists();
-            }
-            if (actionLearnerFile != null) {
-                String actionFile = dataDir + File.separator + String.format("ActionNTBEA_%02d.json", completedIterations);
-                actionExists = new File(actionFile).exists();
-            }
-            boolean agentsOKForState = stateLearnerFile == null || valueExists;
-            boolean agentsOKForAction = actionLearnerFile == null || actionExists;
-            if (!agentsOKForState || !agentsOKForAction) {
-                // we now check to see if the data has been gathered for the next iteration
-                String stateDataFile = dataDir + File.separator + String.format("State_%s_%02d.txt", prefix, completedIterations);
-                String actionDataFile = dataDir + File.separator + String.format("Action_%s_%02d.txt", prefix, completedIterations);
-                boolean dataOKForState = stateLearnerFile == null || new File(stateDataFile).exists();
-                boolean dataOKForAction = actionLearnerFile == null || new File(actionDataFile).exists();
-                if (dataOKForState && dataOKForAction) {
-                    return new Pair<>(completedIterations, completedIterations + 1);
-                } else {
-                    return new Pair<>(completedIterations, completedIterations);
-                }
-            }
-            completedIterations++;
-        }
-    }
-
     public void run() {
         iter = 0;
         boolean finished = false;
@@ -161,6 +124,7 @@ public class ExpertIteration {
 
         IActionHeuristic currentActionHeuristic = null;
 
+        // Check to see if we are re-starting a previously aborted run
         Pair<Integer, Integer> completedIterations = checkCompletedIterations();
         int restartAtIteration = completedIterations.a;
         boolean restartWithTuning = completedIterations.b > 0 && !Objects.equals(completedIterations.a, completedIterations.b);
@@ -200,6 +164,10 @@ public class ExpertIteration {
                 newPlayer.setName(String.format("NTBEA_%02d.json", previousIter));
                 agents.add(newPlayer);
             }
+
+            // if restarting, then we do not have the details of the current best agent (or the ones that were discarded already)
+            // we default to picking the most recent agent as the current best
+            bestAgent = agents.getLast();
         }
 
         do {
@@ -240,6 +208,45 @@ public class ExpertIteration {
             iter++;
         } while (true);
     }
+
+
+    /**
+     * Returns a pair of numbers.
+     * The first is the number of completed iterations (through to generation of tuned agents)
+     * The second is the number of partially completed iterations that generated full data, but not tuned agents
+     * The second number will be one higher than the first if the previous iteration failed in the tuning phase.
+     */
+    private Pair<Integer, Integer> checkCompletedIterations() {
+        // Automatically determine restart iteration by checking for existing ValueNTBEA and ActionNTBEA json files
+        int completedIterations = 0;
+        while (true) {
+            boolean valueExists = false, actionExists = false;
+            if (stateLearnerFile != null) {
+                String valueFile = dataDir + File.separator + String.format("ValueNTBEA_%02d.json", completedIterations);
+                valueExists = new File(valueFile).exists();
+            }
+            if (actionLearnerFile != null) {
+                String actionFile = dataDir + File.separator + String.format("ActionNTBEA_%02d.json", completedIterations);
+                actionExists = new File(actionFile).exists();
+            }
+            boolean agentsOKForState = stateLearnerFile == null || valueExists;
+            boolean agentsOKForAction = actionLearnerFile == null || actionExists;
+            if (!agentsOKForState || !agentsOKForAction) {
+                // we now check to see if the data has been gathered for the next iteration
+                String stateDataFile = dataDir + File.separator + String.format("State_%s_%02d.txt", prefix, completedIterations);
+                String actionDataFile = dataDir + File.separator + String.format("Action_%s_%02d.txt", prefix, completedIterations);
+                boolean dataOKForState = stateLearnerFile == null || new File(stateDataFile).exists();
+                boolean dataOKForAction = actionLearnerFile == null || new File(actionDataFile).exists();
+                if (dataOKForState && dataOKForAction) {
+                    return new Pair<>(completedIterations, completedIterations + 1);
+                } else {
+                    return new Pair<>(completedIterations, completedIterations);
+                }
+            }
+            completedIterations++;
+        }
+    }
+
 
     /**
      * Converts milliseconds to a Pair of hours and minutes.
