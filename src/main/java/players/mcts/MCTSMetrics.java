@@ -19,7 +19,7 @@ public class MCTSMetrics implements IMetricsCollection {
         @Override
         protected boolean _run(MetricsGameListener listener, Event e, Map<String, Object> records) {
             AbstractPlayer player = listener.getGame().getPlayers().get(e.state.getCurrentPlayer());
-            if (player instanceof MCTSPlayer mctsPlayer) {
+            if (e.actions != null && e.actions.size() > 1 && player instanceof MCTSPlayer mctsPlayer) {
                 SingleTreeNode root = mctsPlayer.root;
                 if (root instanceof MultiTreeNode) {
                     root = Arrays.stream(((MultiTreeNode) root).roots).filter(Objects::nonNull)
@@ -32,6 +32,8 @@ public class MCTSMetrics implements IMetricsCollection {
                 if (visits == 0) visits = 1;
                 Map<AbstractAction, ActionStats> actionValueEstimates = root.actionValues;
                 List<AbstractAction> sortedActions = actionValueEstimates.keySet().stream()
+                        .filter(a -> actionValueEstimates.get(a) != null) // exclude those never tried (through pruning)
+                        .filter( a -> mctsPlayer.root.actionsFromOpenLoopState.contains(a))  // exclude impossible actions (from reused parts of the tree)
                         .sorted(Comparator.comparingDouble(a -> -actionValueEstimates.get(a).valueOf(e.playerID)))
                         .toList(); // in descending order of value
 
@@ -54,18 +56,22 @@ public class MCTSMetrics implements IMetricsCollection {
                 records.put("Action", e.action.getString(e.state));
                 if (actionValueEstimates.containsKey(e.action)) {
                     records.put("ActionValue", actionValueEstimates.get(e.action).valueOf(e.playerID));
-                    if (sortedActions.size() > 1) {
-                        AbstractAction secondAction = sortedActions.get(1);
-                        records.put("SecondAction", secondAction.getString(e.state));
-                        records.put("SecondActionValue", actionValueEstimates.get(secondAction).valueOf(e.playerID));
-                    } else {
-                        records.put("SecondAction", "None");
-                        records.put("SecondActionValue", 0.0);
+                    AbstractAction secondAction = sortedActions.get(1); // we know there are at least 2 actions
+                    records.put("SecondAction", secondAction.getString(e.state));
+                    if ( actionValueEstimates.get(secondAction).valueOf(e.playerID) > actionValueEstimates.get(e.action).valueOf(e.playerID)) {
+                        throw new AssertionError("Something odd");
                     }
+                    records.put("SecondActionValue", actionValueEstimates.get(secondAction).valueOf(e.playerID));
                     // this may just be the same as the best action
                     AbstractAction worstAction = sortedActions.getLast();
                     records.put("WorstAction", worstAction.getString(e.state));
-                    records.put("WorstActionValue", actionValueEstimates.get(worstAction).valueOf(e.playerID));
+                    if (actionValueEstimates.containsKey(worstAction)) {
+                        records.put("WorstActionValue", actionValueEstimates.get(worstAction).valueOf(e.playerID));
+                    } else {
+                        throw new AssertionError("WorstAction should have an estimate");
+                    }
+                } else {
+                    throw new AssertionError("Action should really have an estimate");
                 }
                 records.put("ActionsAtRoot", root.actionValues.size());
                 records.put("fmCalls", mctsPlayer.root.fmCallsCount / visits);
