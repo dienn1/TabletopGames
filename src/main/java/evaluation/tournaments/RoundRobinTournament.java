@@ -765,41 +765,6 @@ public class RoundRobinTournament extends AbstractTournament {
         return finalWinRanking.get(agentID) == null ? 0.0 : finalWinRanking.get(agentID).a;
     }
 
-    // Returns a list of agents that are clearly dominated by all other agents
-    public List<Integer> getDominatedAgents() {
-        List<Integer> dominated = new ArrayList<>();
-        double significanceLevel = Utils.standardZScore(0.10, agents.size() * (agents.size() - 1) / 2);
-
-        for (int i = 0; i < agents.size(); i++) {
-            boolean dominatedByAll = true;
-            // for each agent, i, we see if it is dominated but the other agents
-            for (int j = 0; j < agents.size(); j++) {
-                if (i == j) continue;
-                int winsJI = tournamentResults.getWins(agents.get(j).toString(), agents.get(i).toString());
-                int winsIJ = tournamentResults.getWins(agents.get(i).toString(), agents.get(j).toString());
-                if (winsJI <= winsIJ) {
-                    dominatedByAll = false;
-                    break;
-                }
-                // Now check for significance (very approximately... the idea is to avoid discarding agents based on a low sample size
-                int gamesJI = tournamentResults.getGamesPlayed(agents.get(j).toString(), agents.get(i).toString());
-                int gamesIJ = tournamentResults.getGamesPlayed(agents.get(i).toString(), agents.get(j).toString());
-                double winRateJ = (double) winsJI / gamesJI;
-                double winRateI = (double) winsIJ / gamesIJ;
-                double stdErr = sqrt((winRateJ * (1 - winRateJ)) / gamesJI);
-                if (winRateJ - winRateI < significanceLevel * stdErr) {
-                    // not dominated
-                    dominatedByAll = false;
-                    break;
-                }
-            }
-            // all other agents have been checked and i is dominated by all of them
-            if (dominatedByAll)
-                dominated.add(i);
-        }
-        return dominated;
-    }
-
     public double getWinRateAlphaRank(int agentID) {
         if (alphaRankByWin == null)
             return getWinRate(agentID);
