@@ -30,7 +30,7 @@ public class RolloutStateFeatureListener extends StateFeatureListener {
                                        AbstractPlayer[] rolloutPlayers,
                                        AbstractForwardModel forwardModel) {
         // We always start a new rollout when an action is taken, and we just record the value from the perspective of the acting player
-        super(phi, Event.GameEvent.ACTION_CHOSEN, true);
+        super(phi, Event.GameEvent.ACTION_CHOSEN, false);
         for (AbstractPlayer p : rolloutPlayers) {
             p.setForwardModel(forwardModel);
         }
@@ -65,7 +65,10 @@ public class RolloutStateFeatureListener extends StateFeatureListener {
         double[] base = super.extractDoubleVector(action, state, perspectivePlayer);
         double[] retValue = new double[base.length + 4];
         System.arraycopy(base, 0, retValue, 0, base.length);
-        System.arraycopy(rolloutResults[perspectivePlayer], 0, retValue, base.length, rolloutResults[perspectivePlayer].length);
+        retValue[base.length] = rolloutResults[0][perspectivePlayer];
+        retValue[base.length + 1] = rolloutResults[1][perspectivePlayer];
+        retValue[base.length + 2] = rolloutResults[2][perspectivePlayer];
+        retValue[base.length + 3] = rolloutResults[3][perspectivePlayer];
         return retValue;
     }
 
@@ -74,10 +77,10 @@ public class RolloutStateFeatureListener extends StateFeatureListener {
         Object[] base = super.extractFeatureVector(action, state, perspectivePlayer);
         Object[] retValue = new Object[base.length + 4];
         System.arraycopy(base, 0, retValue, 0, base.length);
-        retValue[base.length] = rolloutResults[perspectivePlayer][0];
-        retValue[base.length + 1] = rolloutResults[perspectivePlayer][1];
-        retValue[base.length + 2] = rolloutResults[perspectivePlayer][2];
-        retValue[base.length + 3] = rolloutResults[perspectivePlayer][3];
+        retValue[base.length] = rolloutResults[0][perspectivePlayer];
+        retValue[base.length + 1] = rolloutResults[1][perspectivePlayer];
+        retValue[base.length + 2] = rolloutResults[2][perspectivePlayer];
+        retValue[base.length + 3] = rolloutResults[3][perspectivePlayer];
         return retValue;
     }
 
@@ -118,11 +121,10 @@ public class RolloutStateFeatureListener extends StateFeatureListener {
                 totalOrdinal[p] += copy.getOrdinalPosition(p);
             }
         }
-        double[][] retValue = new double[state.getNPlayers()][4];
         Arrays.setAll(totalWin, p -> totalWin[p] / rollouts);
-        Arrays.setAll(totalLead, p -> totalLead[p] / rollouts);
         Arrays.setAll(totalScore, p -> totalScore[p] / rollouts);
+        Arrays.setAll(totalLead, p -> totalLead[p] / rollouts);
         Arrays.setAll(totalOrdinal, p -> totalOrdinal[p] / rollouts);
-        return retValue;
+        return new double[][] {totalWin, totalLead, totalScore, totalOrdinal};
     }
 }

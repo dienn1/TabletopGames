@@ -33,9 +33,6 @@ public class RoundRobinTournament extends AbstractTournament {
     public boolean alphaRankDetails = true;
     double[] pointsPerPlayer, winsPerPlayer, scorePerPlayer;
     int[] nGamesPlayed;
-    int[][] nGamesPlayedPerOpponent;
-    int[][] winsPerPlayerPerOpponent;
-    int[][] ordinalDeltaPerOpponent;
     double[] alphaRankByWin;
     double[] alphaRankByOrdinal;
     double[] pointsPerPlayerSquared;
@@ -103,14 +100,6 @@ public class RoundRobinTournament extends AbstractTournament {
         this.scorePerPlayer = new double[agents.size()];
         this.winsPerPlayer = new double[agents.size()];
         this.nGamesPlayed = new int[agents.size()];
-        this.nGamesPlayedPerOpponent = new int[agents.size()][];
-        this.ordinalDeltaPerOpponent = new int[agents.size()][];
-        this.winsPerPlayerPerOpponent = new int[agents.size()][];
-        for (int i = 0; i < agents.size(); i++) {
-            this.winsPerPlayerPerOpponent[i] = new int[agents.size()];
-            this.nGamesPlayedPerOpponent[i] = new int[agents.size()];
-            this.ordinalDeltaPerOpponent[i] = new int[agents.size()];
-        }
         this.rankPerPlayer = new double[agents.size()];
         this.rankPerPlayerSquared = new double[agents.size()];
         this.byTeam = (boolean) config.getOrDefault(RunArg.byTeam, false);
@@ -368,7 +357,9 @@ public class RoundRobinTournament extends AbstractTournament {
                 nGamesPlayed[agentIDsInThisGame.get(j)] += 1;
                 for (int k = 0; k < matchUpPlayers.size(); k++) {
                     if (k != j) {
-                        nGamesPlayedPerOpponent[agentIDsInThisGame.get(j)][agentIDsInThisGame.get(k)] += 1;
+                        tournamentResults.updateGamePlayed(
+                                agents.get(agentIDsInThisGame.get(j)),
+                                agents.get(agentIDsInThisGame.get(k)));
                     }
                 }
 
@@ -422,7 +413,10 @@ public class RoundRobinTournament extends AbstractTournament {
         for (int playerPos = 0; playerPos < game.getGameState().getNPlayers(); playerPos++) {
             if (playerPos != player) {
                 int ordinalOther = game.getGameState().getOrdinalPosition(playerPos);
-                ordinalDeltaPerOpponent[j][matchUpPlayers.get(playerPos)] += ordinalOther - ordinalPos;
+                tournamentResults.updateOrdinalResults(
+                        agents.get(j),
+                        agents.get(matchUpPlayers.get(playerPos)),
+                        ordinalOther - ordinalPos);
             }
         }
 
@@ -434,7 +428,10 @@ public class RoundRobinTournament extends AbstractTournament {
             pointsPerPlayerSquared[j] += 1;
             for (int k : matchUpPlayers) {
                 if (k != j) {
-                    winsPerPlayerPerOpponent[j][k] += 1;
+                    tournamentResults.updateWins(
+                            agents.get(j),
+                            agents.get(k),
+                            1);
                 }
             }
         }
@@ -477,17 +474,20 @@ public class RoundRobinTournament extends AbstractTournament {
         if (agents.size() > game.getGameState().getNPlayers()) {
             // We only calculate alpha-rank if we have more agents than players
             // otherwise the Transition matrix is singular
-            dataDump.add("Alpha calculations using Delta Ordinal\n");
-            if (verbose)
-                System.out.println("Alpha calculations using Delta Ordinal");
-            alphaRankByOrdinal = reportAlphaRank(dataDump, ordinalDeltaPerOpponent);
+            int[][] ordinalDelta = new int[agents.size()][agents.size()];
+            for (int i = 0; i < agents.size(); i++) {
+                for (int j = 0; j < agents.size(); j++) {
+                    ordinalDelta[i][j] = tournamentResults.getOrdinalDelta(agents.get(i).toString(), agents.get(j).toString());
+                }
+            }
+            alphaRankByOrdinal = reportAlphaRank(dataDump, ordinalDelta);
             dataDump.add("Alpha calculations using Win Rate\n");
             if (verbose)
                 System.out.println("Alpha calculations using Win Rate");
             int[][] symmetrisedWins = new int[agents.size()][agents.size()];
             for (int i = 0; i < agents.size(); i++) {
                 for (int j = 0; j < agents.size(); j++) {
-                    symmetrisedWins[i][j] = (winsPerPlayerPerOpponent[i][j] - winsPerPlayerPerOpponent[j][i]);
+                    symmetrisedWins[i][j] = (tournamentResults.getWins(agents.get(i).toString(), agents.get(j).toString()) - tournamentResults.getWins(agents.get(j).toString(), agents.get(i).toString()));
                 }
             }
             alphaRankByWin = reportAlphaRank(dataDump, symmetrisedWins);
@@ -517,8 +517,9 @@ public class RoundRobinTournament extends AbstractTournament {
 
             for (int j = 0; j < this.agents.size(); j++) {
                 if (i != j) {
+                    int gamesPlayed = tournamentResults.getGamesPlayed(agents.get(i).toString(), agents.get(j).toString());
                     str = String.format("%s won %.1f%% of the %d games against %s.\n",
-                            agents.get(i), 100.0 * winsPerPlayerPerOpponent[i][j] / nGamesPlayedPerOpponent[i][j], nGamesPlayedPerOpponent[i][j], agents.get(j));
+                            agents.get(i), 100.0 * tournamentResults.getWins(agents.get(i).toString(), agents.get(j).toString()) / gamesPlayed, gamesPlayed, agents.get(j));
                     if (toFile) dataDump.add(str);
                     if (verbose) System.out.print(str);
                 }
@@ -608,7 +609,7 @@ public class RoundRobinTournament extends AbstractTournament {
                     if (i == j) {
                         T[i][j] = Math.exp(0);
                     } else {
-                        double baseValue = values[i][j] / (double) nGamesPlayedPerOpponent[i][j];
+                        double baseValue = values[i][j] / (double) tournamentResults.getGamesPlayed(agents.get(i).toString(), agents.get(j).toString());
                         T[i][j] = Math.exp(-alpha * baseValue);
                     }
                 }
@@ -770,21 +771,31 @@ public class RoundRobinTournament extends AbstractTournament {
         double significanceLevel = Utils.standardZScore(0.10, agents.size() * (agents.size() - 1) / 2);
 
         for (int i = 0; i < agents.size(); i++) {
+            boolean dominatedByAll = true;
             // for each agent, i, we see if it is dominated but the other agents
             for (int j = 0; j < agents.size(); j++) {
-                if (i != j && winsPerPlayerPerOpponent[j][i] > winsPerPlayerPerOpponent[i][j]) {
-                    // Now check for significance (very approximately... the idea is to avoid discarding agents based on a low sample size
-                    double winRateJ = (double) winsPerPlayerPerOpponent[j][i] / nGamesPlayedPerOpponent[j][i];
-                    double winRateI = (double) winsPerPlayerPerOpponent[i][j] / nGamesPlayedPerOpponent[i][j];
-                    double stdErr = sqrt((winRateJ * (1 - winRateJ)) / nGamesPlayedPerOpponent[j][i]);
-                    if (winRateJ - winRateI < significanceLevel * stdErr) {
-                        // not dominated
-                        break;
-                    }
+                if (i == j) continue;
+                int winsJI = tournamentResults.getWins(agents.get(j).toString(), agents.get(i).toString());
+                int winsIJ = tournamentResults.getWins(agents.get(i).toString(), agents.get(j).toString());
+                if (winsJI <= winsIJ) {
+                    dominatedByAll = false;
+                    break;
+                }
+                // Now check for significance (very approximately... the idea is to avoid discarding agents based on a low sample size
+                int gamesJI = tournamentResults.getGamesPlayed(agents.get(j).toString(), agents.get(i).toString());
+                int gamesIJ = tournamentResults.getGamesPlayed(agents.get(i).toString(), agents.get(j).toString());
+                double winRateJ = (double) winsJI / gamesJI;
+                double winRateI = (double) winsIJ / gamesIJ;
+                double stdErr = sqrt((winRateJ * (1 - winRateJ)) / gamesJI);
+                if (winRateJ - winRateI < significanceLevel * stdErr) {
+                    // not dominated
+                    dominatedByAll = false;
+                    break;
                 }
             }
             // all other agents have been checked and i is dominated by all of them
-            dominated.add(i);
+            if (dominatedByAll)
+                dominated.add(i);
         }
         return dominated;
     }
