@@ -51,7 +51,7 @@ public abstract class FeatureListener implements IGameListener {
     @Override
     public boolean setOutputDirectory(String... nestedDirectories) {
         if (logger instanceof FileStatsLogger fileLogger) {
-            fileLogger.setOutPutDirectory(nestedDirectories);
+            fileLogger.setOutputDirectory(nestedDirectories);
         }
         return true;
     }
@@ -109,6 +109,7 @@ public abstract class FeatureListener implements IGameListener {
             for (String key : record.values.keySet()) {
                 data.put(key, record.values.get(key));
             }
+  //          System.out.printf("Recording data....Game: %d, Player: %d, Round: %d, Turn: %d%n",  state.getGameID(), record.player, record.gameRound, record.gameTurn);
             data.put("PlayerCount", getGame().getPlayers().size());
             data.put("TotalRounds", finalRound);
             data.put("TotalTurns", state.getTurnCounter());
@@ -186,7 +187,7 @@ public abstract class FeatureListener implements IGameListener {
         } catch (UnsupportedOperationException e) {
             isDouble = false;
         }
-        if (currentPlayerOnly && state.isNotTerminal()) {
+        if (currentPlayerOnly && state.isNotTerminalForPlayer(currentPlayer)) {
             if (isDouble) {
                 currentData.add(LocalDataWrapper.factory(currentPlayer, doubleData, names(), state, new HashMap<>()));
             } else {
@@ -195,12 +196,14 @@ public abstract class FeatureListener implements IGameListener {
             }
         } else {
             for (int p = 0; p < state.getNPlayers(); p++) {
-                if (isDouble) {
-                    double[] phi = p == currentPlayer ? doubleData : extractDoubleVector(action, state, p);
-                    currentData.add(LocalDataWrapper.factory(p, phi, names(), state, new HashMap<>()));
-                } else {
-                    Object[] phi = extractFeatureVector(action, state, p);
-                    currentData.add(LocalDataWrapper.factory(p, phi, names(), state, new HashMap<>()));
+                if (state.isNotTerminalForPlayer(p)) {
+                    if (isDouble) {
+                        double[] phi = p == currentPlayer ? doubleData : extractDoubleVector(action, state, p);
+                        currentData.add(LocalDataWrapper.factory(p, phi, names(), state, new HashMap<>()));
+                    } else {
+                        Object[] phi = extractFeatureVector(action, state, p);
+                        currentData.add(LocalDataWrapper.factory(p, phi, names(), state, new HashMap<>()));
+                    }
                 }
             }
         }

@@ -1,5 +1,6 @@
 package evaluation;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import core.AbstractParameters;
 import core.AbstractPlayer;
 import core.interfaces.*;
@@ -13,6 +14,7 @@ import evaluation.optimisation.ITPSearchSpace;
 import evaluation.optimisation.NTBEA;
 import evaluation.optimisation.NTBEAParameters;
 import evaluation.tournaments.RoundRobinTournament;
+import evaluation.tournaments.TournamentResults;
 import games.GameType;
 import players.IAnyTimePlayer;
 import players.PlayerFactory;
@@ -23,10 +25,12 @@ import players.simple.BoltzmannActionPlayer;
 import utilities.Pair;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.*;
 import java.util.stream.IntStream;
 
 import static evaluation.ExpertIteration.ValueTarget.Base;
+import static evaluation.RunArg.destDir;
 import static evaluation.RunArg.parseConfig;
 import static utilities.JSONUtils.loadClass;
 
@@ -53,6 +57,9 @@ public class ExpertIteration {
     Map<RunArg, Object> NTBEAConfig;
     Map<RunArg, Object> RGConfig;
 
+    ObjectMapper mapper = new ObjectMapper();
+    TournamentResults runningTournamentResults = new TournamentResults();
+
     int[] valueSearchSettings;
     int[] actionSearchSettings;
     ITPSearchSpace<?> valueSearchSpace = null;
@@ -61,6 +68,8 @@ public class ExpertIteration {
     public enum ValueTarget {Base, MCTS, Rollout, None}
 
     public enum ActionTarget {Base, MCTS, None}
+
+    public enum TrainingMode {Batch, Exponential}
 
     public ExpertIteration(String[] args) {
 
@@ -127,7 +136,7 @@ public class ExpertIteration {
         boolean finished = false;
         // load in the initial agent(s)
         agents = new ArrayList<>(PlayerFactory.createPlayers(player));
-        bestAgent = agents.get(0);
+        bestAgent = agents.getFirst();
 
         IActionHeuristic currentActionHeuristic = null;
 
@@ -137,19 +146,29 @@ public class ExpertIteration {
         boolean restartWithTuning = completedIterations.b > 0 && !Objects.equals(completedIterations.a, completedIterations.b);
         iter = restartAtIteration;
 
+        try {
+            if ((new File(dataDir + File.separator + "RunningTournamentResults.json")).exists()) {
+                runningTournamentResults = mapper.readValue("RunningTournamentResults.json", TournamentResults.class);
+            }
+        } catch (IOException ex) {
+            throw new RuntimeException(ex.getMessage());
+        }
+
         if (restartWithTuning) {
+            int iterationRef = config.get(RunArg.expertTrainingMode) == TrainingMode.Exponential ? 0 : iter;
             if (stateLearnerFile != null)
-                stateDataFilesByIteration[iter] = dataDir + File.separator + String.format("State_%s_%02d.txt", prefix, iter);
+                stateDataFilesByIteration[iterationRef] = dataDir + File.separator + String.format("State_%s_%02d.txt", prefix, iterationRef);
             if (actionLearnerFile != null)
-                actionDataFilesByIteration[iter] = dataDir + File.separator + String.format("Action_%s_%02d.txt", prefix, iter);
+                actionDataFilesByIteration[iterationRef] = dataDir + File.separator + String.format("Action_%s_%02d.txt", prefix, iterationRef);
         }
         if (restartAtIteration > 0) {
+            int iterationRef = config.get(RunArg.expertTrainingMode) == TrainingMode.Exponential ? 0: iter - 1;
             // we are restarting the process, so we need to load the data files from the previous iteration
             if (stateLearnerFile != null) {
-                stateDataFilesByIteration[iter - 1] = dataDir + File.separator + String.format("State_%s_%02d.txt", prefix, iter - 1);
+                stateDataFilesByIteration[iterationRef] = dataDir + File.separator + String.format("State_%s_%02d.txt", prefix, iterationRef);
             }
             if (actionLearnerFile != null) {
-                actionDataFilesByIteration[iter - 1] = dataDir + File.separator + String.format("Action_%s_%02d.txt", prefix, iter - 1);
+                actionDataFilesByIteration[iterationRef] = dataDir + File.separator + String.format("Action_%s_%02d.txt", prefix, iterationRef);
             }
 
             // then load in the agents from the previous iterations
@@ -285,8 +304,21 @@ public class ExpertIteration {
                     anyTime.setBudget(budget);
             }
         }
+        // we want to run 2 tournaments. Firstly with a focusPlayer of the newly learned agent
+        // then one with all agents
+        // unless there is a single agent; or the best agent is still the first one. In this case, we run a single tournament
+//        if (!agents.isEmpty() && bestAgent != agents.getFirst()) {
+//            RGConfig.put(RunArg.mode, "onevsall");
+//            List<AbstractPlayer> focusAtFront = new ArrayList<>(agents);
+//            focusAtFront.remove(bestAgent);
+//            focusAtFront.add(0, bestAgent); // we stick the best agent at the front (TODO: make less hacky)
+//            RoundRobinTournament tournament = new RoundRobinTournament(focusAtFront, gameToPlay, nPlayers, params, RGConfig);
+//
+//        }
 
+        boolean allDataAsOne = config.get(RunArg.expertTrainingMode) == TrainingMode.Exponential;
         RoundRobinTournament tournament = new RoundRobinTournament(agents, gameToPlay, nPlayers, params, RGConfig);
+        tournament.setTournamentResults(runningTournamentResults);
         tournament.setResultsFile(dataDir + File.separator + String.format("TournamentResults_%s_%02d.txt", prefix, iter));
         if (stateLearnerFile != null) {
             stateListener = switch (config.get(RunArg.valueTarget)) {
@@ -313,12 +345,12 @@ public class ExpertIteration {
                 default ->
                         throw new IllegalArgumentException("Unexpected value for expert: " + config.get(RunArg.valueTarget));
             };
-            String fileName = String.format("State_%s_%02d.txt", prefix, iter);
-            stateDataFilesByIteration[iter] = dataDir + File.separator + fileName;
+            String fileName = String.format("State_%s_%02d.txt", prefix, allDataAsOne ? 0 : iter);
+            stateDataFilesByIteration[allDataAsOne ? 0 : iter] = dataDir + File.separator + fileName;
             if (stateListener != null) {
                 stateListener = stateListener
                         .setSampleRate(sampleRate)
-                        .setLogger(new FileStatsLogger(fileName, "\t", false));
+                        .setLogger(new FileStatsLogger(fileName, "\t", allDataAsOne));
                 stateListener.setOutputDirectory(dataDir);
                 tournament.addListener(stateListener);
             }
@@ -346,16 +378,22 @@ public class ExpertIteration {
                 default ->
                         throw new IllegalArgumentException("Unexpected value for expert: " + config.get(RunArg.actionTarget));
             };
-            String fileName = String.format("Action_%s_%02d.txt", prefix, iter);
+            String fileName = String.format("Action_%s_%02d.txt", prefix, allDataAsOne ? 0 : iter);
             actionListener = actionListener
-                    .setLogger(new FileStatsLogger(fileName, "\t", false))
+                    .setLogger(new FileStatsLogger(fileName, "\t", allDataAsOne))
                     .setSampleRate(sampleRate);
             actionListener.setOutputDirectory(dataDir);
 
             tournament.addListener(actionListener);
-            actionDataFilesByIteration[iter] = dataDir + File.separator + fileName;
+            actionDataFilesByIteration[allDataAsOne ? 0 : iter] = dataDir + File.separator + fileName;
         }
         tournament.run();
+        // then save running tournament results in case of a restart
+        try {
+            mapper.writeValue(new File(dataDir + File.separator + "RunningTournamentResults.json"), runningTournamentResults);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
 
         int alphaWinner = tournament.getAlphaRankWinnerByWinRate();
         AbstractPlayer winner = alphaWinner > -1 ? agents.get(alphaWinner) : tournament.getWinner();
@@ -407,10 +445,11 @@ public class ExpertIteration {
         // for the moment we will just supply the most recent file
         IStateHeuristic stateHeuristic = null;
         IActionHeuristic actionHeuristic = null;
+        boolean allData = config.get(RunArg.expertTrainingMode) == TrainingMode.Exponential;
         if (stateLearnerFile != null) {
             String fileName = prefix + "_ValueHeuristic_" + String.format("%02d", iter) + ".json";
             LearnFromData learnFromData = new LearnFromData(
-                    stateDataFilesByIteration[iter],
+                    stateDataFilesByIteration[allData ? 0 : iter],
                     stateFeatureVector,
                     null,
                     dataDir + File.separator + fileName,
@@ -423,7 +462,7 @@ public class ExpertIteration {
         if (actionLearnerFile != null) {
             String fileName = prefix + "_ActionHeuristic_" + String.format("%02d", iter) + ".json";
             LearnFromData learnFromData = new LearnFromData(
-                    actionDataFilesByIteration[iter],
+                    actionDataFilesByIteration[allData ? 0 : iter],
                     useStateInAction ? stateFeatureVector : null,
                     actionFeatureVector,
                     dataDir + File.separator + fileName,

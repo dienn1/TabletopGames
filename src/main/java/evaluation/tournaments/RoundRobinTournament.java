@@ -31,15 +31,12 @@ public class RoundRobinTournament extends AbstractTournament {
     protected List<IGameListener> listeners = new ArrayList<>();
     private boolean verbose;
     public boolean alphaRankDetails = true;
-    double[] pointsPerPlayer, winsPerPlayer, scorePerPlayer;
-    int[] nGamesPlayed;
     double[] alphaRankByWin;
     double[] alphaRankByOrdinal;
-    double[] pointsPerPlayerSquared;
-    double[] rankPerPlayer;
-    double[] rankPerPlayerSquared;
-    protected LinkedHashMap<Integer, Pair<Double, Double>> finalWinRanking; // contains index of agent in agents
-    protected LinkedHashMap<Integer, Pair<Double, Double>> finalOrdinalRanking; // contains index of agent in agents
+    protected IResultsAnalysis winRateAnalysis = new WinRateAnalysis();
+    protected IResultsAnalysis ordinalAnalysis = new OrdinalAnalysis();
+    protected LinkedHashMap<String, Pair<Double, Double>> finalWinRanking; // contains name of agent
+    protected LinkedHashMap<String, Pair<Double, Double>> finalOrdinalRanking; // contains name of agent
     LinkedList<Integer> allAgentIds;
     private int totalGamesRun;
     protected boolean randomGameParams;
@@ -63,6 +60,14 @@ public class RoundRobinTournament extends AbstractTournament {
     public RoundRobinTournament(List<? extends AbstractPlayer> agents, GameType gameToPlay, int playersPerGame,
                                 AbstractParameters gameParams, Map<RunArg, Object> config) {
         super(agents, gameToPlay, playersPerGame, gameParams);
+        Map<String, Integer> nameCounts = new HashMap<>();
+        for (AbstractPlayer agent : this.agents) {
+            String name = agent.toString();
+            nameCounts.put(name, nameCounts.getOrDefault(name, 0) + 1);
+            if (nameCounts.get(name) > 1) {
+                agent.setName(name + " " + nameCounts.get(name));
+            }
+        }
         int nTeams = game.getGameState().getNTeams();
         this.verbose = (boolean) config.getOrDefault(RunArg.verbose, false);
         this.tournamentMode = switch (config.get(RunArg.mode).toString().toUpperCase()) {
@@ -95,13 +100,6 @@ public class RoundRobinTournament extends AbstractTournament {
                 }
             }
         }
-        this.pointsPerPlayer = new double[agents.size()];
-        this.pointsPerPlayerSquared = new double[agents.size()];
-        this.scorePerPlayer = new double[agents.size()];
-        this.winsPerPlayer = new double[agents.size()];
-        this.nGamesPlayed = new int[agents.size()];
-        this.rankPerPlayer = new double[agents.size()];
-        this.rankPerPlayerSquared = new double[agents.size()];
         this.byTeam = (boolean) config.getOrDefault(RunArg.byTeam, false);
         this.tournamentSeeds = (int) config.getOrDefault(RunArg.distinctRandomSeeds, 0);
         this.seedFile = (String) config.getOrDefault(RunArg.seedFile, "");
@@ -203,7 +201,7 @@ public class RoundRobinTournament extends AbstractTournament {
     }
 
     public int getWinnerIndex() {
-        Map<Integer, Pair<Double, Double>> ranking = switch (evalMethod) {
+        LinkedHashMap<String, Pair<Double, Double>> ranking = switch (evalMethod) {
             case "Ordinal", "Score" -> finalOrdinalRanking;
             default -> finalWinRanking;
         };
@@ -211,10 +209,11 @@ public class RoundRobinTournament extends AbstractTournament {
             throw new UnsupportedOperationException("Cannot get winner before results have been calculated");
 
         // The winner is the first key in finalRanking
-        for (Integer key : ranking.keySet()) {
-            return key;
+        String winnerName = ranking.keySet().iterator().next();
+        for (int i = 0; i < agents.size(); i++) {
+            if (agents.get(i).toString().equals(winnerName)) return i;
         }
-        throw new AssertionError("Should not be reachable");
+        return -1;
     }
 
     public AbstractPlayer getWinner() {
@@ -352,38 +351,7 @@ public class RoundRobinTournament extends AbstractTournament {
             game.run();  // Always running tournaments without visuals
             GameResult[] results = game.getGameState().getPlayerResults();
 
-            int numDraws = 0;
-            for (int j = 0; j < matchUpPlayers.size(); j++) {
-                nGamesPlayed[agentIDsInThisGame.get(j)] += 1;
-                for (int k = 0; k < matchUpPlayers.size(); k++) {
-                    if (k != j) {
-                        tournamentResults.updateGamePlayed(
-                                agents.get(agentIDsInThisGame.get(j)),
-                                agents.get(agentIDsInThisGame.get(k)));
-                    }
-                }
-
-                // now we need to be careful if we have a team game, as the agents are indexed by Team, not player
-                if (byTeam) {
-                    for (int player = 0; player < game.getGameState().getNPlayers(); player++) {
-                        if (game.getGameState().getTeam(player) == j) {
-                            numDraws += updatePoints(results, agentIDsInThisGame, agentIDsInThisGame.get(j), player);
-                            break; // we stop after one player on the team to avoid double counting
-                        }
-                    }
-                } else {
-                    numDraws += updatePoints(results, agentIDsInThisGame, agentIDsInThisGame.get(j), j);
-                }
-            }
-
-            if (numDraws > 0) {
-                double pointsPerDraw = 1.0 / numDraws;
-                for (int j = 0; j < matchUpPlayers.size(); j++) {
-                    if (results[j] == GameResult.DRAW_GAME) pointsPerPlayer[agentIDsInThisGame.get(j)] += pointsPerDraw;
-                    if (results[j] == GameResult.DRAW_GAME)
-                        pointsPerPlayerSquared[agentIDsInThisGame.get(j)] += pointsPerDraw * pointsPerDraw;
-                }
-            }
+            tournamentResults.record(game);
 
             if (verbose) {
                 StringBuffer sb = new StringBuffer();
@@ -404,65 +372,9 @@ public class RoundRobinTournament extends AbstractTournament {
         totalGamesRun += nGames;
     }
 
-    private int updatePoints(GameResult[] results, List<Integer> matchUpPlayers, int j, int player) {
-        // j is the index of the agent in the matchup; player is the corresponding player number in the game
-        int ordinalPos = game.getGameState().getOrdinalPosition(player);
-        rankPerPlayer[j] += ordinalPos;
-        rankPerPlayerSquared[j] += ordinalPos * ordinalPos;
-
-        for (int playerPos = 0; playerPos < game.getGameState().getNPlayers(); playerPos++) {
-            if (playerPos != player) {
-                int ordinalOther = game.getGameState().getOrdinalPosition(playerPos);
-                tournamentResults.updateOrdinalResults(
-                        agents.get(j),
-                        agents.get(matchUpPlayers.get(playerPos)),
-                        ordinalOther - ordinalPos);
-            }
-        }
-
-        scorePerPlayer[j] += game.getGameState().getGameScore(player);
-
-        if (results[player] == GameResult.WIN_GAME) {
-            pointsPerPlayer[j] += 1;
-            winsPerPlayer[j] += 1;
-            pointsPerPlayerSquared[j] += 1;
-            for (int k : matchUpPlayers) {
-                if (k != j) {
-                    tournamentResults.updateWins(
-                            agents.get(j),
-                            agents.get(k),
-                            1);
-                }
-            }
-        }
-        if (results[player] == GameResult.DRAW_GAME)
-            return 1;
-        return 0;
-    }
-
-
     protected void calculateFinalResults() {
-        finalWinRanking = new LinkedHashMap<>();
-        finalOrdinalRanking = new LinkedHashMap<>();
-        for (int i = 0; i < this.agents.size(); i++) {
-            // We calculate the standard deviation, and hence the standard error on the mean value
-            // (using a normal approximation, which is valid for large N)
-            double stdDev = Math.sqrt(pointsPerPlayerSquared[i] / nGamesPlayed[i] - (pointsPerPlayer[i] / nGamesPlayed[i])
-                    * (pointsPerPlayer[i] / nGamesPlayed[i]));
-            finalWinRanking.put(i, new Pair<>(pointsPerPlayer[i] / nGamesPlayed[i], stdDev / sqrt(nGamesPlayed[i])));
-            stdDev = Math.sqrt(rankPerPlayerSquared[i] / nGamesPlayed[i] - (rankPerPlayer[i] / nGamesPlayed[i]) * (rankPerPlayer[i] / nGamesPlayed[i]));
-            finalOrdinalRanking.put(i, new Pair<>(rankPerPlayer[i] / nGamesPlayed[i], stdDev / sqrt(nGamesPlayed[i])));
-        }
-        // Sort by points.
-        finalWinRanking = finalWinRanking.entrySet().stream()
-                .sorted(Map.Entry.comparingByValue((o1, o2) -> o2.a.compareTo(o1.a)))
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (e1, e2) -> e1,
-                        LinkedHashMap::new));
-        finalOrdinalRanking = finalOrdinalRanking.entrySet().stream()
-                .sorted(Map.Entry.comparingByValue((o1, o2) -> o2.a.compareTo(o1.a)))
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (e1, e2) -> e1,
-                        LinkedHashMap::new));
-
+        finalWinRanking = winRateAnalysis.getRanking(tournamentResults);
+        finalOrdinalRanking = ordinalAnalysis.getRanking(tournamentResults);
     }
 
     protected void reportResults() {
@@ -497,20 +409,27 @@ public class RoundRobinTournament extends AbstractTournament {
         if (verbose)
             System.out.printf("============= %s - %d games played ============= \n", game.getGameType().name(), totalGamesRun);
         for (int i = 0; i < this.agents.size(); i++) {
-            String str = String.format("%s got %.2f points. ", agents.get(i), pointsPerPlayer[i]);
+            String name = agents.get(i).toString();
+            List<TournamentResults.Result> agentResults = tournamentResults.getPlayerResults(name);
+            double totalPoints = agentResults.stream().mapToDouble(r -> r.points).sum();
+            int totalWins = agentResults.stream().mapToInt(r -> r.win).sum();
+            int nGames = agentResults.size();
+            double totalScore = agentResults.stream().mapToDouble(r -> r.score).sum();
+
+            String str = String.format("%s got %.2f points. ", name, totalPoints);
             if (toFile) dataDump.add(str);
             if (verbose) System.out.print(str);
 
             str = String.format("%s won %.1f%% of the %d games of the tournament. ",
-                    agents.get(i), 100.0 * winsPerPlayer[i] / totalGamesRun, totalGamesRun);
+                    name, 100.0 * totalWins / totalGamesRun, totalGamesRun);
             if (toFile) dataDump.add(str);
             if (verbose) System.out.print(str);
 
             str = String.format("%s won %.1f%% of the %d games it played during the tournament.\n",
-                    agents.get(i), 100.0 * winsPerPlayer[i] / nGamesPlayed[i], nGamesPlayed[i]);
+                    name, 100.0 * totalWins / nGames, nGames);
             if (toFile) dataDump.add(str);
             if (verbose) System.out.print(str);
-            str = String.format("%s got a mean score of %.2f.\n", agents.get(i), scorePerPlayer[i] / nGamesPlayed[i]);
+            str = String.format("%s got a mean score of %.2f.\n", name, totalScore / nGames);
             if (toFile) dataDump.add(str);
             if (verbose) System.out.print(str);
 
@@ -533,11 +452,11 @@ public class RoundRobinTournament extends AbstractTournament {
         if (toFile) dataDump.add(str);
         if (verbose) System.out.print(str);
 
-        for (Integer i : finalWinRanking.keySet()) {
+        for (String agentName : finalWinRanking.keySet()) {
             str = String.format("%s: Win rate %.2f +/- %.3f\tMean Ordinal %.2f +/- %.2f\n",
-                    agents.get(i).toString(),
-                    finalWinRanking.get(i).a, finalWinRanking.get(i).b,
-                    finalOrdinalRanking.get(i).a, finalOrdinalRanking.get(i).b);
+                    agentName,
+                    finalWinRanking.get(agentName).a, finalWinRanking.get(agentName).b,
+                    finalOrdinalRanking.get(agentName).a, finalOrdinalRanking.get(agentName).b);
             if (toFile) dataDump.add(str);
             if (verbose) System.out.print(str);
         }
@@ -762,7 +681,8 @@ public class RoundRobinTournament extends AbstractTournament {
     }
 
     public double getWinRate(int agentID) {
-        return finalWinRanking.get(agentID) == null ? 0.0 : finalWinRanking.get(agentID).a;
+        String name = agents.get(agentID).toString();
+        return finalWinRanking.get(name) == null ? 0.0 : finalWinRanking.get(name).a;
     }
 
     public double getWinRateAlphaRank(int agentID) {
@@ -796,15 +716,23 @@ public class RoundRobinTournament extends AbstractTournament {
     }
 
     public double getWinStdErr(int agentID) {
-        return finalWinRanking.get(agentID) == null ? 0.0 : finalWinRanking.get(agentID).b;
+        String name = agents.get(agentID).toString();
+        return finalWinRanking.get(name) == null ? 0.0 : finalWinRanking.get(name).b;
     }
 
     public double getSumOfSquares(int agentID, String type) {
-        return type.equals("Win") ? pointsPerPlayerSquared[agentID] : rankPerPlayerSquared[agentID];
+        String name = agents.get(agentID).toString();
+        List<TournamentResults.Result> agentResults = tournamentResults.getPlayerResults(name);
+        if (type.equals("Win")) {
+            return agentResults.stream().mapToDouble(r -> r.points * r.points).sum();
+        } else {
+            return agentResults.stream().mapToDouble(r -> (double) r.ordinal * r.ordinal).sum();
+        }
     }
 
     public double getOrdinalRank(int agentID) {
-        return finalOrdinalRanking.get(agentID).a;
+        String name = agents.get(agentID).toString();
+        return finalOrdinalRanking.get(name).a;
     }
 
     public double getOrdinalAlphaRank(int agentID) {
@@ -814,7 +742,8 @@ public class RoundRobinTournament extends AbstractTournament {
     }
 
     public double getOrdinalStdErr(int agentID) {
-        return finalOrdinalRanking.get(agentID).b;
+        String name = agents.get(agentID).toString();
+        return finalOrdinalRanking.get(name).b;
     }
 
     public void addListener(IGameListener gameTracker) {
@@ -826,6 +755,10 @@ public class RoundRobinTournament extends AbstractTournament {
     }
 
     public int[] getNGamesPlayed() {
-        return nGamesPlayed;
+        int[] retValue = new int[agents.size()];
+        for (int i = 0; i < agents.size(); i++) {
+            retValue[i] = tournamentResults.getPlayerResults(agents.get(i).toString()).size();
+        }
+        return retValue;
     }
 }
