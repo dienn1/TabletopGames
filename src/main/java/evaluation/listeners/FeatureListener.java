@@ -26,22 +26,39 @@ public abstract class FeatureListener implements IGameListener {
     protected Game game;
     protected double sampleRate = 1.0; // what proportion of events to record
     protected Random rnd = new Random();
+    protected boolean recordEndGameState = true;
 
     protected FeatureListener(Event.GameEvent frequency, boolean currentPlayerOnly) {
         this.currentPlayerOnly = currentPlayerOnly;
         this.frequency = frequency;
     }
 
-    public void setLogger(IStatisticLogger logger) {
+    public FeatureListener setLogger(IStatisticLogger logger) {
         if (logger != null) {
             logger.processDataAndFinish();
         }
         this.logger = logger;
+        return this;
     }
 
-    public void setSampleRate(double rate) {
+    public FeatureListener setSampleRate(double rate) {
         if (rate <= 0 || rate > 1.0) throw new IllegalArgumentException("Sample rate must be in the range (0,1]");
         sampleRate = rate;
+        return this;
+    }
+
+
+    @Override
+    public boolean setOutputDirectory(String... nestedDirectories) {
+        if (logger instanceof FileStatsLogger fileLogger) {
+            fileLogger.setOutPutDirectory(nestedDirectories);
+        }
+        return true;
+    }
+
+    public FeatureListener recordEndGameState(boolean recordEndGameState) {
+        this.recordEndGameState = recordEndGameState;
+        return this;
     }
 
     @Override
@@ -61,19 +78,12 @@ public abstract class FeatureListener implements IGameListener {
 
         if (event.type == Event.GameEvent.GAME_OVER) {
             // first we record a final state for each player
-            processState(event.state, null);
+            if (recordEndGameState)
+                processState(event.state, null);
 
             // now we can update the result
             writeDataWithStandardHeaders(event.state);
         }
-    }
-
-    @Override
-    public boolean setOutputDirectory(String... nestedDirectories) {
-        if (logger instanceof FileStatsLogger fileLogger) {
-            fileLogger.setOutPutDirectory(nestedDirectories);
-        }
-        return true;
     }
 
     public void writeDataWithStandardHeaders(AbstractGameState state) {
@@ -160,9 +170,14 @@ public abstract class FeatureListener implements IGameListener {
 
     public abstract String[] names();
 
+
+    public void preProcessing(AbstractGameState state, AbstractAction action) {
+        // for extension in sub-classes
+    }
     public void processState(AbstractGameState state, AbstractAction action) {
         // we record one state for each player after each relevant event occurs
         // we first determine if the data is double[] or Object[]
+        preProcessing(state, action);
         boolean isDouble = true;
         int currentPlayer = state.getCurrentPlayer();
         double[] doubleData = new double[0];

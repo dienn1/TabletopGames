@@ -55,7 +55,7 @@ public class MCTSExpertIterationListener extends ActionFeatureListener {
     }
 
     @Override
-    public void setLogger(IStatisticLogger logger) {
+    public MCTSExpertIterationListener setLogger(IStatisticLogger logger) {
         super.setLogger(logger);
         // we also need to set the logger for the state recorder
         FileStatsLogger fileLogger = (FileStatsLogger) logger;
@@ -63,6 +63,7 @@ public class MCTSExpertIterationListener extends ActionFeatureListener {
         FileStatsLogger stateLogger = new FileStatsLogger(loggerName, fileLogger.getDelimiter(), fileLogger.isAppend());
         if (stateRecorder != null)
             stateRecorder.setLogger(stateLogger);
+        return this;
     }
 
     @Override

@@ -205,8 +205,11 @@ public enum RunArg {
     sampleRate("We only record data every with this sample rate to reduce correlation in training data generated.",
             0.02,
             new Usage[]{Usage.ExpertIteration}),
-    expert("An expert player to use for the ExpertIteration process. Either BASE, MCTS or MCTSAction.",
-            "BASE",
+    valueTarget("Target for the state value expert to be trained on",
+            ExpertIteration.ValueTarget.Base,
+            new Usage[]{Usage.ExpertIteration}),
+    actionTarget("Target for the action value expert to be trained on",
+            ExpertIteration.ActionTarget.None,
             new Usage[]{Usage.ExpertIteration}),
     expertTime("The multiplier to use for the expert's budget (if MCTS). Default is 10.",
             10,
@@ -306,7 +309,11 @@ public enum RunArg {
 
     @SuppressWarnings("unchecked")
     public Object parse(JSONObject json) {
+        Class<?> expectedClass = defaultValue.getClass();
         value = json.getOrDefault(name(), defaultValue);
+        if (expectedClass.isEnum()) {
+            return Enum.valueOf((Class<? extends Enum>) expectedClass, value.toString());
+        }
         if (value instanceof Long) {
             value = ((Long) value).intValue();
         } else if (this == listener) {

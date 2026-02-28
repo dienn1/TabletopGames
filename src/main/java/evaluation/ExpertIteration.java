@@ -5,6 +5,7 @@ import core.AbstractPlayer;
 import core.interfaces.*;
 import evaluation.listeners.ActionFeatureListener;
 import evaluation.listeners.FeatureListener;
+import evaluation.listeners.RolloutStateFeatureListener;
 import evaluation.listeners.StateFeatureListener;
 import evaluation.loggers.FileStatsLogger;
 import evaluation.metrics.Event;
@@ -18,12 +19,14 @@ import players.PlayerFactory;
 import players.learners.LearnFromData;
 import players.mcts.MCTSExpertIterationListener;
 import players.mcts.MCTSPlayer;
+import players.simple.BoltzmannActionPlayer;
 import utilities.Pair;
 
 import java.io.File;
 import java.util.*;
 import java.util.stream.IntStream;
 
+import static evaluation.ExpertIteration.ValueTarget.Base;
 import static evaluation.RunArg.parseConfig;
 import static utilities.JSONUtils.loadClass;
 
@@ -54,6 +57,10 @@ public class ExpertIteration {
     int[] actionSearchSettings;
     ITPSearchSpace<?> valueSearchSpace = null;
     ITPSearchSpace<?> actionSearchSpace = null;
+
+    public enum ValueTarget {Base, MCTS, Rollout, None}
+
+    public enum ActionTarget {Base, MCTS, None}
 
     public ExpertIteration(String[] args) {
 
@@ -266,7 +273,6 @@ public class ExpertIteration {
     private boolean gatherDataAndCheckConvergence() {
         RGConfig.put(RunArg.mode, "random");  // we are most interested in a wide range of data, so do not want to reuse random seeds
         RGConfig.put(RunArg.verbose, false);
-        String expert = ((String) config.get(RunArg.expert)).toUpperCase();
 
         // we need to set the listener to record the required data for the Learner processes
         RGConfig.put(RunArg.listener, new ArrayList<String>());
@@ -283,18 +289,36 @@ public class ExpertIteration {
         RoundRobinTournament tournament = new RoundRobinTournament(agents, gameToPlay, nPlayers, params, RGConfig);
         tournament.setResultsFile(dataDir + File.separator + String.format("TournamentResults_%s_%02d.txt", prefix, iter));
         if (stateLearnerFile != null) {
-            stateListener = switch (expert) {
-                case "BASE", "MCTSACTION" -> new StateFeatureListener(stateFeatureVector,
+            stateListener = switch (config.get(RunArg.valueTarget)) {
+                case ValueTarget.Base -> new StateFeatureListener(stateFeatureVector,
                         useRounds ? Event.GameEvent.ROUND_OVER : Event.GameEvent.TURN_OVER,
-                        false);
-                case "MCTS" -> null; // covered by ActionListener
-                default -> throw new IllegalArgumentException("Unexpected value for expert: " + expert);
+                        false);  // i.e. we use the actual game outcome as the Value target
+                case ValueTarget.MCTS -> {
+                    if (config.get(RunArg.actionTarget) != ActionTarget.MCTS)
+                        throw new IllegalArgumentException("Cannot use a valueTarget of MCTS unless actionTarget is also MCTS");
+                    yield null;  // covered by ActionListener (i.e. we use the MCTS estimate as the Value target)
+                }
+                case ValueTarget.Rollout -> {
+                    AbstractPlayer[] players = new AbstractPlayer[nPlayers];
+                    for (int i = 0; i < players.length; i++)
+                        players[i] = bestAgent.copy();
+                    yield (new RolloutStateFeatureListener(
+                            stateFeatureVector,
+                            players,
+                            gameToPlay.createForwardModel(params, nPlayers)))
+                            .recordEndGameState(false);
+                }
+                case ValueTarget.None ->
+                        throw new IllegalArgumentException("Value Target is NONE, but stateLearner is defined as " + stateLearnerFile);
+                default ->
+                        throw new IllegalArgumentException("Unexpected value for expert: " + config.get(RunArg.valueTarget));
             };
             String fileName = String.format("State_%s_%02d.txt", prefix, iter);
             stateDataFilesByIteration[iter] = dataDir + File.separator + fileName;
             if (stateListener != null) {
-                stateListener.setSampleRate(sampleRate);
-                stateListener.setLogger(new FileStatsLogger(fileName, "\t", false));
+                stateListener = stateListener
+                        .setSampleRate(sampleRate)
+                        .setLogger(new FileStatsLogger(fileName, "\t", false));
                 stateListener.setOutputDirectory(dataDir);
                 tournament.addListener(stateListener);
             }
@@ -305,24 +329,27 @@ public class ExpertIteration {
             oracle.setName("Oracle");
             oracle.setBudget(budget * expertTime);
             oracle.getParameters().setParameterValue("reuseTree", false); // we only look at occasional actions
-            oracle.getParameters().setParameterValue("maxTreeDepth", 1000);
+            //       oracle.getParameters().setParameterValue("maxTreeDepth", 1000);
             if (((double) oracle.getParameters().getParameterValue("FPU")) < 1000.0)
                 oracle.getParameters().setParameterValue("FPU", 1000.0);
             if (((double) oracle.getParameters().getParameterValue("K")) < 1.0)
                 oracle.getParameters().setParameterValue("K", 1.0);
-            actionListener = switch (expert) {
-                case "BASE" -> new ActionFeatureListener(actionFeatureVector, stateFeatureVector,
+            actionListener = switch (config.get(RunArg.actionTarget)) {
+                case ActionTarget.Base -> new ActionFeatureListener(actionFeatureVector, stateFeatureVector,
                         Event.GameEvent.ACTION_CHOSEN,
                         true);
-                case "MCTS" -> new MCTSExpertIterationListener(oracle, actionFeatureVector, stateFeatureVector,
-                        100, 0, true);
-                case "MCTSACTION" -> new MCTSExpertIterationListener(oracle, actionFeatureVector, stateFeatureVector,
-                        100, 0, false);
-                default -> throw new IllegalArgumentException("Unexpected value for expert: " + expert);
+                case ActionTarget.MCTS ->
+                        new MCTSExpertIterationListener(oracle, actionFeatureVector, stateFeatureVector,
+                                100, 0, true);
+                case ActionTarget.None ->
+                        throw new IllegalArgumentException("Action Target is None, but actionLearner defined as " + actionLearnerFile);
+                default ->
+                        throw new IllegalArgumentException("Unexpected value for expert: " + config.get(RunArg.actionTarget));
             };
-            actionListener.setSampleRate(sampleRate);
             String fileName = String.format("Action_%s_%02d.txt", prefix, iter);
-            actionListener.setLogger(new FileStatsLogger(fileName, "\t", false));
+            actionListener = actionListener
+                    .setLogger(new FileStatsLogger(fileName, "\t", false))
+                    .setSampleRate(sampleRate);
             actionListener.setOutputDirectory(dataDir);
 
             tournament.addListener(actionListener);
