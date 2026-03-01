@@ -42,6 +42,10 @@ public abstract class AbstractPlayer {
         return playerID;
     }
 
+    public void setPlayerID(int p) {
+        this.playerID = p;
+    }
+
     public final void setName(String name) {
         this.name = name;
     }

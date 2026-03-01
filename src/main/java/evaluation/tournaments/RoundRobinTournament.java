@@ -31,14 +31,15 @@ public class RoundRobinTournament extends AbstractTournament {
     protected List<IGameListener> listeners = new ArrayList<>();
     private boolean verbose;
     public boolean alphaRankDetails = true;
-    double[] alphaRankByWin;
-    double[] alphaRankByOrdinal;
     protected IResultsAnalysis winRateAnalysis = new WinRateAnalysis();
     protected IResultsAnalysis ordinalAnalysis = new OrdinalAnalysis();
+    protected IResultsAnalysis alphaRankWinAnalysis = new AlphaRankAnalysis(false);
+    protected IResultsAnalysis alphaRankOrdinalAnalysis = new AlphaRankAnalysis(true);
     protected LinkedHashMap<String, Pair<Double, Double>> finalWinRanking; // contains name of agent
     protected LinkedHashMap<String, Pair<Double, Double>> finalOrdinalRanking; // contains name of agent
+    protected LinkedHashMap<String, Pair<Double, Double>> finalAlphaRankWinRanking;
+    protected LinkedHashMap<String, Pair<Double, Double>> finalAlphaRankOrdinalRanking;
     LinkedList<Integer> allAgentIds;
-    private int totalGamesRun;
     protected boolean randomGameParams;
     public String name;
     public boolean byTeam;
@@ -365,12 +366,17 @@ public class RoundRobinTournament extends AbstractTournament {
             }
 
         }
-        totalGamesRun += nGames;
     }
 
     protected void calculateFinalResults() {
         finalWinRanking = winRateAnalysis.getRanking(tournamentResults);
         finalOrdinalRanking = ordinalAnalysis.getRanking(tournamentResults);
+        if (agents.size() > game.getGameState().getNPlayers()) {
+            // We only calculate alpha-rank if we have more agents than players
+            // otherwise the Transition matrix is singular
+            finalAlphaRankWinRanking = alphaRankWinAnalysis.getRanking(tournamentResults);
+            finalAlphaRankOrdinalRanking = alphaRankOrdinalAnalysis.getRanking(tournamentResults);
+        }
     }
 
     protected void reportResults() {
@@ -379,29 +385,8 @@ public class RoundRobinTournament extends AbstractTournament {
         List<String> dataDump = new ArrayList<>();
         dataDump.add(name + "\n");
 
-        if (agents.size() > game.getGameState().getNPlayers()) {
-            // We only calculate alpha-rank if we have more agents than players
-            // otherwise the Transition matrix is singular
-            int[][] ordinalDelta = new int[agents.size()][agents.size()];
-            for (int i = 0; i < agents.size(); i++) {
-                for (int j = 0; j < agents.size(); j++) {
-                    ordinalDelta[i][j] = tournamentResults.getOrdinalDelta(agents.get(i).toString(), agents.get(j).toString());
-                }
-            }
-            alphaRankByOrdinal = reportAlphaRank(dataDump, ordinalDelta);
-            dataDump.add("Alpha calculations using Win Rate\n");
-            if (verbose)
-                System.out.println("Alpha calculations using Win Rate");
-            int[][] symmetrisedWins = new int[agents.size()][agents.size()];
-            for (int i = 0; i < agents.size(); i++) {
-                for (int j = 0; j < agents.size(); j++) {
-                    symmetrisedWins[i][j] = (tournamentResults.getWins(agents.get(i).toString(), agents.get(j).toString()) - tournamentResults.getWins(agents.get(j).toString(), agents.get(i).toString()));
-                }
-            }
-            alphaRankByWin = reportAlphaRank(dataDump, symmetrisedWins);
-        }
-
         // To console
+        int totalGamesRun = tournamentResults.totalResults() / game.getGameState().getNPlayers();
         if (verbose)
             System.out.printf("============= %s - %d games played ============= \n", game.getGameType().name(), totalGamesRun);
         for (int i = 0; i < this.agents.size(); i++) {
@@ -457,40 +442,16 @@ public class RoundRobinTournament extends AbstractTournament {
             if (verbose) System.out.print(str);
         }
 
-        if (agents.size() > game.getGameState().getNPlayers()) {
-            // now report alpha-rank as long as we have more agents than players
-            // otherwise the Transition matrix is singular and we get no additional information
-            // compared the the simple win rates
-            if (alphaRankByWin != null) {
-                str = "\nAlpha-rank by Win Rate\n";
+        if (finalAlphaRankWinRanking != null && !finalAlphaRankWinRanking.isEmpty()) {
+            for (String agentNames : finalAlphaRankWinRanking.keySet()) {
+                str = String.format("%s: Alpha-rank by Win %.2f\tAlpha-rank by Ordinal %.2f\n",
+                        agentNames,
+                        finalAlphaRankWinRanking.get(agentNames).a, finalAlphaRankOrdinalRanking.get(agentNames).a);
                 if (toFile) dataDump.add(str);
                 if (verbose) System.out.print(str);
-                List<Pair<String, Double>> sortedAlphaRank = IntStream.range(0, agents.size())
-                        .mapToObj(i -> new Pair<>(agents.get(i).toString(), alphaRankByWin[i]))
-                        .sorted((o1, o2) -> o2.b.compareTo(o1.b))
-                        .toList();
-                for (Pair<String, Double> pair : sortedAlphaRank) {
-                    str = String.format("\t%-30s\t%.2f\n", pair.a, pair.b);
-                    if (toFile) dataDump.add(str);
-                    if (verbose) System.out.print(str);
-                }
-            }
-            if (alphaRankByOrdinal != null) {
-                // and then by ordinal
-                str = "\nAlpha-rank by Ordinal Position\n";
-                if (toFile) dataDump.add(str);
-                if (verbose) System.out.print(str);
-                List<Pair<String, Double>> sortedAlphaRank = IntStream.range(0, agents.size())
-                        .mapToObj(i -> new Pair<>(agents.get(i).toString(), alphaRankByOrdinal[i]))
-                        .sorted((o1, o2) -> o2.b.compareTo(o1.b))
-                        .toList();
-                for (Pair<String, Double> pair : sortedAlphaRank) {
-                    str = String.format("\t%-30s\t%.2f\n", pair.a, pair.b);
-                    if (toFile) dataDump.add(str);
-                    if (verbose) System.out.print(str);
-                }
             }
         }
+
         // To file
         if (toFile) {
             try {
@@ -512,203 +473,10 @@ public class RoundRobinTournament extends AbstractTournament {
         }
     }
 
-    protected double[] reportAlphaRank(List<String> dataDump, int[][] values) {
-        // alpha-rank calculations
-        double[] alphaValues = new double[]{10.0};
-        double[] retValue = new double[agents.size()];
-        for (double alpha : alphaValues) {
-            // T is our transition matrix
-            double[][] T = new double[agents.size()][agents.size()];
-            for (int i = 0; i < agents.size(); i++) {
-                for (int j = 0; j < agents.size(); j++) {
-                    if (i == j) {
-                        T[i][j] = Math.exp(0);
-                    } else {
-                        double baseValue = values[i][j] / (double) tournamentResults.getGamesPlayed(agents.get(i).toString(), agents.get(j).toString());
-                        T[i][j] = Math.exp(-alpha * baseValue);
-                    }
-                }
-                // then normalise the row
-                double rowSum = Arrays.stream(T[i]).sum();
-                for (int j = 0; j < agents.size(); j++) {
-                    T[i][j] /= rowSum;
-                }
-            }
-            RealMatrix transitionMatrix = MatrixUtils.createRealMatrix(T);
-
-            // We now find the stationary distribution of this transition matrix
-            // i.e. the pi for which T^T pi = pi
-            try {
-                EigenDecomposition eig = new EigenDecomposition(transitionMatrix.transpose());
-                double[] eigenValues = eig.getRealEigenvalues();
-                // we now expect one of these to have a value of +1.0
-                for (int eigenIndex = 0; eigenIndex < eigenValues.length; eigenIndex++) {
-                    if (Math.abs(eigenValues[eigenIndex] - 1.0) < 1e-6) {
-                        // we have found the eigenvector we want
-                        double[] pi = eig.getEigenvector(eigenIndex).toArray();
-                        // normalise pi
-                        double piSum = Arrays.stream(pi).sum();
-                        for (int i = 0; i < agents.size(); i++) {
-                            pi[i] /= piSum;
-                        }
-                        String str = "Alpha: " + alpha;
-                        dataDump.add(str + "\n");
-                        if (verbose) System.out.println(str);
-                        for (int i = 0; i < agents.size(); i++) {
-                            retValue[i] = pi[i];
-                            str = String.format("\t%.3f\t%s%n", pi[i], agents.get(i));
-                            dataDump.add(str);
-                            if (verbose) System.out.print(str);
-                        }
-                        dataDump.add("\n");
-                        if (verbose) System.out.println();
-                        break;
-                    }
-                }
-            } catch (Exception e) {
-                System.out.println("Error in eigen decomposition - unable to calculate alpha-rank.");
-                return null;
-            }
-
-            // print the transition matrix
-            if (alphaRankDetails) {
-                String str = "Transition matrix for alpha = " + alpha;
-                dataDump.add(str + "\n");
-                if (verbose) System.out.println(str);
-                for (int i = 0; i < agents.size(); i++) {
-                    for (int j = 0; j < agents.size(); j++) {
-                        str = String.format("%.3f\t", T[i][j]);
-                        dataDump.add(str);
-                        if (verbose) System.out.print(str);
-                    }
-                    dataDump.add("\n");
-                    if (verbose) System.out.println();
-                }
-            }
-
-            // B = A^TA + A A^T
-            RealMatrix B = transitionMatrix.transpose().multiply(transitionMatrix).add(transitionMatrix.multiply(transitionMatrix.transpose()));
-            // This provides useful clustering information
-
-            // print the B matrix
-            if (alphaRankDetails) {
-                String str = "B matrix for alpha = " + alpha;
-                dataDump.add(str + "\n");
-                if (verbose) System.out.println(str);
-                for (int i = 0; i < agents.size(); i++) {
-                    for (int j = 0; j < agents.size(); j++) {
-                        str = String.format("%.3f\t", B.getEntry(i, j));
-                        dataDump.add(str);
-                        if (verbose) System.out.print(str);
-                    }
-                    dataDump.add("\n");
-                    if (verbose) System.out.println();
-                }
-            }
-
-            // Now we cluster based on the bibliometrically symmetrised matrix B
-            double thresholdForCluster = 0.15 * sqrt(agents.size());
-            String[] clusterMembership = new String[agents.size()];
-            for (int i = 0; i < agents.size(); i++) {
-                for (int j = i; j < agents.size(); j++) {
-                    if (i != j) {
-                        // we look at the Euclidean distance between the two rows
-                        double distance = 0.0;
-                        for (int k = 0; k < agents.size(); k++) {
-                            distance += (B.getEntry(i, k) - B.getEntry(j, k)) * (B.getEntry(i, k) - B.getEntry(j, k));
-                        }
-                        distance = sqrt(distance);
-                        if (distance < thresholdForCluster) {
-                            if (clusterMembership[i] == null) {
-                                if (clusterMembership[j] == null) {
-                                    // neither in cluster, so new cluster
-                                    clusterMembership[i] = agents.get(i).toString();
-                                    clusterMembership[j] = agents.get(i).toString();
-                                } else {
-                                    // j is in a cluster, so i joins it
-                                    clusterMembership[i] = clusterMembership[j];
-                                }
-                            } else {
-                                if (clusterMembership[j] == null) {
-                                    // i is in a cluster, so j joins it
-                                    clusterMembership[j] = clusterMembership[i];
-                                } else {
-                                    // both in clusters, so merge
-                                    String cluster = clusterMembership[i];
-                                    for (int k = 0; k < agents.size(); k++) {
-                                        if (clusterMembership[k] != null && clusterMembership[k].equals(clusterMembership[j])) {
-                                            clusterMembership[k] = cluster;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            // print the cluster membership
-            if (alphaRankDetails && Arrays.stream(clusterMembership).anyMatch(Objects::nonNull)) {
-                String str = "The following agents cluster together, and may be considered equivalent: ";
-                dataDump.add(str + "\n");
-                if (verbose) System.out.println(str);
-                for (int i = 0; i < agents.size(); i++) {
-                    // get all agents in this cluster
-                    boolean clusterExists = false;
-                    for (int j = 0; j < agents.size(); j++) {
-                        if (clusterMembership[j] != null && clusterMembership[j].equals(agents.get(i).toString())) {
-                            if (!clusterExists) {
-                                str = String.format("\tCluster for %s%n", agents.get(i));
-                                dataDump.add(str);
-                                if (verbose) System.out.print(str);
-                            }
-                            clusterExists = true;
-                            str = String.format("\t\t%s%n", agents.get(j));
-                            dataDump.add(str);
-                            if (verbose) System.out.print(str);
-                        }
-                    }
-                }
-                dataDump.add("\n");
-                if (verbose) System.out.println();
-            }
-        }
-        return retValue;
-    }
 
     public double getWinRate(int agentID) {
         String name = agents.get(agentID).toString();
         return finalWinRanking.get(name) == null ? 0.0 : finalWinRanking.get(name).a;
-    }
-
-    public double getWinRateAlphaRank(int agentID) {
-        if (alphaRankByWin == null)
-            return getWinRate(agentID);
-        return alphaRankByWin[agentID];
-    }
-
-    public int getAlphaRankWinnerByWinRate() {
-        if (alphaRankByWin == null)
-            return -1;
-        return getBestAgentInArray(alphaRankByWin);
-    }
-
-    public int getAlphaRankWinnerByOrdinal() {
-        if (alphaRankByOrdinal == null)
-            return -1;
-        return getBestAgentInArray(alphaRankByOrdinal);
-    }
-
-    private int getBestAgentInArray(double[] arrayIndexedByAgent) {
-        int winnerIndex = 0;
-        double max = arrayIndexedByAgent[0];
-        for (int i = 1; i < arrayIndexedByAgent.length; i++) {
-            if (arrayIndexedByAgent[i] > max) {
-                max = arrayIndexedByAgent[i];
-                winnerIndex = i;
-            }
-        }
-        return winnerIndex;
     }
 
     public double getWinStdErr(int agentID) {
@@ -731,12 +499,6 @@ public class RoundRobinTournament extends AbstractTournament {
         return finalOrdinalRanking.get(name).a;
     }
 
-    public double getOrdinalAlphaRank(int agentID) {
-        if (alphaRankByOrdinal == null)
-            return -getOrdinalRank(agentID);
-        return alphaRankByOrdinal[agentID];
-    }
-
     public double getOrdinalStdErr(int agentID) {
         String name = agents.get(agentID).toString();
         return finalOrdinalRanking.get(name).b;
@@ -744,10 +506,6 @@ public class RoundRobinTournament extends AbstractTournament {
 
     public void addListener(IGameListener gameTracker) {
         listeners.add(gameTracker);
-    }
-
-    public int getNumberOfAgents() {
-        return agents.size();
     }
 
     public int[] getNGamesPlayed() {

@@ -96,6 +96,10 @@ public class RolloutStateFeatureListener extends StateFeatureListener {
         double[] totalWin = new double[state.getNPlayers()];
         double[] totalLead = new double[state.getNPlayers()];
         for (int i = 0; i < rollouts; i++) {
+            // firstly we reset our players (to remove any information they may have from previous rollouts)
+            for (AbstractPlayer p : rolloutPlayers) {
+                p.initializePlayer(state);
+            }
             AbstractGameState copy = state.copy(state.getCurrentPlayer());
             while (copy.isNotTerminal()) {
                 AbstractPlayer player = rolloutPlayers[copy.getCurrentPlayer()];

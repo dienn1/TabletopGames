@@ -53,7 +53,7 @@ public class MCTSPlayer extends AbstractPlayer implements IAnyTimePlayer, IHasSt
             rnd = new Random(parameters.getRandomSeed());
             getParameters().rolloutPolicy = null;
             getParameters().getRolloutStrategy();
-            getParameters().opponentModel = null;  // thi swill force reconstruction from random seed
+            getParameters().opponentModel = null;  // this will force reconstruction from random seed
             getParameters().getOpponentModel();
             //       System.out.println("Resetting seed for MCTS player to " + params.getRandomSeed());
         }

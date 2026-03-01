@@ -94,6 +94,10 @@ public class TournamentResults {
         playerResults.computeIfAbsent(name, k -> new ArrayList<>()).add(new Result(points, ordinal, score, win));
     }
 
+    public int totalResults() {
+        return playerResults.values().stream().mapToInt(List::size).sum();
+    }
+
     public List<Result> getPlayerResults(String name) {
         return playerResults.getOrDefault(name, Collections.emptyList());
     }

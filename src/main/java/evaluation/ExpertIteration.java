@@ -14,6 +14,7 @@ import evaluation.metrics.Event;
 import evaluation.optimisation.ITPSearchSpace;
 import evaluation.optimisation.NTBEA;
 import evaluation.optimisation.NTBEAParameters;
+import evaluation.tournaments.AlphaRankAnalysis;
 import evaluation.tournaments.RoundRobinTournament;
 import evaluation.tournaments.TournamentResults;
 import games.GameType;
@@ -30,6 +31,7 @@ import java.util.*;
 import java.util.stream.IntStream;
 
 import static evaluation.RunArg.parseConfig;
+import static java.util.Comparator.comparingDouble;
 import static utilities.JSONUtils.loadClass;
 
 public class ExpertIteration {
@@ -322,8 +324,14 @@ public class ExpertIteration {
         tournamentConfig.put(RunArg.matchups, (int) RGConfig.get(RunArg.matchups) - (int) tournamentConfig.get(RunArg.matchups));
         RoundRobinTournament tournament = runTournament(agents, tournamentConfig);
 
-        int alphaWinner = tournament.getAlphaRankWinnerByWinRate();
-        AbstractPlayer winner = alphaWinner > -1 ? agents.get(alphaWinner) : tournament.getWinner();
+        Map<String, Pair<Double, Double>> alphaRankAnalysis = (new AlphaRankAnalysis(false)).getRanking(tournament.getTournamentResults());
+        List<String> agentsSortedByAlphaRank = alphaRankAnalysis.entrySet().stream()
+                .sorted((e1, e2) -> Double.compare(e2.getValue().a, e1.getValue().a)) // sort descending by alpha rank
+                .map(Map.Entry::getKey)
+                .toList();
+        String alphaRankWinner = agentsSortedByAlphaRank.isEmpty() ? tournament.getWinner().toString() : agentsSortedByAlphaRank.getFirst();
+
+        AbstractPlayer winner = tournament.getTournamentResults().getAgent(alphaRankWinner);
         // Are we done?
         if (iter > 0) {
             tournamentWinsByAgent.merge(winner.toString(), 1, Integer::sum);
@@ -345,14 +353,9 @@ public class ExpertIteration {
             int toRemove = agents.size() - 2 * nPlayers;
             System.out.println("Removing " + toRemove + " additional agents to get within 2 x nPlayers");
             // we remove the worst performing agents
-            List<Integer> sortedAgents = IntStream.range(0, agents.size())
-                    .boxed()
-                    .sorted(Comparator.comparingDouble(tournament::getWinRateAlphaRank))
-                    .toList();
-            // This sorts them in ascending order, so the first ones are the worst performing
-            List<AbstractPlayer> toRemoveAgents = sortedAgents.stream()
+            List<AbstractPlayer> toRemoveAgents = agentsSortedByAlphaRank.stream()
                     .limit(toRemove)
-                    .map(agents::get)
+                    .map(name -> tournament.getTournamentResults().getAgent(name))
                     .peek(a -> System.out.println("Removing agent " + a))
                     .toList();
             agents.removeAll(toRemoveAgents);
@@ -384,8 +387,10 @@ public class ExpertIteration {
                 }
                 case ValueTarget.Rollout -> {
                     AbstractPlayer[] players = new AbstractPlayer[nPlayers];
-                    for (int i = 0; i < players.length; i++)
+                    for (int i = 0; i < players.length; i++) {
                         players[i] = bestAgent.copy();
+                        players[i].setPlayerID(i);
+                    }
                     yield (new RolloutStateFeatureListener(
                             stateFeatureVector,
                             players,
@@ -497,24 +502,25 @@ public class ExpertIteration {
         NTBEAConfig.put(RunArg.evalGames, 0);
 
         AbstractPlayer newTunedPlayer = null;
-        if (!config.get(RunArg.valueSS).equals("")) {
+        if (!config.get(RunArg.valueSS).equals("")) { // we tune with a value search space
             NTBEAConfig.put(RunArg.searchSpace, config.get(RunArg.valueSS));
             NTBEAConfig.put(RunArg.destDir, dataDir + File.separator + String.format("ValueNTBEA_%02d", iter));
             NTBEAParameters ntbeaParams = new NTBEAParameters(NTBEAConfig);
 
             NTBEA ntbea = new NTBEA(ntbeaParams, gameToPlay, nPlayers);
             ntbea.setOpponents(Collections.singletonList(bestAgent));
-            ntbea.fixTunableParameter("heuristic", stateHeuristic);  // so this is used when tuning
 
+            // fix to current action settings (if we have a two-phase tuning approach)
             if (actionSearchSettings != null) {
                 if (actionSearchSpace != null) {   // on first iteration we have results of action search
                     // we can use the action search settings to initialise the value search settings
                     fixSSDimensions(ntbea, valueSearchSpace, actionSearchSettings, actionSearchSpace,
                             Set.of("heuristic", "actionHeuristic", "rolloutPolicyParams", "rolloutPolicyParams.actionHeuristic"));
                 }
-
             }
-            // as well as the old action-tuned settings, we also use the action heuristic (even if not tuning the action space)
+
+            // also set currently learned heuristics
+            ntbea.fixTunableParameter("heuristic", stateHeuristic);  // so this is used when tuning
             if (actionHeuristic != null) {
                 ntbea.fixTunableParameter("actionHeuristic", actionHeuristic);
                 ntbea.fixTunableParameter("rolloutPolicyParams.actionHeuristic", actionHeuristic);
@@ -527,6 +533,8 @@ public class ExpertIteration {
             valueSearchSpace = (ITPSearchSpace<?>) ntbeaParams.searchSpace;
             valueSearchSpace.writeAgentJSON(valueSearchSettings, dataDir + File.separator + String.format("ValueNTBEA_%02d.json", iter));
         }
+
+        // then we run the second action phase (if set to do so)
         if (!config.get(RunArg.actionSS).equals("")) {
             NTBEAConfig.put(RunArg.searchSpace, config.get(RunArg.actionSS));
             NTBEAConfig.put(RunArg.destDir, dataDir + File.separator + String.format("ActionNTBEA_%02d", iter));
@@ -535,16 +543,17 @@ public class ExpertIteration {
 
             NTBEA ntbea = new NTBEA(ntbeaParams, gameToPlay, nPlayers);
             ntbea.setOpponents(Collections.singletonList(bestAgent));
-            ntbea.fixTunableParameter("actionHeuristic", actionHeuristic);  // so this is used when tuning
-            ntbea.fixTunableParameter("rolloutPolicyParams.actionHeuristic", actionHeuristic);
 
             if (valueSearchSettings != null && valueSearchSpace != null) {
                 // we can use the value search settings to initialise the action search settings
                 fixSSDimensions(ntbea, actionSearchSpace, valueSearchSettings, valueSearchSpace,
                         Set.of("heuristic", "actionHeuristic", "rolloutPolicyParams", "rolloutPolicyParams.actionHeuristic"));
             }
+
+            // set current heuristics
+            ntbea.fixTunableParameter("actionHeuristic", actionHeuristic);  // so this is used when tuning
+            ntbea.fixTunableParameter("rolloutPolicyParams.actionHeuristic", actionHeuristic);
             if (stateHeuristic != null) {
-                // and also make sure we include the state heuristic in the action search
                 ntbea.fixTunableParameter("heuristic", stateHeuristic);
             }
 
