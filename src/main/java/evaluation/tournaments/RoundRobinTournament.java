@@ -60,13 +60,9 @@ public class RoundRobinTournament extends AbstractTournament {
     public RoundRobinTournament(List<? extends AbstractPlayer> agents, GameType gameToPlay, int playersPerGame,
                                 AbstractParameters gameParams, Map<RunArg, Object> config) {
         super(agents, gameToPlay, playersPerGame, gameParams);
-        Map<String, Integer> nameCounts = new HashMap<>();
         for (AbstractPlayer agent : this.agents) {
             String name = agent.toString();
-            nameCounts.put(name, nameCounts.getOrDefault(name, 0) + 1);
-            if (nameCounts.get(name) > 1) {
-                agent.setName(name + " " + nameCounts.get(name));
-            }
+            agent.setName(name);
         }
         int nTeams = game.getGameState().getNTeams();
         this.verbose = (boolean) config.getOrDefault(RunArg.verbose, false);

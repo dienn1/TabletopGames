@@ -1,11 +1,16 @@
 package evaluation.tournaments;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonValue;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import core.AbstractPlayer;
-import core.CoreConstants;
 import core.Game;
+import org.jspecify.annotations.NonNull;
 
-import java.beans.Transient;
+import java.io.IOException;
 import java.util.*;
 
 /**
@@ -22,7 +27,11 @@ public class TournamentResults {
         public final double score;
         public final int win; // 1 for win, 0 otherwise
 
-        public Result(double points, int ordinal, double score, int win) {
+        @JsonCreator
+        public Result(@JsonProperty("points") double points,
+                      @JsonProperty("ordinal") int ordinal,
+                      @JsonProperty("score") double score,
+                      @JsonProperty("win") int win) {
             this.points = points;
             this.ordinal = ordinal;
             this.score = score;
@@ -30,6 +39,7 @@ public class TournamentResults {
         }
     }
 
+    @JsonIgnore
     Map<String, AbstractPlayer> agentsByName = new HashMap<>();
     Map<String, Map<String, Integer>> nGamesPlayedPerOpponent = new HashMap<>();
     Map<String, Map<String, Integer>> winsPerPlayerPerOpponent = new HashMap<>();
@@ -40,8 +50,6 @@ public class TournamentResults {
         if (game.getGameState().isNotTerminal())
             throw new IllegalArgumentException("Game has not finished yet");
 
-        boolean byTeam = game.getGameState().getNTeams() != game.getGameState().getNPlayers();
-        // TODO: Not sure what I need to do differently here for Team games after refactor - to be revisited
         int winningPlayerCount = game.getGameState().getWinners().size();
         for (int j = 0; j < game.getPlayers().size(); j++) {
             // Firstly we record the raw result for each player
@@ -146,4 +154,83 @@ public class TournamentResults {
         }
         return 0;
     }
+
+    // ------------------ Jackson (de)serialisation helpers ------------------
+
+    /**
+     * DTO used to safely serialise/deserialise the parts of TournamentResults that are JSON-friendly.
+     * We intentionally exclude the transient agentsByName map (AbstractPlayer instances) from JSON.
+     */
+    public static class TournamentResultsDTO {
+        public Map<String, Map<String, Integer>> nGamesPlayedPerOpponent;
+        public Map<String, Map<String, Integer>> winsPerPlayerPerOpponent;
+        public Map<String, Map<String, Integer>> ordinalDeltaPerOpponent;
+        public Map<String, List<Result>> playerResults;
+
+        // no-arg constructor for Jackson
+        public TournamentResultsDTO() {
+        }
+    }
+
+    // Expose DTO for Jackson serialization
+    @JsonValue
+    public TournamentResultsDTO toDTO() {
+        TournamentResultsDTO dto = new TournamentResultsDTO();
+        dto.nGamesPlayedPerOpponent = this.nGamesPlayedPerOpponent;
+        dto.winsPerPlayerPerOpponent = this.winsPerPlayerPerOpponent;
+        dto.ordinalDeltaPerOpponent = this.ordinalDeltaPerOpponent;
+        dto.playerResults = this.playerResults;
+        return dto;
+    }
+
+    @JsonCreator
+    public static TournamentResults getTournamentResults(TournamentResultsDTO dto) {
+        return extractFromDTO(dto);
+    }
+
+    /**
+     * Convert this TournamentResults to a JSON string (only includes JSON-friendly fields).
+     */
+    public String toJson() throws JsonProcessingException {
+        ObjectMapper om = new ObjectMapper();
+        TournamentResultsDTO dto = new TournamentResultsDTO();
+        dto.nGamesPlayedPerOpponent = this.nGamesPlayedPerOpponent;
+        dto.winsPerPlayerPerOpponent = this.winsPerPlayerPerOpponent;
+        dto.ordinalDeltaPerOpponent = this.ordinalDeltaPerOpponent;
+        dto.playerResults = this.playerResults;
+        // Use pretty printer for readable JSON
+        return om.writerWithDefaultPrettyPrinter().writeValueAsString(dto);
+    }
+
+    /**
+     * Recreate TournamentResults from JSON. Note: agentsByName will be empty after this; use
+     * {@link #fromJson(String, Map)} if you have a mapping of names to AbstractPlayer instances to restore.
+     */
+    public static TournamentResults fromJson(String json) throws IOException {
+        ObjectMapper om = new ObjectMapper();
+        TournamentResultsDTO dto = om.readValue(json, TournamentResultsDTO.class);
+        return getTournamentResults(dto);
+    }
+
+    /**
+     * Recreate TournamentResults from JSON and attach provided AbstractPlayer instances by name.
+     * Any names in the provided map that don't appear in the JSON will still be added to agentsByName.
+     */
+    public static TournamentResults fromJson(String json, Map<String, AbstractPlayer> agentsByName) throws IOException {
+        ObjectMapper om = new ObjectMapper();
+        TournamentResultsDTO dto = om.readValue(json, TournamentResultsDTO.class);
+        TournamentResults tr = extractFromDTO(dto);
+        if (agentsByName != null) tr.agentsByName.putAll(agentsByName);
+        return tr;
+    }
+
+    private static TournamentResults extractFromDTO(TournamentResultsDTO dto) {
+        TournamentResults tr = new TournamentResults();
+        if (dto.nGamesPlayedPerOpponent != null) tr.nGamesPlayedPerOpponent = dto.nGamesPlayedPerOpponent;
+        if (dto.winsPerPlayerPerOpponent != null) tr.winsPerPlayerPerOpponent = dto.winsPerPlayerPerOpponent;
+        if (dto.ordinalDeltaPerOpponent != null) tr.ordinalDeltaPerOpponent = dto.ordinalDeltaPerOpponent;
+        if (dto.playerResults != null) tr.playerResults = dto.playerResults;
+        return tr;
+    }
+
 }

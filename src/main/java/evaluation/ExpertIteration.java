@@ -1,6 +1,7 @@
 package evaluation;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import core.AbstractParameters;
 import core.AbstractPlayer;
 import core.interfaces.*;
@@ -21,7 +22,6 @@ import players.PlayerFactory;
 import players.learners.LearnFromData;
 import players.mcts.MCTSExpertIterationListener;
 import players.mcts.MCTSPlayer;
-import players.simple.BoltzmannActionPlayer;
 import utilities.Pair;
 
 import java.io.File;
@@ -29,8 +29,6 @@ import java.io.IOException;
 import java.util.*;
 import java.util.stream.IntStream;
 
-import static evaluation.ExpertIteration.ValueTarget.Base;
-import static evaluation.RunArg.destDir;
 import static evaluation.RunArg.parseConfig;
 import static utilities.JSONUtils.loadClass;
 
@@ -57,7 +55,7 @@ public class ExpertIteration {
     Map<RunArg, Object> NTBEAConfig;
     Map<RunArg, Object> RGConfig;
 
-    ObjectMapper mapper = new ObjectMapper();
+    ObjectMapper mapper = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
     TournamentResults runningTournamentResults = new TournamentResults();
 
     int[] valueSearchSettings;
@@ -148,7 +146,8 @@ public class ExpertIteration {
 
         try {
             if ((new File(dataDir + File.separator + "RunningTournamentResults.json")).exists()) {
-                runningTournamentResults = mapper.readValue("RunningTournamentResults.json", TournamentResults.class);
+                TournamentResults.TournamentResultsDTO dto = mapper.readValue(new File(dataDir + File.separator + "RunningTournamentResults.json"), TournamentResults.TournamentResultsDTO.class);
+                runningTournamentResults = TournamentResults.getTournamentResults(dto);
             }
         } catch (IOException ex) {
             throw new RuntimeException(ex.getMessage());
@@ -290,14 +289,14 @@ public class ExpertIteration {
     // any very poorly performing agents are removed from the list (dominated by all other agents)
     // This also checks for convergence; meaning that the best agent has not changed for 3 iterations
     private boolean gatherDataAndCheckConvergence() {
-        RGConfig.put(RunArg.mode, "random");  // we are most interested in a wide range of data, so do not want to reuse random seeds
-        RGConfig.put(RunArg.verbose, false);
+        Map<RunArg, Object> tournamentConfig = new HashMap<>(RGConfig);
+        tournamentConfig.put(RunArg.verbose, false);
 
         // we need to set the listener to record the required data for the Learner processes
-        RGConfig.put(RunArg.listener, new ArrayList<String>());
+        tournamentConfig.put(RunArg.listener, new ArrayList<String>());
 
         // and set the budget on the agents
-        int budget = (int) RGConfig.get(RunArg.budget);
+        int budget = (int) tournamentConfig.get(RunArg.budget);
         if (budget > 0) {
             for (AbstractPlayer player : agents) {
                 if (player instanceof IAnyTimePlayer anyTime)
@@ -305,95 +304,23 @@ public class ExpertIteration {
             }
         }
         // we want to run 2 tournaments. Firstly with a focusPlayer of the newly learned agent
-        // then one with all agents
-        // unless there is a single agent; or the best agent is still the first one. In this case, we run a single tournament
-//        if (!agents.isEmpty() && bestAgent != agents.getFirst()) {
-//            RGConfig.put(RunArg.mode, "onevsall");
-//            List<AbstractPlayer> focusAtFront = new ArrayList<>(agents);
-//            focusAtFront.remove(bestAgent);
-//            focusAtFront.add(0, bestAgent); // we stick the best agent at the front (TODO: make less hacky)
-//            RoundRobinTournament tournament = new RoundRobinTournament(focusAtFront, gameToPlay, nPlayers, params, RGConfig);
-//
-//        }
+        // then one with all agents - each using half the matchups budget.
+        // Unless there is a single agent; or the best agent is still the first one. In this case, we run a single tournament with the full budget.
+        if (!agents.isEmpty() && bestAgent != agents.getFirst()) {
+            tournamentConfig.put(RunArg.mode, "onevsall");
+            tournamentConfig.put(RunArg.matchups, (int) RGConfig.get(RunArg.matchups) / 2);
+            List<AbstractPlayer> focusAtFront = new ArrayList<>(agents);
+            focusAtFront.remove(bestAgent);
+            focusAtFront.addFirst(bestAgent); // we stick the best agent at the front
+            runTournament(focusAtFront, tournamentConfig);
+        } else {
+            tournamentConfig.put(RunArg.matchups, 0); // indicate we have not used any of the budget
+        }
 
-        boolean allDataAsOne = config.get(RunArg.expertTrainingMode) == TrainingMode.Exponential;
-        RoundRobinTournament tournament = new RoundRobinTournament(agents, gameToPlay, nPlayers, params, RGConfig);
-        tournament.setTournamentResults(runningTournamentResults);
-        tournament.setResultsFile(dataDir + File.separator + String.format("TournamentResults_%s_%02d.txt", prefix, iter));
-        if (stateLearnerFile != null) {
-            stateListener = switch (config.get(RunArg.valueTarget)) {
-                case ValueTarget.Base -> new StateFeatureListener(stateFeatureVector,
-                        useRounds ? Event.GameEvent.ROUND_OVER : Event.GameEvent.TURN_OVER,
-                        false);  // i.e. we use the actual game outcome as the Value target
-                case ValueTarget.MCTS -> {
-                    if (config.get(RunArg.actionTarget) != ActionTarget.MCTS)
-                        throw new IllegalArgumentException("Cannot use a valueTarget of MCTS unless actionTarget is also MCTS");
-                    yield null;  // covered by ActionListener (i.e. we use the MCTS estimate as the Value target)
-                }
-                case ValueTarget.Rollout -> {
-                    AbstractPlayer[] players = new AbstractPlayer[nPlayers];
-                    for (int i = 0; i < players.length; i++)
-                        players[i] = bestAgent.copy();
-                    yield (new RolloutStateFeatureListener(
-                            stateFeatureVector,
-                            players,
-                            gameToPlay.createForwardModel(params, nPlayers)))
-                            .recordEndGameState(false);
-                }
-                case ValueTarget.None ->
-                        throw new IllegalArgumentException("Value Target is NONE, but stateLearner is defined as " + stateLearnerFile);
-                default ->
-                        throw new IllegalArgumentException("Unexpected value for expert: " + config.get(RunArg.valueTarget));
-            };
-            String fileName = String.format("State_%s_%02d.txt", prefix, allDataAsOne ? 0 : iter);
-            stateDataFilesByIteration[allDataAsOne ? 0 : iter] = dataDir + File.separator + fileName;
-            if (stateListener != null) {
-                stateListener = stateListener
-                        .setSampleRate(sampleRate)
-                        .setLogger(new FileStatsLogger(fileName, "\t", allDataAsOne));
-                stateListener.setOutputDirectory(dataDir);
-                tournament.addListener(stateListener);
-            }
-        }
-        if (actionLearnerFile != null) {
-            MCTSPlayer oracle = (MCTSPlayer) bestAgent.copy();
-            // For the oracle we set a high budget, and tweak parameters to ensure some exploration
-            oracle.setName("Oracle");
-            oracle.setBudget(budget * expertTime);
-            oracle.getParameters().setParameterValue("reuseTree", false); // we only look at occasional actions
-            //       oracle.getParameters().setParameterValue("maxTreeDepth", 1000);
-            if (((double) oracle.getParameters().getParameterValue("FPU")) < 1000.0)
-                oracle.getParameters().setParameterValue("FPU", 1000.0);
-            if (((double) oracle.getParameters().getParameterValue("K")) < 1.0)
-                oracle.getParameters().setParameterValue("K", 1.0);
-            actionListener = switch (config.get(RunArg.actionTarget)) {
-                case ActionTarget.Base -> new ActionFeatureListener(actionFeatureVector, stateFeatureVector,
-                        Event.GameEvent.ACTION_CHOSEN,
-                        true);
-                case ActionTarget.MCTS ->
-                        new MCTSExpertIterationListener(oracle, actionFeatureVector, stateFeatureVector,
-                                100, 0, true);
-                case ActionTarget.None ->
-                        throw new IllegalArgumentException("Action Target is None, but actionLearner defined as " + actionLearnerFile);
-                default ->
-                        throw new IllegalArgumentException("Unexpected value for expert: " + config.get(RunArg.actionTarget));
-            };
-            String fileName = String.format("Action_%s_%02d.txt", prefix, allDataAsOne ? 0 : iter);
-            actionListener = actionListener
-                    .setLogger(new FileStatsLogger(fileName, "\t", allDataAsOne))
-                    .setSampleRate(sampleRate);
-            actionListener.setOutputDirectory(dataDir);
-
-            tournament.addListener(actionListener);
-            actionDataFilesByIteration[allDataAsOne ? 0 : iter] = dataDir + File.separator + fileName;
-        }
-        tournament.run();
-        // then save running tournament results in case of a restart
-        try {
-            mapper.writeValue(new File(dataDir + File.separator + "RunningTournamentResults.json"), runningTournamentResults);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        tournamentConfig.put(RunArg.mode, "random");
+        // use remaining budget
+        tournamentConfig.put(RunArg.matchups, (int) RGConfig.get(RunArg.matchups) - (int) tournamentConfig.get(RunArg.matchups));
+        RoundRobinTournament tournament = runTournament(agents, tournamentConfig);
 
         int alphaWinner = tournament.getAlphaRankWinnerByWinRate();
         AbstractPlayer winner = alphaWinner > -1 ? agents.get(alphaWinner) : tournament.getWinner();
@@ -437,6 +364,94 @@ public class ExpertIteration {
         }
         return false;
 
+    }
+
+    private RoundRobinTournament runTournament(List<AbstractPlayer> localAgents, Map<RunArg, Object> runGamesConfig) {
+
+        boolean allDataAsOne = config.get(RunArg.expertTrainingMode) == TrainingMode.Exponential;
+        RoundRobinTournament tournament = new RoundRobinTournament(localAgents, gameToPlay, nPlayers, params, runGamesConfig);
+        tournament.setTournamentResults(runningTournamentResults);
+        tournament.setResultsFile(dataDir + File.separator + String.format("TournamentResults_%s_%02d.txt", prefix, iter));
+        if (stateLearnerFile != null) {
+            stateListener = switch (config.get(RunArg.valueTarget)) {
+                case ValueTarget.Base -> new StateFeatureListener(stateFeatureVector,
+                        useRounds ? Event.GameEvent.ROUND_OVER : Event.GameEvent.TURN_OVER,
+                        false);  // i.e. we use the actual game outcome as the Value target
+                case ValueTarget.MCTS -> {
+                    if (config.get(RunArg.actionTarget) != ActionTarget.MCTS)
+                        throw new IllegalArgumentException("Cannot use a valueTarget of MCTS unless actionTarget is also MCTS");
+                    yield null;  // covered by ActionListener (i.e. we use the MCTS estimate as the Value target)
+                }
+                case ValueTarget.Rollout -> {
+                    AbstractPlayer[] players = new AbstractPlayer[nPlayers];
+                    for (int i = 0; i < players.length; i++)
+                        players[i] = bestAgent.copy();
+                    yield (new RolloutStateFeatureListener(
+                            stateFeatureVector,
+                            players,
+                            gameToPlay.createForwardModel(params, nPlayers)))
+                            .recordEndGameState(false);
+                }
+                case ValueTarget.None ->
+                        throw new IllegalArgumentException("Value Target is NONE, but stateLearner is defined as " + stateLearnerFile);
+                default ->
+                        throw new IllegalArgumentException("Unexpected value for expert: " + config.get(RunArg.valueTarget));
+            };
+            String fileName = String.format("State_%s_%02d.txt", prefix, allDataAsOne ? 0 : iter);
+            stateDataFilesByIteration[allDataAsOne ? 0 : iter] = dataDir + File.separator + fileName;
+            if (stateListener != null) {
+                stateListener = stateListener
+                        .setSampleRate(sampleRate)
+                        .setLogger(new FileStatsLogger(fileName, "\t", allDataAsOne));
+                stateListener.setOutputDirectory(dataDir);
+                tournament.addListener(stateListener);
+            }
+        }
+        if (actionLearnerFile != null) {
+            MCTSPlayer oracle = (MCTSPlayer) bestAgent.copy();
+            // For the oracle we set a high budget, and tweak parameters to ensure some exploration
+            oracle.setName("Oracle");
+            oracle.setBudget((int) config.get(RunArg.budget) * expertTime);
+            oracle.getParameters().setParameterValue("reuseTree", false); // we only look at occasional actions
+            //       oracle.getParameters().setParameterValue("maxTreeDepth", 1000);
+            if (((double) oracle.getParameters().getParameterValue("FPU")) < 1000.0)
+                oracle.getParameters().setParameterValue("FPU", 1000.0);
+            if (((double) oracle.getParameters().getParameterValue("K")) < 1.0)
+                oracle.getParameters().setParameterValue("K", 1.0);
+            actionListener = switch (config.get(RunArg.actionTarget)) {
+                case ActionTarget.Base -> new ActionFeatureListener(actionFeatureVector, stateFeatureVector,
+                        Event.GameEvent.ACTION_CHOSEN,
+                        true);
+                case ActionTarget.MCTS ->
+                        new MCTSExpertIterationListener(oracle, actionFeatureVector, stateFeatureVector,
+                                100, 0, stateLearnerFile != null && stateListener == null);
+                // we record the MCTS stats for every action, plus the state features if we are not already recording them with a separate listener
+                case ActionTarget.None ->
+                        throw new IllegalArgumentException("Action Target is None, but actionLearner defined as " + actionLearnerFile);
+                default ->
+                        throw new IllegalArgumentException("Unexpected value for expert: " + config.get(RunArg.actionTarget));
+            };
+            String fileName = String.format("Action_%s_%02d.txt", prefix, allDataAsOne ? 0 : iter);
+            actionListener = actionListener
+                    .setLogger(new FileStatsLogger(fileName, "\t", allDataAsOne))
+                    .setSampleRate(sampleRate);
+            actionListener.setOutputDirectory(dataDir);
+
+            tournament.addListener(actionListener);
+            actionDataFilesByIteration[allDataAsOne ? 0 : iter] = dataDir + File.separator + fileName;
+        }
+        tournament.run();
+        // then save running tournament results in case of a restart (and if there was more than one agent involved)
+        if (localAgents.size() > 1) {
+            try {
+                // write the DTO so Jackson serializes a JSON-friendly structure
+                mapper.writeValue(new File(dataDir + File.separator + "RunningTournamentResults.json"), runningTournamentResults.toDTO());
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        return tournament;
     }
 
     // Learn agents from the data collected in the previous iteration
@@ -497,11 +512,12 @@ public class ExpertIteration {
                     fixSSDimensions(ntbea, valueSearchSpace, actionSearchSettings, actionSearchSpace,
                             Set.of("heuristic", "actionHeuristic", "rolloutPolicyParams", "rolloutPolicyParams.actionHeuristic"));
                 }
-                // as well as the old action-tuned settings, we also use the old action heuristic for which they were tuned
-                if (oldActionHeuristic != null) {
-                    ntbea.fixTunableParameter("actionHeuristic", oldActionHeuristic);
-                    ntbea.fixTunableParameter("rolloutPolicyParams.actionHeuristic", oldActionHeuristic);
-                }
+
+            }
+            // as well as the old action-tuned settings, we also use the action heuristic (even if not tuning the action space)
+            if (actionHeuristic != null) {
+                ntbea.fixTunableParameter("actionHeuristic", actionHeuristic);
+                ntbea.fixTunableParameter("rolloutPolicyParams.actionHeuristic", actionHeuristic);
             }
 
             ntbeaParams.printSearchSpaceDetails();
@@ -526,6 +542,8 @@ public class ExpertIteration {
                 // we can use the value search settings to initialise the action search settings
                 fixSSDimensions(ntbea, actionSearchSpace, valueSearchSettings, valueSearchSpace,
                         Set.of("heuristic", "actionHeuristic", "rolloutPolicyParams", "rolloutPolicyParams.actionHeuristic"));
+            }
+            if (stateHeuristic != null) {
                 // and also make sure we include the state heuristic in the action search
                 ntbea.fixTunableParameter("heuristic", stateHeuristic);
             }

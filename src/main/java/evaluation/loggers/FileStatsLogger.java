@@ -132,7 +132,6 @@ public class FileStatsLogger implements IStatisticLogger {
                 String outputLine = String.join(delimiter, outputData) + "\n";
      //           System.out.printf("File: %s, Writing....%s", fileName, outputLine);
                 writer.write(outputLine);
-                writer.flush();
             }
         } catch (IOException e) {
             throw new AssertionError("Problem writing to file " + writer + " : " + e.getMessage());
