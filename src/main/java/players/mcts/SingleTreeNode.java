@@ -203,8 +203,8 @@ public class SingleTreeNode {
             if (actionsFromOpenLoopState.size() != actionsFromOpenLoopState.stream().distinct().count())
                 throw new AssertionError("Duplicate actions found in action list: " +
                         actionsFromOpenLoopState.stream().map(a -> "\t" + a.toString() + "\n").collect(joining()));
-            if ((params.actionHeuristic != IActionHeuristic.nullReturn && nVisits < actionsFromOpenLoopState.size())
-                    || params.pUCT || params.progressiveBias > 0 || params.initialiseVisits > 0 || params.progressiveWideningConstant >= 1.0) {
+            if ((params.useActionHeuristicForMoveOrdering && nVisits < actionsFromOpenLoopState.size())
+                    || params.progressiveBias > 0 || params.initialiseVisits > 0) {
                 // We only need to calculate actionValueEstimates if we are going to be using the data in one of these variants
                 // If not, then we can save processing time by not calculating them
                 // actionHeuristicRecalculationThreshold defines how often we recalculate the action values
@@ -228,14 +228,14 @@ public class SingleTreeNode {
                         }
                     }
                 } else {
-                    params.setParameterValue("pUCT", false);
+                    params.setParameterValue("pUCTTemperature", 10001.0);
                     params.setParameterValue("progressiveBias", 0.0);
                     params.setParameterValue("initialiseVisits", 0);
                     params.setParameterValue("progressiveWideningConstant", 0.0);
                     //System.out.println("Warning: actionHeuristic is nullReturn, so pUCT, initialiseVisits, progressive bias and pruning are disabled");
                 }
             }
-            if (params.pUCT) {
+            if (params.pUCTTemperature < 10000.0) {
                 // construct the pdf for the pUCT selection
                 // This ignores Progressive widening. This should not be a major issue, but means the pdf is calculated
                 // over all possible actions, rather than just the ones we are considering
@@ -806,7 +806,7 @@ public class SingleTreeNode {
                 default -> Math.sqrt(Math.log(effectiveTotalVisits) / actionVisits);
             };
         }
-        if (params.pUCT) {
+        if (params.pUCTTemperature < 10000.0) {
             // in this case we multiply the exploration term by the pUCT factor (the probability that the action would be taken by
             // our actionHeuristic). These were calculated in setActionsFromOpenLoopState
             explorationTerm *= actionPDFEstimates.get(action);
