@@ -414,7 +414,6 @@ public class RoundRobinTournament extends AbstractTournament {
             if (toFile) dataDump.add(str);
             if (verbose) System.out.print(str);
 
-
             for (int j = 0; j < this.agents.size(); j++) {
                 if (i != j) {
                     int gamesPlayed = tournamentResults.getGamesPlayed(agents.get(i).toString(), agents.get(j).toString());
@@ -441,6 +440,9 @@ public class RoundRobinTournament extends AbstractTournament {
             if (toFile) dataDump.add(str);
             if (verbose) System.out.print(str);
         }
+        str = "\n\n---- Alpha Rank ----  \n";
+        if (toFile) dataDump.add(str);
+        if (verbose) System.out.print(str);
 
         if (finalAlphaRankWinRanking != null && !finalAlphaRankWinRanking.isEmpty()) {
             for (String agentNames : finalAlphaRankWinRanking.keySet()) {

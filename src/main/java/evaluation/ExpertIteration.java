@@ -28,6 +28,7 @@ import utilities.Pair;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static evaluation.RunArg.parseConfig;
@@ -145,6 +146,9 @@ public class ExpertIteration {
         int restartAtIteration = completedIterations.a;
         boolean restartWithTuning = completedIterations.b > 0 && !Objects.equals(completedIterations.a, completedIterations.b);
         iter = restartAtIteration;
+        if (completedIterations.a > 0 && completedIterations.b > 0) {
+            System.out.printf("Restarting from iteration %d (with tuning: %b)%n", restartAtIteration, restartWithTuning);
+        }
 
         try {
             if ((new File(dataDir + File.separator + "RunningTournamentResults.json")).exists()) {
@@ -175,13 +179,15 @@ public class ExpertIteration {
             // then load in the agents from the previous iterations
             for (int previousIter = 0; previousIter < restartAtIteration; previousIter++) {
                 AbstractPlayer newPlayer = null;
-                if (stateLearnerFile != null) {
+                boolean hasValueSS = !config.get(RunArg.valueSS).equals("");
+                boolean hasActionSS = !config.get(RunArg.actionSS).equals("");
+                if (hasValueSS) {
                     // Full player json is in NTBEA output directory
                     String agentFileName = dataDir + File.separator + String.format("ValueNTBEA_%02d.json", previousIter);
                     newPlayer = PlayerFactory.createPlayer(agentFileName);
 
                 }
-                if (actionLearnerFile != null) {
+                if (hasActionSS) {
                     String agentFileName = dataDir + File.separator + String.format("ActionNTBEA_%02d.json", previousIter);
                     newPlayer = PlayerFactory.createPlayer(agentFileName);
                 }
@@ -245,23 +251,26 @@ public class ExpertIteration {
      */
     private Pair<Integer, Integer> checkCompletedIterations() {
         // Automatically determine restart iteration by checking for existing ValueNTBEA and ActionNTBEA json files
+        boolean hasValueSS = !config.get(RunArg.valueSS).equals("");
+        boolean hasActionSS = !config.get(RunArg.actionSS).equals("");
         int completedIterations = 0;
         while (true) {
             boolean valueExists = false, actionExists = false;
-            if (stateLearnerFile != null) {
+            if (hasValueSS) {
                 String valueFile = dataDir + File.separator + String.format("ValueNTBEA_%02d.json", completedIterations);
                 valueExists = new File(valueFile).exists();
             }
-            if (actionLearnerFile != null) {
+            if (hasActionSS) {
                 String actionFile = dataDir + File.separator + String.format("ActionNTBEA_%02d.json", completedIterations);
                 actionExists = new File(actionFile).exists();
             }
-            boolean agentsOKForState = stateLearnerFile == null || valueExists;
-            boolean agentsOKForAction = actionLearnerFile == null || actionExists;
+            boolean agentsOKForState = !hasValueSS || valueExists;
+            boolean agentsOKForAction = !hasActionSS || actionExists;
             if (!agentsOKForState || !agentsOKForAction) {
                 // we now check to see if the data has been gathered for the next iteration
-                String stateDataFile = dataDir + File.separator + String.format("State_%s_%02d.txt", prefix, completedIterations);
-                String actionDataFile = dataDir + File.separator + String.format("Action_%s_%02d.txt", prefix, completedIterations);
+                int iterationRef = config.get(RunArg.expertTrainingMode) == TrainingMode.Exponential ? 0 : completedIterations;
+                String stateDataFile = dataDir + File.separator + String.format("State_%s_%02d.txt", prefix, iterationRef);
+                String actionDataFile = dataDir + File.separator + String.format("Action_%s_%02d.txt", prefix, iterationRef);
                 boolean dataOKForState = stateLearnerFile == null || new File(stateDataFile).exists();
                 boolean dataOKForAction = actionLearnerFile == null || new File(actionDataFile).exists();
                 if (dataOKForState && dataOKForAction) {
@@ -310,9 +319,8 @@ public class ExpertIteration {
         // Unless there is a single agent; or the best agent is still the first one. In this case, we run a single tournament with the full budget.
         if (!agents.isEmpty() && bestAgent != agents.getFirst()) {
             tournamentConfig.put(RunArg.mode, "onevsall");
-            tournamentConfig.put(RunArg.matchups, (int) RGConfig.get(RunArg.matchups) / 2);
-            List<AbstractPlayer> focusAtFront = new ArrayList<>(agents);
-            focusAtFront.remove(bestAgent);
+            tournamentConfig.put(RunArg.matchups, (int) RGConfig.get(RunArg.matchups)  * (nPlayers - 1) / nPlayers);
+            List<AbstractPlayer> focusAtFront = agents.stream().filter(a -> !a.toString().equals(bestAgent.toString())).collect(Collectors.toList());
             focusAtFront.addFirst(bestAgent); // we stick the best agent at the front
             runTournament(focusAtFront, tournamentConfig);
         } else {

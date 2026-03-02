@@ -50,13 +50,13 @@ public class TournamentResults {
         if (game.getGameState().isNotTerminal())
             throw new IllegalArgumentException("Game has not finished yet");
 
-        int winningPlayerCount = game.getGameState().getWinners().size();
+        int winningPlayerCount = game.getGameState().getTied().size() + game.getGameState().getWinners().size();
         for (int j = 0; j < game.getPlayers().size(); j++) {
             // Firstly we record the raw result for each player
             boolean playerIsWinner = game.getGameState().getOrdinalPosition(j) == 1;
             addResult(
                     game.getPlayers().get(j),
-                    playerIsWinner ? 1.0 / winningPlayerCount : 0.0,
+                    playerIsWinner ? (1.0 / winningPlayerCount) : 0.0,
                     game.getGameState().getOrdinalPosition(j),
                     game.getGameState().getGameScore(j),
                     playerIsWinner ? 1 : 0
