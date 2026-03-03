@@ -10,6 +10,7 @@ import com.google.gson.JsonPrimitive;
 import com.google.gson.JsonSyntaxException;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 public class Tokenizer {
@@ -160,15 +161,23 @@ public class Tokenizer {
         return p.toString();
     }
 
-    private static void addToken(Map<String, Integer> map, String token) {
+    public static void addToken(Map<String, Integer> map, String token) {
         if (token == null) return;
         Integer v = map.get(token);
         map.put(token, v == null ? 1 : v + 1);
     }
 
-    private static void merge(Map<String, Integer> dest, Map<String, Integer> src) {
+    public static void merge(Map<String, Integer> dest, Map<String, Integer> src) {
         for (Map.Entry<String, Integer> e : src.entrySet()) {
             dest.put(e.getKey(), dest.getOrDefault(e.getKey(), 0) + e.getValue());
+        }
+    }
+
+    public static void filter(Map<String, Integer> freq, List<String> filterList, boolean whitelist) {
+        if (whitelist) {
+            freq.keySet().retainAll(filterList);
+        } else {
+            filterList.forEach(freq.keySet()::remove);
         }
     }
 }

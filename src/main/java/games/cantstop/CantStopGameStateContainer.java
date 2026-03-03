@@ -13,7 +13,7 @@ public class CantStopGameStateContainer extends AbstractGameStateContainer {
     protected int[][] playerMarkerPositions;
     protected List<Dice> dice;
 
-    protected CantStopGameStateContainer(CantStopGameState gs) {
+    public CantStopGameStateContainer(CantStopGameState gs) {
         super(gs);
         completedColumns = gs.completedColumns;
         playerMarkerPositions = gs.playerMarkerPositions;

@@ -11,7 +11,7 @@ public class DBGameStateContainer extends AbstractGameStateContainer {
     int[] nCellsPerPlayer;
     HashMap<DBCell, Integer> cellToOwnerMap;  // Mapping from each cell to its owner, if complete
     HashMap<DBEdge, Integer> edgeToOwnerMap;  // Mapping from each edge to its owner, if placed
-    protected DBGameStateContainer(DBGameState gs) {
+    public DBGameStateContainer(DBGameState gs) {
         super(gs);
         nCellsPerPlayer = gs.nCellsPerPlayer;
         cellToOwnerMap = gs.cellToOwnerMap;  // Mapping from each cell to its owner, if complete
