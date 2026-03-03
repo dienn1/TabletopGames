@@ -1,8 +1,9 @@
-package players.simple;
+package players.jsonBagPlayers;
 
 import core.AbstractGameState;
 import core.actions.AbstractAction;
 import core.interfaces.IStateHeuristic;
+import players.simple.OSLAPlayer;
 
 import java.util.ArrayList;
 import java.util.List;

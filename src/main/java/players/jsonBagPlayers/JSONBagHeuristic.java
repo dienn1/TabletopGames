@@ -1,10 +1,9 @@
-package players.simple;
+package players.jsonBagPlayers;
 
 import core.AbstractGameState;
+import core.AbstractGameStateContainer;
 import core.interfaces.IStateHeuristic;
-import evaluation.metrics.Tokenizer;
 
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -14,6 +13,10 @@ public class JSONBagHeuristic implements IStateHeuristic {
 
     public JSONBagHeuristic() {
         currentJSONBag = new LinkedHashMap<String, Integer>();
+    }
+
+    public void updateJSONBag(AbstractGameStateContainer gsContainter) {
+
     }
 
     @Override
