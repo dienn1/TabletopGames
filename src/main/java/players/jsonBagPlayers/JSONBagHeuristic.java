@@ -40,6 +40,11 @@ public class JSONBagHeuristic implements IStateHeuristic {
         Tokenizer.merge(currentJSONBag, tokenizedGameState);
     }
 
+    public void resetCurrentBag(AbstractGameState gs) {
+        currentJSONBag = new LinkedHashMap<String, Integer>();
+        updateJSONBag(gs);
+    }
+
     @Override
     public double evaluateState(AbstractGameState gs, int playerId) {
         if (gs.getNPlayers() != prototypes.size()) {

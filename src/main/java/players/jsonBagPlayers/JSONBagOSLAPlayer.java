@@ -75,6 +75,11 @@ public class JSONBagOSLAPlayer extends AbstractPlayer {
     }
 
     @Override
+    public void initializePlayer(AbstractGameState gameState) {
+        heuristic.resetCurrentBag(gameState);
+    }
+
+    @Override
     public JSONBagOSLAPlayer copy() {
         JSONBagOSLAPlayer retValue = new JSONBagOSLAPlayer(new Random(rnd.nextInt()));
         retValue.heuristic = this.heuristic.copy();
