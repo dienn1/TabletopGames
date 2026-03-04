@@ -33,7 +33,7 @@ public class JensenShannonDistance {
      * @param q Second distribution as a map of string keys to integer counts
      * @return The Jensen-Shannon distance (between 0 and 1)
      */
-    public static double jensenShannonDistance(Map<String, Integer> p, Map<String, Integer> q) {
+    public static double jsd(Map<String, Integer> p, Map<String, Integer> q) {
         // Handle empty cases
         if ((p == null || p.isEmpty()) && (q == null || q.isEmpty())) {
             return 0;
@@ -89,7 +89,7 @@ public class JensenShannonDistance {
         q.put("b", 25);
         q.put("d", 10);
 
-        double distance = jensenShannonDistance(p, q);
+        double distance = jsd(p, q);
         System.out.println("Jensen-Shannon Distance: " + distance);
     }
 }

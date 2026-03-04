@@ -23,6 +23,8 @@ import players.basicMCTS.BasicMCTSPlayer;
 import players.human.ActionController;
 import players.human.HumanConsolePlayer;
 import players.human.HumanGUIPlayer;
+import players.jsonBagPlayers.JSONBagOSLAPlayer;
+import players.jsonBagPlayers.Tokenizer;
 import players.mcts.MCTSEnums;
 import players.mcts.MCTSParams;
 import players.mcts.MCTSPlayer;
@@ -36,6 +38,11 @@ import players.simple.SimultaneousOSLAPlayer;
 import utilities.Pair;
 import utilities.Utils;
 
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+import java.io.FileReader;
+import java.io.IOException;
+import java.lang.reflect.Type;
 import javax.swing.Timer;
 import javax.swing.*;
 import java.awt.*;
@@ -43,9 +50,6 @@ import java.util.List;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
-
-import static utilities.JSONUtils.loadClassFromJSON;
-import static utilities.JSONUtils.loadJSONFile;
 
 
 public class Game {
@@ -867,41 +871,60 @@ public class Game {
         /* Set up players for the game */
         ArrayList<AbstractPlayer> players = new ArrayList<>();
 
-        List<String> gameNames = new ArrayList<>(){{
-            add("Wonders7");
-//            add("Dominion");
-//            add("SeaSaltPaper");
-//            add("CantStop");
-//            add("Connect4");
-//            add("DotsAndBoxes");
-        }};
-        long t_init = System.currentTimeMillis();
-        int n = 100;
-        for (String name: gameNames) {
-            System.out.println("POLICY JSD TEST " + name + " " + n + " GAMES");
-            players.clear();
-            String playersPath = "Experiments/" + name + "/agents/agreementTest";
-            String csv_name = "PolicyJSDMatrix.csv";
-            ComparisonPlayer comparisonPlayer = new ComparisonPlayer(playersPath, playersPath, csv_name);
-            players.add(comparisonPlayer);
-            int n_random = (name.equals("Connect4") || name.equals("DotsAndBoxes")) ? 1 : 3;
-            for (int i = 0; i < n_random; i++)
-            {
-                players.add(new RandomPlayer());
-            }
-            long t = System.currentTimeMillis();
-            ArrayList<GameType> games = new ArrayList<>();
-            games.add(GameType.valueOf(name));
-            long[] seeds = new long[n];
-            Random rnd = new Random();
-            for (int i = 0; i < n; i++) {
-                seeds[i] = rnd.nextInt();
-            }
-            runMany(games, players, n, seeds, null, false, null, 0);
-            System.out.println("FISNIHED RUNNING IN " + (System.currentTimeMillis() - t)/1000 + " SECONDS");
-            System.out.println("---------------------------------------------------");
-        }
-        System.out.println("FISNIHED RUNNING EVERYTHING IN " + (System.currentTimeMillis() - t_init)/1000 + " SECONDS");
+        /* Load prototypes */
+        GameType gameTypeTest = GameType.Dominion;
+        String prototypesPath = "Experiments/valueFuncTest/" + gameTypeTest.name();
+        int n_prototypes = 4; // Set number of prototypes to load
+        List<Map<String, Integer>> prototypes = Tokenizer.loadPrototypes(prototypesPath, n_prototypes);
+        // Load top_features
+        int topKFeatures = 500;
+        String filterListPath = prototypesPath + "/features-top" + topKFeatures + ".json";
+        List<String> topFeaturesFilterList = Tokenizer.loadStringList(filterListPath);
+        JSONBagOSLAPlayer jsonBagOSLAPlayer = new JSONBagOSLAPlayer(prototypes, topFeaturesFilterList);
+
+        players.add(jsonBagOSLAPlayer);
+        players.add(new OSLAPlayer());
+        players.add(new OSLAPlayer());
+        players.add(new OSLAPlayer());
+//        players.add(new RandomPlayer());
+//        players.add(new RandomPlayer());
+//        players.add(new RandomPlayer());
+
+//        List<String> gameNames = new ArrayList<>(){{
+//            add("Wonders7");
+////            add("Dominion");
+////            add("SeaSaltPaper");
+////            add("CantStop");
+////            add("Connect4");
+////            add("DotsAndBoxes");
+//        }};
+//        long t_init = System.currentTimeMillis();
+//        int n = 100;
+//        for (String name: gameNames) {
+//            System.out.println("POLICY JSD TEST " + name + " " + n + " GAMES");
+//            players.clear();
+//            String playersPath = "Experiments/" + name + "/agents/agreementTest";
+//            String csv_name = "PolicyJSDMatrix.csv";
+//            ComparisonPlayer comparisonPlayer = new ComparisonPlayer(playersPath, playersPath, csv_name);
+//            players.add(comparisonPlayer);
+//            int n_random = (name.equals("Connect4") || name.equals("DotsAndBoxes")) ? 1 : 3;
+//            for (int i = 0; i < n_random; i++)
+//            {
+//                players.add(new RandomPlayer());
+//            }
+//            long t = System.currentTimeMillis();
+//            ArrayList<GameType> games = new ArrayList<>();
+//            games.add(GameType.valueOf(name));
+//            long[] seeds = new long[n];
+//            Random rnd = new Random();
+//            for (int i = 0; i < n; i++) {
+//                seeds[i] = rnd.nextInt();
+//            }
+//            runMany(games, players, n, seeds, null, false, null, 0);
+//            System.out.println("FISNIHED RUNNING IN " + (System.currentTimeMillis() - t)/1000 + " SECONDS");
+//            System.out.println("---------------------------------------------------");
+//        }
+//        System.out.println("FISNIHED RUNNING EVERYTHING IN " + (System.currentTimeMillis() - t_init)/1000 + " SECONDS");
 
         /* Game parameter configuration. Set to null to ignore and use default parameters */
         String gameParams = null;
@@ -910,18 +933,18 @@ public class Game {
 //        runOne(GameType.valueOf(gameType), gameParams, players, seed, false, null, useGUI ? ac : null, turnPause);
 
         /* Run multiple games */
-//        long t = System.currentTimeMillis();
-//        int n = 10;
-//        ArrayList<GameType> games = new ArrayList<>();
-//        games.add(GameType.SeaSaltPaper);
-////        runMany(games, players, 100L, n, false, true, null, turnPause);
-//        long[] seeds = new long[n];
-//        Random rnd = new Random();
-//        for (int i = 0; i < n; i++) {
-//            seeds[i] = rnd.nextInt();
-//        }
-//        runMany(games, players, n, seeds, null, false, null, 0);
+        long t = System.currentTimeMillis();
+        int n = 100;
+        ArrayList<GameType> games = new ArrayList<>();
+        games.add(gameTypeTest);
+//        runMany(games, players, 100L, n, false, true, null, turnPause);
+        long[] seeds = new long[n];
+        Random rnd = new Random();
+        for (int i = 0; i < n; i++) {
+            seeds[i] = rnd.nextInt();
+        }
+        runMany(games, players, n, seeds, null, false, null, 0);
 //        runMany(new ArrayList<GameType>() {{add(Uno);}}, players, 100L, 100, false, false, null, turnPause);
-//        System.out.println("FISNIHED RUNNING IN " + (System.currentTimeMillis() - t)/1000 + " SECONDS");
+        System.out.println("FISNIHED RUNNING IN " + (System.currentTimeMillis() - t)/1000 + " SECONDS");
     }
 }

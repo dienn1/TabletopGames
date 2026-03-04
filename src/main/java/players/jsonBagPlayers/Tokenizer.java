@@ -8,10 +8,14 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonPrimitive;
 import com.google.gson.JsonSyntaxException;
+import com.google.gson.reflect.TypeToken;
+import core.AbstractGameState;
+import core.AbstractGameStateContainer;
 
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.io.FileReader;
+import java.io.IOException;
+import java.lang.reflect.Type;
+import java.util.*;
 
 public class Tokenizer {
     private static final Gson gson = new Gson();
@@ -25,6 +29,11 @@ public class Tokenizer {
      */
     public static Map<String, Integer> tokenize(Object obj) {
         return tokenize(obj, "", true, "both", false, false, false);
+    }
+
+    public static Map<String, Integer> tokenize(AbstractGameState gs) {
+        AbstractGameStateContainer gsContainer = GameStateContainerFactory.createContainer(gs);
+        return Tokenizer.tokenize(gsContainer);
     }
 
     /**
@@ -180,4 +189,55 @@ public class Tokenizer {
             filterList.forEach(freq.keySet()::remove);
         }
     }
+
+    /**
+     * Loads n_prototypes of type Map<String, Integer> from JSON files.
+     * Files are expected to be named "prototype{i}.json" where i ranges from 0 to n_prototypes-1.
+     *
+     * @param path         - the directory path containing the prototype JSON files
+     * @param n_prototypes - the number of prototypes to load
+     * @return a list of Map<String, Integer> loaded from the JSON files
+     */
+    public static List<Map<String, Integer>> loadPrototypes(String path, int n_prototypes) {
+        List<Map<String, Integer>> prototypes = new ArrayList<>();
+        Gson gson = new Gson();
+        Type mapType = new TypeToken<Map<String, Integer>>() {}.getType();
+
+        for (int i = 0; i < n_prototypes; i++) {
+            String filePath = path + "/prototype" + i + ".json";
+            try (FileReader reader = new FileReader(filePath)) {
+                Map<String, Integer> prototype = gson.fromJson(reader, mapType);
+                if (prototype != null) {
+                    prototypes.add(prototype);
+                } else {
+                    System.err.println("Warning: prototype" + i + ".json was empty or invalid");
+                    prototypes.add(new HashMap<>());
+                }
+            } catch (IOException e) {
+                System.err.println("Error loading prototype" + i + ".json: " + e.getMessage());
+                prototypes.add(new HashMap<>());
+            }
+        }
+        return prototypes;
+    }
+
+    /**
+     * Loads a list of strings from a JSON file.
+     * The JSON file should contain an array of strings, e.g., ["item1", "item2", "item3"]
+     *
+     * @param filePath - the path to the JSON file
+     * @return a list of strings loaded from the JSON file, or an empty list if loading fails
+     */
+    public static List<String> loadStringList(String filePath) {
+        Type listType = new TypeToken<List<String>>() {}.getType();
+        try (FileReader reader = new FileReader(filePath)) {
+            List<String> result = gson.fromJson(reader, listType);
+            return result != null ? result : new ArrayList<>();
+        } catch (IOException e) {
+            System.err.println("Error loading string list from " + filePath + ": " + e.getMessage());
+            return new ArrayList<>();
+        }
+    }
+
+    
 }
