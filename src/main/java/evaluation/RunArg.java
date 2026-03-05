@@ -209,7 +209,7 @@ public enum RunArg {
             ExpertIteration.TrainingMode.Batch,
             new Usage[]{Usage.ExpertIteration}),
     valueTarget("Target for the state value expert to be trained on",
-            ExpertIteration.ValueTarget.Base,
+            ExpertIteration.ValueTarget.None,
             new Usage[]{Usage.ExpertIteration}),
     actionTarget("Target for the action value expert to be trained on",
             ExpertIteration.ActionTarget.None,

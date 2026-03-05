@@ -98,6 +98,21 @@ public class TournamentResults {
         return playerResults.values().stream().mapToInt(List::size).sum();
     }
 
+    public void filterPlayer(String name) {
+        playerResults.remove(name);
+        nGamesPlayedPerOpponent.remove(name);
+        winsPerPlayerPerOpponent.remove(name);
+        ordinalDeltaPerOpponent.remove(name);
+        agentsByName.remove(name);
+
+        // We then also remove the records of other players against this player
+        for (String other : getAllAgentNames()) {
+            nGamesPlayedPerOpponent.getOrDefault(other, Collections.emptyMap()).remove(name);
+            winsPerPlayerPerOpponent.getOrDefault(other, Collections.emptyMap()).remove(name);
+            ordinalDeltaPerOpponent.getOrDefault(other, Collections.emptyMap()).remove(name);
+        }
+    }
+
     public List<Result> getPlayerResults(String name) {
         return playerResults.getOrDefault(name, Collections.emptyList());
     }
@@ -190,42 +205,6 @@ public class TournamentResults {
     @JsonCreator
     public static TournamentResults getTournamentResults(TournamentResultsDTO dto) {
         return extractFromDTO(dto);
-    }
-
-    /**
-     * Convert this TournamentResults to a JSON string (only includes JSON-friendly fields).
-     */
-    public String toJson() throws JsonProcessingException {
-        ObjectMapper om = new ObjectMapper();
-        TournamentResultsDTO dto = new TournamentResultsDTO();
-        dto.nGamesPlayedPerOpponent = this.nGamesPlayedPerOpponent;
-        dto.winsPerPlayerPerOpponent = this.winsPerPlayerPerOpponent;
-        dto.ordinalDeltaPerOpponent = this.ordinalDeltaPerOpponent;
-        dto.playerResults = this.playerResults;
-        // Use pretty printer for readable JSON
-        return om.writerWithDefaultPrettyPrinter().writeValueAsString(dto);
-    }
-
-    /**
-     * Recreate TournamentResults from JSON. Note: agentsByName will be empty after this; use
-     * {@link #fromJson(String, Map)} if you have a mapping of names to AbstractPlayer instances to restore.
-     */
-    public static TournamentResults fromJson(String json) throws IOException {
-        ObjectMapper om = new ObjectMapper();
-        TournamentResultsDTO dto = om.readValue(json, TournamentResultsDTO.class);
-        return getTournamentResults(dto);
-    }
-
-    /**
-     * Recreate TournamentResults from JSON and attach provided AbstractPlayer instances by name.
-     * Any names in the provided map that don't appear in the JSON will still be added to agentsByName.
-     */
-    public static TournamentResults fromJson(String json, Map<String, AbstractPlayer> agentsByName) throws IOException {
-        ObjectMapper om = new ObjectMapper();
-        TournamentResultsDTO dto = om.readValue(json, TournamentResultsDTO.class);
-        TournamentResults tr = extractFromDTO(dto);
-        if (agentsByName != null) tr.agentsByName.putAll(agentsByName);
-        return tr;
     }
 
     private static TournamentResults extractFromDTO(TournamentResultsDTO dto) {

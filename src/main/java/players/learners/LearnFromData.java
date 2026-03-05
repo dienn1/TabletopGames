@@ -354,7 +354,8 @@ public class LearnFromData {
                 // then adjust current bestBIC to reflect the new multiplier
                 bestBIC = bicFromAic(bestResult.newHeuristic.getModel().summary().aic(), asf.names().length, n);
             }
-        } while (bestFeatures != null);
+        } while (bestFeatures != null && asf.names().length > 1);
+        // we stop if we only have one feature left
         return startingHeuristic;
     }
 

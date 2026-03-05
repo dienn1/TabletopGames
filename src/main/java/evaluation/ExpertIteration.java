@@ -69,7 +69,7 @@ public class ExpertIteration {
     public enum ValueTarget {Base, MCTS, Rollout, None}
 
     public enum ActionTarget {Base, MCTS, None}
-
+// TODO: If either target is None, then turn off the state/actionLearner
     public enum TrainingMode {Batch, Exponential}
 
     public ExpertIteration(String[] args) {
@@ -320,8 +320,8 @@ public class ExpertIteration {
         if (!agents.isEmpty() && bestAgent != agents.getFirst()) {
             tournamentConfig.put(RunArg.mode, "onevsall");
             tournamentConfig.put(RunArg.matchups, (int) RGConfig.get(RunArg.matchups)  * (nPlayers - 1) / nPlayers);
-            List<AbstractPlayer> focusAtFront = agents.stream().filter(a -> !a.toString().equals(bestAgent.toString())).collect(Collectors.toList());
-            focusAtFront.addFirst(bestAgent); // we stick the best agent at the front
+            List<AbstractPlayer> focusAtFront = new ArrayList<>(agents.reversed());
+            // this will have the newly learned agent at the front
             runTournament(focusAtFront, tournamentConfig);
         } else {
             tournamentConfig.put(RunArg.matchups, 0); // indicate we have not used any of the budget
@@ -361,12 +361,16 @@ public class ExpertIteration {
             int toRemove = agents.size() - 2 * nPlayers;
             System.out.println("Removing " + toRemove + " additional agents to get within 2 x nPlayers");
             // we remove the worst performing agents
-            List<AbstractPlayer> toRemoveAgents = agentsSortedByAlphaRank.stream()
+            List<String> toRemoveAgents = agentsSortedByAlphaRank.reversed().stream()
                     .limit(toRemove)
                     .map(name -> tournament.getTournamentResults().getAgent(name))
+                    .map(AbstractPlayer::toString)
                     .peek(a -> System.out.println("Removing agent " + a))
                     .toList();
-            agents.removeAll(toRemoveAgents);
+            agents.removeIf(a -> toRemoveAgents.contains(a.toString()));
+            for (String removed : toRemoveAgents) {
+                runningTournamentResults.filterPlayer(removed);
+            }
         }
         // we end if any agent has won 7 tournaments in total, or 4 consecutive tournaments
         if (consecutiveWins >= 4 || tournamentWinsByAgent.values().stream().mapToInt(Integer::intValue).max().orElse(0) >= 7) {
@@ -379,12 +383,16 @@ public class ExpertIteration {
 
     private RoundRobinTournament runTournament(List<AbstractPlayer> localAgents, Map<RunArg, Object> runGamesConfig) {
 
+        ActionTarget actionTarget = (ActionTarget) config.get(RunArg.actionTarget);
+        ValueTarget valueTarget = (ValueTarget) config.get(RunArg.valueTarget);
+        if (valueTarget == ValueTarget.None) stateLearnerFile = null;
+        if (actionTarget == ActionTarget.None) actionLearnerFile = null;
         boolean allDataAsOne = config.get(RunArg.expertTrainingMode) == TrainingMode.Exponential;
         RoundRobinTournament tournament = new RoundRobinTournament(localAgents, gameToPlay, nPlayers, params, runGamesConfig);
         tournament.setTournamentResults(runningTournamentResults);
         tournament.setResultsFile(dataDir + File.separator + String.format("TournamentResults_%s_%02d.txt", prefix, iter));
         if (stateLearnerFile != null) {
-            stateListener = switch (config.get(RunArg.valueTarget)) {
+            stateListener = switch (valueTarget) {
                 case ValueTarget.Base -> new StateFeatureListener(stateFeatureVector,
                         useRounds ? Event.GameEvent.ROUND_OVER : Event.GameEvent.TURN_OVER,
                         false);  // i.e. we use the actual game outcome as the Value target
@@ -405,8 +413,6 @@ public class ExpertIteration {
                             gameToPlay.createForwardModel(params, nPlayers)))
                             .recordEndGameState(false);
                 }
-                case ValueTarget.None ->
-                        throw new IllegalArgumentException("Value Target is NONE, but stateLearner is defined as " + stateLearnerFile);
                 default ->
                         throw new IllegalArgumentException("Unexpected value for expert: " + config.get(RunArg.valueTarget));
             };
@@ -439,8 +445,6 @@ public class ExpertIteration {
                         new MCTSExpertIterationListener(oracle, actionFeatureVector, stateFeatureVector,
                                 100, 0, stateLearnerFile != null && stateListener == null);
                 // we record the MCTS stats for every action, plus the state features if we are not already recording them with a separate listener
-                case ActionTarget.None ->
-                        throw new IllegalArgumentException("Action Target is None, but actionLearner defined as " + actionLearnerFile);
                 default ->
                         throw new IllegalArgumentException("Unexpected value for expert: " + config.get(RunArg.actionTarget));
             };
