@@ -19,6 +19,7 @@ import evaluation.tournaments.RoundRobinTournament;
 import evaluation.tournaments.TournamentResults;
 import evaluation.tournaments.WinRateAnalysis;
 import games.GameType;
+import org.apache.commons.io.FileUtils;
 import players.IAnyTimePlayer;
 import players.PlayerFactory;
 import players.learners.LearnFromData;
@@ -257,6 +258,31 @@ public class ExpertIteration {
             );
             iter++;
         } while (true);
+
+        // Now we want to write out the final winning agent, and also all other agents still in the competition
+        // as these may have non-transitive behaviours
+
+        // For each of them we want to give them a name of the format "FinalAgent_X_YY.json"
+        // where X is a unique identifier for the agent (e.g. its rank in the final tournament)
+        // and YY is the alpha rank of the agent in the final tournament.
+
+        AlphaRankAnalysis alphaRankAnalysis = new AlphaRankAnalysis(false);
+        Map<String, Pair<Double, Double>> alphaRankings = alphaRankAnalysis.getRanking(runningTournamentResults);
+        agents.sort(comparingDouble(a -> -alphaRankings.get(a.toString()).a)); // then sort by alpha rank
+        for (int i = 0; i < agents.size(); i++) {
+            AbstractPlayer agent = agents.get(i);
+            int originalIteration = Integer.parseInt(agent.toString().split("_")[1]);
+            String originalFileName = String.format("%sNTBEA_%02d.json", config.get(RunArg.valueSS).equals("") ? "Action" : "Value", originalIteration);
+            String newFileName = String.format("FinalAgent_R%02d_A%2.0f.json", i + 1, alphaRankings.get(agent.toString()).a);
+            try {
+                // we now copy the file for the agent
+                File oldFile = new File(dataDir + File.separator + originalFileName);
+                File newFile = new File(dataDir + File.separator + "FinalAgents" + File.separator + newFileName);
+                FileUtils.copyFile(oldFile, newFile);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
     }
 
 
