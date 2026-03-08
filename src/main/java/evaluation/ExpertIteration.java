@@ -17,6 +17,7 @@ import evaluation.optimisation.NTBEAParameters;
 import evaluation.tournaments.AlphaRankAnalysis;
 import evaluation.tournaments.RoundRobinTournament;
 import evaluation.tournaments.TournamentResults;
+import evaluation.tournaments.WinRateAnalysis;
 import games.GameType;
 import players.IAnyTimePlayer;
 import players.PlayerFactory;
@@ -33,6 +34,7 @@ import java.util.stream.IntStream;
 
 import static evaluation.RunArg.parseConfig;
 import static java.util.Comparator.comparingDouble;
+import static java.util.Comparator.comparingInt;
 import static utilities.JSONUtils.loadClass;
 
 public class ExpertIteration {
@@ -69,7 +71,7 @@ public class ExpertIteration {
     public enum ValueTarget {Base, MCTS, Rollout, None}
 
     public enum ActionTarget {Base, MCTS, None}
-// TODO: If either target is None, then turn off the state/actionLearner
+
     public enum TrainingMode {Batch, Exponential}
 
     public ExpertIteration(String[] args) {
@@ -167,7 +169,7 @@ public class ExpertIteration {
                 actionDataFilesByIteration[iterationRef] = dataDir + File.separator + String.format("Action_%s_%02d.txt", prefix, iterationRef);
         }
         if (restartAtIteration > 0) {
-            int iterationRef = config.get(RunArg.expertTrainingMode) == TrainingMode.Exponential ? 0: iter - 1;
+            int iterationRef = config.get(RunArg.expertTrainingMode) == TrainingMode.Exponential ? 0 : iter - 1;
             // we are restarting the process, so we need to load the data files from the previous iteration
             if (stateLearnerFile != null) {
                 stateDataFilesByIteration[iterationRef] = dataDir + File.separator + String.format("State_%s_%02d.txt", prefix, iterationRef);
@@ -177,7 +179,9 @@ public class ExpertIteration {
             }
 
             // then load in the agents from the previous iterations
+            // we first load in all agents
             for (int previousIter = 0; previousIter < restartAtIteration; previousIter++) {
+                String playerName = String.format("NTBEA_%02d.json", previousIter);
                 AbstractPlayer newPlayer = null;
                 boolean hasValueSS = !config.get(RunArg.valueSS).equals("");
                 boolean hasActionSS = !config.get(RunArg.actionSS).equals("");
@@ -194,13 +198,26 @@ public class ExpertIteration {
                 if (newPlayer == null) {
                     throw new IllegalStateException("Could not load agent from previous iteration");
                 }
-                newPlayer.setName(String.format("NTBEA_%02d.json", previousIter));
+                newPlayer.setName(playerName);
                 agents.add(newPlayer);
+                runningTournamentResults.registerAgent(newPlayer);
             }
 
-            // if restarting, then we do not have the details of the current best agent (or the ones that were discarded already)
-            // we default to picking the most recent agent as the current best
-            bestAgent = agents.getLast();
+            // the above code has loaded all agents....we now cut this down to just the ones that were in the
+            // running at the point from which we are reloading
+            for (AbstractPlayer agent : agents) {
+                if (runningTournamentResults.getPlayerResults(agent.toString()).isEmpty()) {
+                    // has already been removed
+                    runningTournamentResults.filterPlayer(agent.toString());
+                    agents.remove(agent);
+                }
+            }
+            // then work out who the current best agent is
+            WinRateAnalysis winRateAnalysis = new WinRateAnalysis();
+            String bestAgentName = winRateAnalysis.getRanking(runningTournamentResults).firstEntry().getKey();
+            bestAgent = agents.stream().filter(a -> a.toString().equals(bestAgentName)).findFirst()
+                    .orElseThrow(() -> new IllegalStateException("Best agent from previous run not found among loaded agents"));
+
         }
 
         do {
@@ -319,7 +336,7 @@ public class ExpertIteration {
         // Unless there is a single agent; or the best agent is still the first one. In this case, we run a single tournament with the full budget.
         if (!agents.isEmpty() && bestAgent != agents.getFirst()) {
             tournamentConfig.put(RunArg.mode, "onevsall");
-            tournamentConfig.put(RunArg.matchups, (int) RGConfig.get(RunArg.matchups)  * (nPlayers - 1) / nPlayers);
+            tournamentConfig.put(RunArg.matchups, (int) RGConfig.get(RunArg.matchups) * (nPlayers - 1) / nPlayers);
             List<AbstractPlayer> focusAtFront = new ArrayList<>(agents.reversed());
             // this will have the newly learned agent at the front
             runTournament(focusAtFront, tournamentConfig);
@@ -332,8 +349,9 @@ public class ExpertIteration {
         tournamentConfig.put(RunArg.matchups, (int) RGConfig.get(RunArg.matchups) - (int) tournamentConfig.get(RunArg.matchups));
         RoundRobinTournament tournament = runTournament(agents, tournamentConfig);
 
-        Map<String, Pair<Double, Double>> alphaRankAnalysis = (new AlphaRankAnalysis(false)).getRanking(tournament.getTournamentResults());
-        List<String> agentsSortedByAlphaRank = alphaRankAnalysis.entrySet().stream()
+        AlphaRankAnalysis alphaRankAnalysis = new AlphaRankAnalysis(false);
+        Map<String, Pair<Double, Double>> alphaRankings = alphaRankAnalysis.getRanking(tournament.getTournamentResults());
+        List<String> agentsSortedByAlphaRank = alphaRankings.entrySet().stream()
                 .sorted((e1, e2) -> Double.compare(e2.getValue().a, e1.getValue().a)) // sort descending by alpha rank
                 .map(Map.Entry::getKey)
                 .toList();
@@ -357,28 +375,65 @@ public class ExpertIteration {
         System.out.println("Best agent is " + bestAgent);
 
         if (agents.size() > nPlayers * 2) {
-            // We then remove additional agents to get within 2 x nPlayers
+            // We may remove additional agents to get within 2 x nPlayers
             int toRemove = agents.size() - 2 * nPlayers;
-            System.out.println("Removing " + toRemove + " additional agents to get within 2 x nPlayers");
-            // we remove the worst performing agents
-            List<String> toRemoveAgents = agentsSortedByAlphaRank.reversed().stream()
-                    .limit(toRemove)
-                    .map(name -> tournament.getTournamentResults().getAgent(name))
-                    .map(AbstractPlayer::toString)
-                    .peek(a -> System.out.println("Removing agent " + a))
-                    .toList();
-            agents.removeIf(a -> toRemoveAgents.contains(a.toString()));
-            for (String removed : toRemoveAgents) {
+            System.out.println("Attempting to remove " + toRemove + " additional agents to get within 2 x nPlayers");
+            // firstly find any agents that are dominated by all others (i.e. beaten by all other agents in head-to-head matchups)
+            List<String> dominatedAgents = runningTournamentResults.getDominatedAgents();
+            toRemove -= dominatedAgents.size();
+            System.out.println("Removing " + dominatedAgents.size() + " strictly dominated agents");
+            agents.removeIf(a -> dominatedAgents.contains(a.toString()));
+            for (String removed : dominatedAgents) {
+                System.out.println("\tRemoving " + removed);
                 runningTournamentResults.filterPlayer(removed);
+            }
+            if (toRemove > 0) {
+                // we now see if there are clusters of agents, and remove the worst agent from the largest cluster
+                List<String> poorClusterPerformers = new ArrayList<>();
+                double[] thresholds = new double[]{0.02, 0.05, 0.1, 0.2};
+                for (double threshold : thresholds) {
+                    Map<String, List<String>> clusters = alphaRankAnalysis.calculateClusters(runningTournamentResults, threshold);
+                    Map<String, List<String>> clustersWithMoreThanOneMember = clusters.keySet().stream()
+                            .filter(cName -> clusters.get(cName).size() > 1)
+                            .collect(Collectors.toMap(c -> c, clusters::get));
+                    if (clustersWithMoreThanOneMember.isEmpty()) {
+                        System.out.printf("No clusters with a threshold of %.2f%n", threshold);
+                        continue; // try next largest thresholds
+                    }
+
+                    System.out.printf("%d clusters found at threshold of %2f (%s)%n\t",
+                            clustersWithMoreThanOneMember.size(), threshold,
+                            clustersWithMoreThanOneMember.values().stream().map(List::toString).collect(Collectors.joining(", ")));
+                    System.out.println();
+                    // Now we find the poorest performer in each cluster
+                    for (String clusterName : clustersWithMoreThanOneMember.keySet()) {
+                        String poorestPerformer = "";
+                        double performance = Double.POSITIVE_INFINITY;
+                        for (String agent : clustersWithMoreThanOneMember.get(clusterName)) {
+                            double p = alphaRankings.get(agent).a;
+                            if (p < performance) {
+                                performance = p;
+                                poorestPerformer = agent;
+                            }
+                        }
+                        poorClusterPerformers.add(poorestPerformer);
+                    }
+                    break;  // we stop once we've found the narrowest clusters
+                }
+                agents.removeIf(a -> poorClusterPerformers.contains(a.toString()));
+                for (String removed : poorClusterPerformers) {
+                    System.out.println("Removing " + removed + " as poorest performer in cluster");
+                    runningTournamentResults.filterPlayer(removed);
+                }
             }
         }
         // we end if any agent has won 7 tournaments in total, or 4 consecutive tournaments
-        if (consecutiveWins >= 4 || tournamentWinsByAgent.values().stream().mapToInt(Integer::intValue).max().orElse(0) >= 7) {
+        if (consecutiveWins >= 4 || tournamentWinsByAgent.values().stream()
+                .mapToInt(Integer::intValue).max().orElse(0) >= 7) {
             System.out.println("Converged after " + iter + " iterations");
             return true;
         }
         return false;
-
     }
 
     private RoundRobinTournament runTournament(List<AbstractPlayer> localAgents, Map<RunArg, Object> runGamesConfig) {

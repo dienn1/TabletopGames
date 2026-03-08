@@ -112,8 +112,10 @@ public class AlphaRankAnalysis implements IResultsAnalysis {
         return T;
     }
 
-    public String[] calculateClusters(TournamentResults results) {
+    public Map<String, List<String>> calculateClusters(TournamentResults results, double threshold) {
         List<String> agents = results.getAllAgentNames();
+        if (threshold < 0.001)
+            threshold = 0.15; // vaguely sensible default
 
         // alpha-rank calculations
         double alpha = 10.0;
@@ -124,7 +126,7 @@ public class AlphaRankAnalysis implements IResultsAnalysis {
         RealMatrix B = transitionMatrix.transpose().multiply(transitionMatrix).add(transitionMatrix.multiply(transitionMatrix.transpose()));
         // This provides useful clustering information
         // Now we cluster based on the bibliometrically symmetrised matrix B
-        double thresholdForCluster = 0.15 * sqrt(agents.size());
+        double thresholdForCluster = threshold * sqrt(agents.size());
         String[] clusterMembership = new String[agents.size()];
         for (int i = 0; i < agents.size(); i++) {
             for (int j = i; j < agents.size(); j++) {
@@ -163,7 +165,18 @@ public class AlphaRankAnalysis implements IResultsAnalysis {
                 }
             }
         }
-        return clusterMembership;
+        // clusterMembership now contains the cluster name for each agent
+        // we now convert this into a map of cluster name to list of agents
+        Map<String, List<String>> clusters = new HashMap<>();
+        for (int i = 0; i < agents.size(); i++) {
+            String cluster = clusterMembership[i];
+            if (cluster == null) {
+                cluster = agents.get(i); // form its own cluster if it is not close to any other agent
+            }
+            clusters.putIfAbsent(cluster, new ArrayList<>());
+            clusters.get(cluster).add(agents.get(i));
+        }
+        return clusters;
     }
 }
 

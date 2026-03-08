@@ -83,6 +83,12 @@ public class TournamentResults {
         return agentsByName.get(name);
     }
 
+    public void registerAgent(AbstractPlayer newPlayer) {
+        String name = newPlayer.toString();
+        agentsByName.putIfAbsent(name, newPlayer);
+    }
+
+
     @JsonIgnore
     public List<String> getAllAgentNames() {
         return agentsByName.keySet().stream().toList();
@@ -92,6 +98,27 @@ public class TournamentResults {
         String name = player.toString();
         agentsByName.putIfAbsent(name, player);
         playerResults.computeIfAbsent(name, k -> new ArrayList<>()).add(new Result(points, ordinal, score, win));
+    }
+
+    public List<String> getDominatedAgents() {
+        List<String> dominatedAgents = new ArrayList<>();
+        for (String agent : getAllAgentNames()) {
+            boolean isDominated = true;
+            for (String opponent : getAllAgentNames()) {
+                if (!agent.equals(opponent) && getGamesPlayed(agent, opponent) > 0) {
+                    int wins = getWins(agent, opponent);
+                    int losses = getWins(opponent, agent);
+                    if (wins > losses) {
+                        isDominated = false;
+                        break;
+                    }
+                }
+            }
+            if (isDominated) {
+                dominatedAgents.add(agent);
+            }
+        }
+        return dominatedAgents;
     }
 
     public int totalResults() {
