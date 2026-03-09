@@ -14,12 +14,10 @@ import evaluation.metrics.Event;
 import evaluation.optimisation.ITPSearchSpace;
 import evaluation.optimisation.NTBEA;
 import evaluation.optimisation.NTBEAParameters;
-import evaluation.tournaments.AlphaRankAnalysis;
-import evaluation.tournaments.RoundRobinTournament;
-import evaluation.tournaments.TournamentResults;
-import evaluation.tournaments.WinRateAnalysis;
+import evaluation.tournaments.*;
 import games.GameType;
 import org.apache.commons.io.FileUtils;
+import org.apache.spark.sql.catalyst.types.PhysicalArrayType;
 import players.IAnyTimePlayer;
 import players.PlayerFactory;
 import players.learners.LearnFromData;
@@ -266,22 +264,33 @@ public class ExpertIteration {
         // and YY is the alpha rank of the agent in the final tournament.
 
         // TODO: For the final set of agents, we really just want the Pareto front
+        ParetoAnalysis paretoAnalysis = new ParetoAnalysis();
+        Map<String, Pair<Double, Double>> paretoRankings = paretoAnalysis.getRanking(runningTournamentResults);
+
+        List<String> firstParetoFront = paretoRankings.entrySet().stream()
+                .filter(e -> e.getValue().a == 1.0)
+                .map(Map.Entry::getKey)
+                .toList();
+
         AlphaRankAnalysis alphaRankAnalysis = new AlphaRankAnalysis(false);
         Map<String, Pair<Double, Double>> alphaRankings = alphaRankAnalysis.getRanking(runningTournamentResults);
         agents.sort(comparingDouble(a -> -alphaRankings.get(a.toString()).a)); // then sort by alpha rank
         for (int i = 0; i < agents.size(); i++) {
-            AbstractPlayer agent = agents.get(i);
-            // format is XXX_03.json"
-            int originalIteration = Integer.parseInt(agent.toString().split("_")[1].replaceAll("\\D+", ""));
-            String originalFileName = String.format("%sNTBEA_%02d.json", config.get(RunArg.valueSS).equals("") ? "Action" : "Value", originalIteration);
-            String newFileName = String.format("FinalAgent_R%02d_A%2d.json", i + 1, Math.round(alphaRankings.get(agent.toString()).a * 100.0));
-            try {
-                // we now copy the file for the agent
-                File oldFile = new File(dataDir + File.separator + originalFileName);
-                File newFile = new File(dataDir + File.separator + "FinalAgents" + File.separator + newFileName);
-                FileUtils.copyFile(oldFile, newFile);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
+            if (firstParetoFront.contains(agents.get(i).toString())) {
+                // only save those agents on the Pareto Front
+                AbstractPlayer agent = agents.get(i);
+                // format is XXX_03.json"
+                int originalIteration = Integer.parseInt(agent.toString().split("_")[1].replaceAll("\\D+", ""));
+                String originalFileName = String.format("%sNTBEA_%02d.json", config.get(RunArg.valueSS).equals("") ? "Action" : "Value", originalIteration);
+                String newFileName = String.format("FinalAgent_R%02d_A%2d.json", i + 1, Math.round(alphaRankings.get(agent.toString()).a * 100.0));
+                try {
+                    // we now copy the file for the agent
+                    File oldFile = new File(dataDir + File.separator + originalFileName);
+                    File newFile = new File(dataDir + File.separator + "FinalAgents" + File.separator + newFileName);
+                    FileUtils.copyFile(oldFile, newFile);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
             }
         }
     }

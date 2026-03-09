@@ -201,6 +201,20 @@ public class TournamentResults {
         return 0;
     }
 
+    public TournamentResults shallowCopy() {
+        // the top level maps are copied, but the inner maps and lists are shared
+        TournamentResults copy = new TournamentResults();
+        copy.agentsByName = new HashMap<>(this.agentsByName);
+        copy.nGamesPlayedPerOpponent = new HashMap<>(this.nGamesPlayedPerOpponent);
+        copy.winsPerPlayerPerOpponent = new HashMap<>(this.winsPerPlayerPerOpponent);
+        copy.ordinalDeltaPerOpponent = new HashMap<>(this.ordinalDeltaPerOpponent);
+        copy.playerResults = new HashMap<>();
+        for (Map.Entry<String, List<Result>> entry : this.playerResults.entrySet()) {
+            copy.playerResults.put(entry.getKey(), new ArrayList<>(entry.getValue()));
+        }
+        return copy;
+    }
+
     // ------------------ Jackson (de)serialisation helpers ------------------
 
     /**
