@@ -50,15 +50,16 @@ public class PlacePathCard extends SetGridValueAction
 
     @Override
     public int hashCode() {
-        return Objects.hash(super.hashCode(), rotated);
+        return super.hashCode() + 31 * (rotated ? 1 : 0);
     }
 
     @Override
-    public String getString(AbstractGameState gameState) {
-        return super.getString(gameState) + (rotated ? " rotated" : "");
+    public String getString(AbstractGameState state) {
+        PathCard pathCard = (PathCard) state.getComponentById(getValueID());
+        return String.format("Place %s at (%d,%d) %s.", pathCard.getString(), getX(), getY(), rotated ? " rotated" : "");
     }
 
     public String toString() {
-        return super.toString() + (rotated ? " rotated" : "");
+        return String.format("Place %d at (%d,%d) %s.", getValueID(), getX(), getY(), rotated ? " rotated" : "");
     }
 }
