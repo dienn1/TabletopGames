@@ -8,7 +8,6 @@ import games.descent2e.components.DicePool;
 import games.descent2e.components.Figure;
 import games.descent2e.components.Monster;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -27,21 +26,47 @@ public class MultiAttack extends RangedAttack {
 
     public MultiAttack(int attackingFigure, List<Integer> defendingFigures) {
         super(attackingFigure, defendingFigures.get(0));
-        this.defendingFigures = new ArrayList<>(defendingFigures);
+        this.defendingFigures = defendingFigures;
     }
 
     @Override
     public boolean execute(DescentGameState state) {
-        defendingFigure = defendingFigures.get(0);
-        index = 0;
-        super.execute(state);
+        state.setActionInProgress(this);
 
-        // remove final "; Result: " from result
-        result = result.substring(0, result.length() - 10);
+        defendingFigure = defendingFigures.get(0);
+
+        index = 0;
+
+        attackingPlayer = state.getComponentById(attackingFigure).getOwnerId();
+        defendingPlayer = state.getComponentById(defendingFigure).getOwnerId();
+
+        phase = PRE_ATTACK_ROLL;
+        interruptPlayer = attackingPlayer;
+        Figure attacker = (Figure) state.getComponentById(attackingFigure);
+        Figure defender = (Figure) state.getComponentById(defendingFigure);
+        DicePool attackPool = attacker.getAttackDice();
+        DicePool defencePool = defender.getDefenceDice();
+
+        state.setAttackDicePool(attackPool);
+        state.setDefenceDicePool(defencePool);
+
+        result = "Targets: " + defender.getComponentName().replace("Hero: ", "");
         for (int i = 1; i < defendingFigures.size(); i++) {
             result += " & " + (state.getComponentById(defendingFigures.get(i)).getComponentName().replace("Hero: ", ""));
         }
         result += "; Result: ";
+
+        if (defender instanceof Monster) {
+            if (((Monster) defender).hasPassive(MonsterAbilities.MonsterPassive.NIGHTSTALKER))
+            {
+                NightStalker.addNightStalker(state, attackingFigure, defendingFigure);
+            }
+        }
+
+        super.movePhaseForward(state);
+
+        attacker.getNActionsExecuted().increment();
+        attacker.setHasAttacked(true);
 
         return true;
     }
@@ -60,7 +85,7 @@ public class MultiAttack extends RangedAttack {
         if (defender instanceof Monster) {
             if (((Monster) defender).hasPassive(MonsterAbilities.MonsterPassive.NIGHTSTALKER))
             {
-                NightStalker.addNightStalker(state, ((Figure) state.getComponentById(attackingFigure)).getPosition(), defender.getPosition());
+                NightStalker.addNightStalker(state, attackingFigure, defendingFigure);
             }
         }
 
@@ -177,7 +202,6 @@ public class MultiAttack extends RangedAttack {
 
     public void copyComponentTo(MultiAttack target) {
         target.index = index;
-        target.defendingFigure = defendingFigure;  // we also need to set this, as the constructor overrides it
         super.copyComponentTo(target);
     }
 }

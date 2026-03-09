@@ -61,8 +61,7 @@ public class SaboteurBoardView extends JComponent {
         for (int i = 0; i < board.getHeight(); i++) {
             for (int j = 0; j < board.getWidth(); j++) {
                 PathCard card = (PathCard) board.getElement(j, i);
-                int humanID = gui.getHumanPlayerIds().iterator().next();
-                if (card != null) drawPathCard((Graphics2D) g, card, panPos.x + j * cellWidth, panPos.y + i * cellHeight, board.getElementVisibility(j, i).get(humanID));
+                if (card != null) drawPathCard((Graphics2D) g, card, panPos.x + j * cellWidth, panPos.y + i * cellHeight);
                 if (gui.gridHighlight != null && gui.gridHighlight.x == j && gui.gridHighlight.y == i) {
                     g.setColor(Color.green);
                     g.drawRect(panPos.x + j * cellWidth, panPos.y + i * cellHeight, cellWidth, cellHeight);
@@ -71,7 +70,7 @@ public class SaboteurBoardView extends JComponent {
         }
     }
 
-    public static void drawPathCard (Graphics2D g, PathCard card, int pX, int pY, boolean visibility) {
+    public static void drawPathCard (Graphics2D g, PathCard card, int pX, int pY) {
         int mX = pX + cellWidth/2;
         int mY = pY + cellHeight/2;
 
@@ -122,14 +121,10 @@ public class SaboteurBoardView extends JComponent {
 
         if (card.type == PathCard.PathCardType.Goal) {
             // Draw treasure in center of card
-            if (visibility) {
-                if (card.hasTreasure()) {
-                    g.setColor(Color.yellow);
-                } else {
-                    g.setColor(Color.black);
-                }
+            if (card.hasTreasure()) {
+                g.setColor(Color.yellow);
             } else {
-                g.setColor(Color.darkGray);
+                g.setColor(Color.black);
             }
             g.fillOval(pX + cellWidth/2, pY + cellWidth/2, 10, 10);
         }

@@ -119,8 +119,7 @@ public class DeepConstructNewOffer extends AbstractAction implements IExtendedSe
     @Override
     public boolean execute(AbstractGameState gs) {
         if (!execute) return true;
-        gs.setActionInProgress(this);
-        return true;
+        return gs.setActionInProgress(this);
     }
 
     @Override

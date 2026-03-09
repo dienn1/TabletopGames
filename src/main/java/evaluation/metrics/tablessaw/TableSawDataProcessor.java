@@ -7,7 +7,6 @@ import evaluation.metrics.IDataProcessor;
 import evaluation.summarisers.TAGNumericStatSummary;
 import tech.tablesaw.api.*;
 import tech.tablesaw.columns.Column;
-import tech.tablesaw.io.csv.CsvWriteOptions;
 import tech.tablesaw.plotly.Plot;
 import tech.tablesaw.plotly.api.LinePlot;
 import tech.tablesaw.plotly.components.*;
@@ -27,23 +26,9 @@ public class TableSawDataProcessor implements IDataProcessor {
 
 
     @Override
-    public void processRawDataToFile(IDataLogger logger, String folderName, boolean append) {
+    public void processRawDataToFile(IDataLogger logger, String folderName) {
         DataTableSaw dts = (DataTableSaw) logger;
-        String filename = folderName + "/" + dts.data.name() + ".csv";
-        if(!append) {
-            dts.data.write().csv(filename);
-        } else {
-            try {
-                File file = new File(filename);
-                boolean headerNeeded = !file.exists();
-                Writer w = new FileWriter(file, true);
-                CsvWriteOptions.Builder options = CsvWriteOptions.builder(w);
-                options.header(headerNeeded);
-                dts.data.write().csv(options.build());
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        }
+        dts.data.write().csv(folderName + "/" + dts.data.name() + ".csv");
     }
 
     @Override

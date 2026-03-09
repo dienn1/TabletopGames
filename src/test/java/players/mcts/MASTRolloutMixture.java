@@ -1,9 +1,13 @@
 package players.mcts;
 
+import core.AbstractGameState;
 import core.actions.AbstractAction;
 import core.interfaces.IActionHeuristic;
 import org.junit.Before;
 import org.junit.Test;
+import players.PlayerConstants;
+import players.simple.BoltzmannActionParams;
+import players.simple.BoltzmannActionPlayer;
 import utilities.Pair;
 
 import java.util.*;
@@ -45,7 +49,7 @@ public class MASTRolloutMixture {
         assertTrue(player.getParameters().getRolloutStrategy() instanceof MASTPlayer);
         assertTrue(player.getParameters().useMAST);
         MASTPlayer rolloutPlayer = (MASTPlayer) player.getParameters().rolloutPolicy;
-        rolloutPlayer.setMASTStats(node.MASTStatistics); // link rollout player to MAST statistics
+        rolloutPlayer.setStats(node.MASTStatistics); // link rollout player to MAST statistics
 
         node.backUpSingleNode(new LMRAction("Left"), new double[]{1.0});
         // Create a singleton list with Left action
@@ -79,7 +83,7 @@ public class MASTRolloutMixture {
         assertTrue(player.getParameters().getRolloutStrategy() instanceof MASTPlayer);
         assertTrue(player.getParameters().useMAST);
         MASTPlayer rolloutPlayer = (MASTPlayer) player.getParameters().rolloutPolicy;
-        rolloutPlayer.setMASTStats(node.MASTStatistics); // link rollout player to MAST statistics
+        rolloutPlayer.setStats(node.MASTStatistics); // link rollout player to MAST statistics
 
         node.backUpSingleNode(new LMRAction("Left"), new double[]{1.0});
         // Create a singleton list with Left action
@@ -119,7 +123,7 @@ public class MASTRolloutMixture {
 
         MASTPlayer rolloutPlayer = (MASTPlayer) player.getParameters().rolloutPolicy;
         assertTrue(rolloutPlayer.getActionHeuristic() instanceof MASTPlusActionHeuristic);
-        rolloutPlayer.setMASTStats(node.MASTStatistics); // link rollout player to MAST statistics
+        rolloutPlayer.setStats(node.MASTStatistics); // link rollout player to MAST statistics
 
         node.backUpSingleNode(new LMRAction("Left"), new double[]{1.0});
         // Create a singleton list with Left action

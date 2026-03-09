@@ -165,13 +165,11 @@ public class PropertyRentAction extends AbstractAction implements IExtendedSeque
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         PropertyRentAction that = (PropertyRentAction) o;
-        return playerID == that.playerID && doubleTheRent == that.doubleTheRent && setType == that.setType &&
-                cardType == that.cardType && that.target == target && that.rent == rent &&
-                actionState == that.actionState && reaction == that.reaction && Arrays.equals(collectedRent, that.collectedRent);
+        return playerID == that.playerID && doubleTheRent == that.doubleTheRent && setType == that.setType && cardType == that.cardType;
     }
     @Override
     public int hashCode() {
-        int result = Objects.hash(playerID, setType, cardType, doubleTheRent, target, rent, actionState, reaction);
+        int result = Objects.hash(playerID, setType, cardType, doubleTheRent);
         result = 31 * result + Arrays.hashCode(collectedRent);
         return result;
     }

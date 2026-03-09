@@ -9,6 +9,8 @@ import java.util.List;
 import java.util.Random;
 import java.util.function.Predicate;
 
+import static java.util.stream.Collectors.toList;
+
 public class DeterminisationUtilities {
 
     /**
@@ -24,7 +26,6 @@ public class DeterminisationUtilities {
      */
     public static <C extends Component> void reshuffle(int player, List<Deck<C>> decks, Predicate<C> lambda, Random rnd) {
         // Gather up all unknown cards for reshuffling
-        if (player < 0) return;
 
         Deck<C> allCards = new Deck<>("temp", -1, CoreConstants.VisibilityMode.HIDDEN_TO_ALL);
 

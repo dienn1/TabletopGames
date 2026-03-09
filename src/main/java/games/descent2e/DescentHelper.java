@@ -261,9 +261,12 @@ public class DescentHelper {
         }
 
         // Sorts the movement actions to always be in the same order (Clockwise NW to W, One Space then Multiple Spaces)
-        actions.sort(Comparator.comparingInt(Move::getDirectionID));
+        Collections.sort(actions, Comparator.comparingInt(Move::getDirectionID));
 
-        return new ArrayList<>(actions);
+        List<AbstractAction> sortedActions = new ArrayList<>();
+        sortedActions.addAll(actions);
+
+        return sortedActions;
     }
 
     private static Map<Vector2D, Pair<Double,List<Vector2D>>> getAllPointOfInterests(DescentGameState dgs, Figure figure){

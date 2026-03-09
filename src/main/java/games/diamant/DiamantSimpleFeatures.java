@@ -2,7 +2,6 @@ package games.diamant;
 
 import core.AbstractGameState;
 import evaluation.features.TunableStateFeatures;
-import games.diamant.cards.DiamantCard;
 import players.heuristics.LeaderHeuristic;
 
 public class DiamantSimpleFeatures extends TunableStateFeatures {
@@ -20,14 +19,18 @@ public class DiamantSimpleFeatures extends TunableStateFeatures {
 
         double[] retVal = new double[allNames.length];
         retVal[0] = gs.getTreasureChests().get(playerId).getValue();
-        retVal[1] = gs.path.getComponents().get(gs.path.getSize()-1).getValue(); // nGemsOnPath;
+        retVal[1] = gs.path.getComponents().get(gs.path.getSize()-1).getNumberOfGems(); // nGemsOnPath;
         retVal[2] = gs.playerInCave.size();
         retVal[3] = gs.nCave;
 
         // hazards on path - we only care about if we have seen a type or not
-        retVal[4] = gs.getPath().stream().
-                filter(c -> c.getCardType() == DiamantCard.DiamantCardType.Hazard)
-                .count();
+        int hazards = 0;
+        hazards += gs.nHazardExplosionsOnPath;
+        hazards += gs.nHazardPoissonGasOnPath;
+        hazards += gs.nHazardRockfallsOnPath;
+        hazards += gs.nHazardScorpionsOnPath;
+        hazards += gs.nHazardSnakesOnPath;
+        retVal[4] = hazards;
 
         // player's ordinal position
         retVal[5] = gs.getOrdinalPosition(playerId);

@@ -4,7 +4,7 @@ import core.AbstractGameState;
 import core.CoreConstants;
 import core.interfaces.IStateHeuristic;
 
-public class WinPlusHeuristic extends WinOnlyHeuristic {
+public class WinPlusHeuristic implements IStateHeuristic {
 
     double scale;
     public WinPlusHeuristic(double scale) {
@@ -13,17 +13,18 @@ public class WinPlusHeuristic extends WinOnlyHeuristic {
     @Override
     public double evaluateState(AbstractGameState gs, int playerId) {
         if (gs.isNotTerminalForPlayer(playerId))
-            return Math.max(0.05, Math.min(gs.getHeuristicScore(playerId) / scale, 0.95));
+            return Math.min(gs.getHeuristicScore(playerId) / scale, 0.9);
 
-        return super.evaluateState(gs, playerId);
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        return obj instanceof WinPlusHeuristic;
+        if (gs.getPlayerResults()[playerId] == CoreConstants.GameResult.DRAW_GAME)
+            return 0.5;
+        return gs.getPlayerResults()[playerId].value;
     }
     @Override
-    public int hashCode() {
-        return 5;
+    public double minValue() {
+        return 0.0;
+    }
+    @Override
+    public double maxValue() {
+        return 1.0;
     }
 }

@@ -80,14 +80,16 @@ public class TestFullObservabilityCopy {
 
         DominionGameState fullCopy = (DominionGameState) startState.copy();
         assertTrue(fullCopy.currentActionInProgress() instanceof AttackReaction);
-        assertTrue(startState.currentActionInProgress() instanceof AttackReaction);
         assertNotSame(startState.currentActionInProgress(), fullCopy.currentActionInProgress());
         assertEquals(startState.currentActionInProgress(), fullCopy.currentActionInProgress());
 
-        assertTrue(fullCopy.getQueuedAction(0) instanceof Militia);
-        assertTrue(startState.getQueuedAction(0) instanceof Militia);
-        assertNotSame(startState.getQueuedAction(0), fullCopy.getQueuedAction(0));
-        assertEquals(startState.getQueuedAction(0), fullCopy.getQueuedAction(0));
+        fullCopy.setActionInProgress(null);
+        assertTrue(fullCopy.currentActionInProgress() instanceof Militia);
+        assertTrue(startState.currentActionInProgress() instanceof AttackReaction);
+        startState.setActionInProgress(null);
+        assertNotSame(startState.currentActionInProgress(), fullCopy.currentActionInProgress());
+        assertEquals(startState.currentActionInProgress(), fullCopy.currentActionInProgress());
     }
+
 
 }

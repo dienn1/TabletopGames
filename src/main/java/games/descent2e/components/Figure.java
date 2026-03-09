@@ -302,10 +302,15 @@ public class Figure extends Token {
     {
         exhausted.add(card);
     }
+    public void unexhaustCard (DescentCard card)
+    {
+        exhausted.remove(card);
+    }
     public void refreshAllCards()
     {
         exhausted.clear();
     }
+    public Deck<DescentCard> getExhausted() { return exhausted;}
     public boolean isExhausted(DescentCard card)
     {
         return exhausted.contains(card);

@@ -98,7 +98,7 @@ public class Monster extends Figure {
 
     public Monster copyNewID() {
         Monster copy = new Monster(componentName, nActionsExecuted.getMaximum());
-        copyComponentTo(copy);
+        super.copyComponentTo(copy);
         return copy;
     }
 

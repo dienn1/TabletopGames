@@ -46,7 +46,7 @@ public class AlphaBetaPruningTests {
         MaxNSearchPlayer player2 = new MaxNSearchPlayer(paramsTwo);
         player2.setForwardModel(forwardModel);
 
-        runGame(gameState, player1, player2, false, true);
+        runGame(gameState, player1, player2);
     }
 
 
@@ -76,7 +76,7 @@ public class AlphaBetaPruningTests {
         MaxNSearchPlayer player2 = new MaxNSearchPlayer(paramsTwo);
         player2.setForwardModel(forwardModel);
 
-        runGame(gameState, player1, player2, true, false);
+        runGame(gameState, player1, player2);
     }
 
     @Test
@@ -87,7 +87,7 @@ public class AlphaBetaPruningTests {
         Connect4GameState gameState = new Connect4GameState(new Connect4GameParameters(), 2);
         forwardModel.setup(gameState);
 
-        // create a MaxNSearchPlayer with estimated expansion set to false
+        // create a MaxNSearchPlayer with alphaBetaPruning set to false
         MaxNSearchParameters paramsOne = new MaxNSearchParameters();
         paramsOne.alphaBetaPruning = true;
         paramsOne.expandByEstimatedValue = false;
@@ -97,7 +97,7 @@ public class AlphaBetaPruningTests {
         MaxNSearchPlayer player1 = new MaxNSearchPlayer(paramsOne);
         player1.setForwardModel(forwardModel);
 
-        // create a MaxNSearchPlayer with estimated expansion set to true
+        // create a MaxNSearchPlayer with alphaBetaPruning set to true
         MaxNSearchParameters paramsTwo = new MaxNSearchParameters();
         paramsTwo.alphaBetaPruning = true;
         paramsTwo.budget = 1000;
@@ -107,7 +107,7 @@ public class AlphaBetaPruningTests {
         MaxNSearchPlayer player2 = new MaxNSearchPlayer(paramsTwo);
         player2.setForwardModel(forwardModel);
 
-        runGame(gameState, player1, player2, false, true);
+        runGame(gameState, player1, player2);
     }
 
     @Test
@@ -118,9 +118,9 @@ public class AlphaBetaPruningTests {
         Connect4GameState gameState = new Connect4GameState(new Connect4GameParameters(), 2);
         forwardModel.setup(gameState);
 
-        // create a MaxNSearchPlayer with iterativeDeepening set to false
+        // create a MaxNSearchPlayer with alphaBetaPruning set to false
         MaxNSearchParameters paramsOne = new MaxNSearchParameters();
-        paramsOne.iterativeDeepening = false;
+        paramsOne.iterativeDeepening = true;
         paramsOne.alphaBetaPruning = true;
         paramsOne.budget = 1000;
         paramsOne.expandByEstimatedValue = false;
@@ -129,7 +129,7 @@ public class AlphaBetaPruningTests {
         MaxNSearchPlayer player1 = new MaxNSearchPlayer(paramsOne);
         player1.setForwardModel(forwardModel);
 
-        // create a MaxNSearchPlayer with iterativeDeepening set to true
+        // create a MaxNSearchPlayer with alphaBetaPruning set to true
         MaxNSearchParameters paramsTwo = new MaxNSearchParameters();
         paramsTwo.iterativeDeepening = true;
         paramsTwo.alphaBetaPruning = true;
@@ -140,13 +140,12 @@ public class AlphaBetaPruningTests {
         MaxNSearchPlayer player2 = new MaxNSearchPlayer(paramsTwo);
         player2.setForwardModel(forwardModel);
 
-        runGame(gameState, player1, player2, false, true);
+        runGame(gameState, player1, player2);
     }
 
 
     // should be called so that the expected faster agent is player2
-    private void runGame(Connect4GameState gameState, MaxNSearchPlayer player1, MaxNSearchPlayer player2,
-                         boolean checkIdenticalMoves, boolean checkPlayerOneSlower) {
+    private void runGame(Connect4GameState gameState, MaxNSearchPlayer player1, MaxNSearchPlayer player2) {
 
         long playerOneTime = 0;
         long playerTwoTime = 0;
@@ -160,6 +159,9 @@ public class AlphaBetaPruningTests {
             AbstractAction actionTwo = player2.getAction(gameState, forwardModel.computeAvailableActions(gameState));
             long timeTwo = System.currentTimeMillis() - start - timeOne;
 
+            //       System.out.println("Player 1 : " + actionOne.toString() + "\tPlayer 2 : " + actionTwo.toString());
+            //       System.out.println("Player 1 took " + timeOne + "ms, Player 2 took " + timeTwo + "ms");
+            //    assertTrue(timeOne > timeTwo);
             totalActions++;
             if (actionOne.equals(actionTwo))
                 identicalActions++;
@@ -183,12 +185,7 @@ public class AlphaBetaPruningTests {
 
         System.out.println("Player 1 took " + playerOneTime + "ms, Player 2 took " + playerTwoTime + "ms");
         System.out.println("Identical actions : " + identicalActions + " / " + totalActions);
-        if (checkPlayerOneSlower)
-            assertTrue(playerOneTime > playerTwoTime);
-        if (checkIdenticalMoves)
-            assertEquals(totalActions, identicalActions);
-        else
-            assertNotEquals(totalActions, identicalActions);
+        assertTrue(playerOneTime > playerTwoTime);
     }
 
 }

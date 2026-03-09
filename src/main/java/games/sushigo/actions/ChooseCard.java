@@ -110,8 +110,12 @@ public class ChooseCard extends AbstractAction implements IExtendedSequence {
 
     @Override
     public String toString() {
-        return String.format("ChooseCard: player %d, cardIdx %d, %b, %b",
-                playerId, cardIdx, useChopsticks, chopstickChooseDone);
+        return "ChooseCard{" +
+                "playerId=" + playerId +
+                ", cardIdx=" + cardIdx +
+                ", useChopsticks=" + useChopsticks +
+                ", chopstickChooseDone=" + chopstickChooseDone +
+                '}';
     }
 
 }

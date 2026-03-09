@@ -73,8 +73,7 @@ public class RHEAParams extends PlayerParameters
         return new RHEAPlayer(this);
     }
 
-    @Override
-    public IStateHeuristic getStateHeuristic() {
+    public IStateHeuristic getHeuristic() {
         return heuristic;
     }
 

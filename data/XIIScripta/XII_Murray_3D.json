@@ -1,8 +1,0 @@
-{
-	"route" : "Common",
-	"entryRule" : "Entry",
-	"boardSize" : 36,
-	"entryBoardSize" : 12,
-	"doubleActions" : false,
-	"diceNumber": 3
-}

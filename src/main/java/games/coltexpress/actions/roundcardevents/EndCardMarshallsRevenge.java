@@ -23,14 +23,14 @@ public class EndCardMarshallsRevenge extends RoundEvent {
             if (c.containsMarshal) {
                 for (Integer playerID : c.playersOnTopOfCompartment) {
                     Deck<Loot> playerLoot = gameState.getLoot(playerID);
-                    Loot leastValuablePurse = null;
+                    Loot lestValueablePurse = null;
                     for (Loot loot : playerLoot.getComponents()) {
                         if (loot.getLootType() == ColtExpressTypes.LootType.Purse &&
-                                (leastValuablePurse == null || leastValuablePurse.getValue() < loot.getValue()))
-                            leastValuablePurse = loot;
+                                (lestValueablePurse == null || lestValueablePurse.getValue() < loot.getValue()))
+                            lestValueablePurse = loot;
                     }
-                    if (leastValuablePurse != null)
-                        playerLoot.remove(leastValuablePurse);
+                    if (lestValueablePurse != null)
+                        playerLoot.remove(lestValueablePurse);
                 }
                 break;
             }

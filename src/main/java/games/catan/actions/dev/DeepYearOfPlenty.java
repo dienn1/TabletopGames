@@ -31,7 +31,7 @@ public class DeepYearOfPlenty extends AbstractAction implements IExtendedSequenc
 
         // Set in progress for the rest of the resources
         if (nSteps != nStepsTaken && _computeAvailableActions(gs).size() > 0) {
-            gs.setActionInProgress(this);
+            return gs.setActionInProgress(this);
         } else {
             nStepsTaken = nSteps;
         }

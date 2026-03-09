@@ -83,10 +83,9 @@ public class PlayCard extends DrawCard {
         card.applyInstantCardEffects(wgs, player);
 
         // remove the card from the players hand to the playedDeck
-        if (fromDiscard) {
-            wgs.getDiscardPile().remove(card);
-        } else {
-            playerHand.remove(card);
+        boolean cardFound = fromDiscard ? wgs.getDiscardPile().remove(card) : playerHand.remove(card);
+        if (!cardFound) {
+            throw new AssertionError("Card not found in player hand");
         }
 
         return true;

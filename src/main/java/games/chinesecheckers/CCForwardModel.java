@@ -10,7 +10,6 @@ import games.chinesecheckers.components.Peg;
 import games.chinesecheckers.components.StarBoard;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static core.CoreConstants.GameResult.*;
 
@@ -49,12 +48,8 @@ public class CCForwardModel extends StandardForwardModel {
     }
 
     private static CCNode neighbourInDirection(CCNode node, int dir) {
-        int id = node.getNeighbourBySide(dir);
-        if (id == -1) {
-            return null; // No neighbour in this direction
-        }
         for (CCNode neig : node.getNeighbours()) {
-            if (neig.getID() == id) {
+            if (node.getNeighbourSideMapping().get(neig) == dir) {
                 return neig;
             }
         }
@@ -65,7 +60,6 @@ public class CCForwardModel extends StandardForwardModel {
      * Returns true if the peg can be placed on the node
      * All board nodes in the main areas are neutral; the colour here refers just to the 10
      * starting nodes for each player
-     *
      * @param col
      * @param playerCol
      * @return
@@ -81,7 +75,7 @@ public class CCForwardModel extends StandardForwardModel {
         List<AbstractAction> actions = new ArrayList<>();
         for (CCNode node : state.starBoard.getBoardNodes()) { // Check all Nodes
             if (node.getOccupiedPeg() != null && node.getOccupiedPeg().getColour() == playerCol) {
-                actions.addAll(exploreNodeAction(node));
+                actions.addAll(exploreNodeAction(node, state));
             }
         }
         return actions;
@@ -90,11 +84,11 @@ public class CCForwardModel extends StandardForwardModel {
     /**
      * In which we use a form of breadth-first search to find all the possible moves we can make
      * starting from the given node
-     *
      * @param node
+     * @param state
      * @return
      */
-    private static List<AbstractAction> exploreNodeAction(CCNode node) {
+    private static List<AbstractAction> exploreNodeAction(CCNode node, CCGameState state) {
         Peg.Colour playerCol = node.getOccupiedPeg().getColour();
         List<AbstractAction> actions = new ArrayList<>();
         // first get the single directly adjacent moves
@@ -117,12 +111,12 @@ public class CCForwardModel extends StandardForwardModel {
         }
         // then get the jumping stuff
         repeatAction(node, actions, playerCol);
-        return actions.stream().distinct().collect(Collectors.toList());
+        return actions;
     }
 
     private static void repeatAction(CCNode node, List<AbstractAction> actions, Peg.Colour playerCol) {
-        List<CCNode> visited = new ArrayList<>();
-        Queue<CCNode> toVisit = new LinkedList<>();
+        HashSet<CCNode> visited = new HashSet<>();
+        HashSet<CCNode> toVisit = new HashSet<>();
         toVisit.add(node);
 
         // This should be looking for a chain of moves, without revisiting previous nodes
@@ -130,12 +124,13 @@ public class CCForwardModel extends StandardForwardModel {
         // and not once per neighbouring peg
 
         while (!toVisit.isEmpty()) {
-            CCNode expNode = toVisit.poll();
+            CCNode expNode = toVisit.iterator().next();
             visited.add(expNode);
+            toVisit.remove(expNode);
             // once in target zone, a peg may not leave it
             boolean canLeaveZone = expNode.getBaseColour() != playerCol;
             for (CCNode neighbour : expNode.getNeighbours()) {
-                int side = expNode.getSideOfNeighbour(neighbour.getID());
+                int side = expNode.getNeighbourSideMapping().get(neighbour);
                 if (neighbour.isNodeOccupied()) {
                     CCNode stride = neighbourInDirection(neighbour, side);
                     if (stride != null && !stride.isNodeOccupied() &&
@@ -150,7 +145,9 @@ public class CCForwardModel extends StandardForwardModel {
         visited.removeIf(n -> (!isPlayerPlaceable(n.getBaseColour(), playerCol)));
         for (CCNode v : visited) {
             MovePeg action = new MovePeg(node.getID(), v.getID());
-            actions.add(action);
+            if (!actions.contains(action)) {
+                actions.add(action);
+            }
         }
     }
 
@@ -172,28 +169,23 @@ public class CCForwardModel extends StandardForwardModel {
     @Override
     protected void _afterAction(AbstractGameState currentState, AbstractAction action) {
         CCGameState state = (CCGameState) currentState;
+        CCParameters params = (CCParameters) state.getGameParameters();
 
         for (int p = 0; p < state.getNPlayers(); p++) {
-            if (checkWinCondition(state, p)) {
+            Peg.Colour col = params.playerColours.get(state.getNPlayers())[p];
+            if (checkWinCondition(state, col)) {
                 endGame(state);
             }
         }
-        if (state.isNotTerminal()) {
-            int currentPlayer = state.getCurrentPlayer();
+        if (state.isNotTerminal())
             endPlayerTurn(state);
-            if (state.getCurrentPlayer() == 0 && currentPlayer != 0) {
-                endRound(state);
-            }
-        }
     }
 
-    private boolean checkWinCondition(CCGameState state, int player) {
-        Peg.Colour colour = state.getPlayerColour(player);
+    private boolean checkWinCondition(CCGameState state, Peg.Colour colour) {
         CCParameters params = (CCParameters) state.getGameParameters();
         int[] colourIndices = params.colourIndices.get(colour);
         int counter = 0;
         boolean PegIn = false;
-        // we win if all target nodes are occupied, and at least one of them is ours (anti-spoiling rule)
         List<CCNode> nodes = state.getStarBoard().getBoardNodes();
         for (int i : colourIndices) {
             if (nodes.get(i).isNodeOccupied() && nodes.get(i).getOccupiedPeg().getColour() == colour) {

@@ -27,8 +27,7 @@ public class PlayDevCard extends AbstractAction implements IExtendedSequence {
 
     @Override
     public boolean execute(AbstractGameState gs) {
-        gs.setActionInProgress(this);
-        return true;
+        return gs.setActionInProgress(this);
     }
 
     @Override

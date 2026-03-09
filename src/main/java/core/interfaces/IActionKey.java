@@ -1,5 +1,6 @@
 package core.interfaces;
 
+import core.AbstractGameState;
 import core.actions.AbstractAction;
 
 public interface IActionKey {

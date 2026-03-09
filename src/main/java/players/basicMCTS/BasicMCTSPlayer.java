@@ -64,11 +64,11 @@ public class BasicMCTSPlayer extends AbstractPlayer {
 
     @Override
     public String toString() {
-        return super.toString();
+        return "BasicMCTS";
     }
 
     @Override
     public BasicMCTSPlayer copy() {
-        return new BasicMCTSPlayer((BasicMCTSParams) parameters.copy());
+        return this;
     }
 }

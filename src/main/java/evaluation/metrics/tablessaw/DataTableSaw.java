@@ -121,11 +121,6 @@ public class DataTableSaw implements IDataLogger {
     }
 
     @Override
-    public void flush() {
-        this.data = data.emptyCopy();
-    }
-
-    @Override
     public IDataLogger copy() {
         return new DataTableSaw(metric, data.copy());
     }
@@ -302,5 +297,4 @@ public class DataTableSaw implements IDataLogger {
             }
         }
     }
-
 }

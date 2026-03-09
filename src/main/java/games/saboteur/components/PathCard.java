@@ -4,10 +4,9 @@ import java.util.Arrays;
 import java.util.Objects;
 
 public class PathCard extends SaboteurCard {
-    final private boolean[] directions;  // The array is final - but the contents are not!
+    final private boolean[] directions;
     final public PathCardType type;
     final boolean hasTreasure;
-    final boolean symmetric;
 
     public enum PathCardType {
         Edge,
@@ -25,7 +24,6 @@ public class PathCard extends SaboteurCard {
         this.type = type;
         this.directions = direction;
         this.hasTreasure = hasTreasure;
-        this.symmetric = direction[0] == direction[1] && direction[2] == direction[3];
     }
 
     public PathCard(PathCardType type, boolean[] direction, boolean hasTreasure, int componentID) {
@@ -33,7 +31,6 @@ public class PathCard extends SaboteurCard {
         this.type = type;
         this.directions = direction;
         this.hasTreasure = hasTreasure;
-        this.symmetric = direction[0] == direction[1] && direction[2] == direction[3];
     }
 
     public void rotate()
@@ -62,8 +59,6 @@ public class PathCard extends SaboteurCard {
             default -> -1;
         };
     }
-
-    public boolean isSymmetric() {return symmetric;}
 
 
     public boolean hasTreasure() {

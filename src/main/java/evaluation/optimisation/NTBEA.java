@@ -11,6 +11,7 @@ import evaluation.optimisation.ntbea.functions.NTBEAFunction;
 import evaluation.tournaments.RoundRobinTournament;
 import games.GameType;
 import evaluation.optimisation.ntbea.*;
+import org.json.simple.JSONObject;
 import players.PlayerFactory;
 import players.heuristics.OrdinalPosition;
 import players.heuristics.PureScoreHeuristic;
@@ -74,17 +75,25 @@ public class NTBEA {
                 : PlayerFactory.createPlayers(params.opponentDescriptor);
 
         if (params.tuningGame) {
-            gameHeuristic = JSONUtils.loadClass(params.evalMethod);
-        } else {
-            // Add check that the number of final matchups is reasonable given the number of repeats
-            if (params.tournamentGames > 0) {
-                int matchupsPerGame = Utils.gamesPerMatchup(nPlayers, params.repeats, params.tournamentGames, false);
-                if (matchupsPerGame < 1) {
-                    throw new IllegalArgumentException(String.format("Higher budget needed for the final tournament. There will be %d permutations of agents to positions in exhaustive mode, which is more than %d game in the available budget.",
-                            Utils.playerPermutations(nPlayers, params.repeats, false), params.tournamentGames));
+            if (new File(params.evalMethod).exists()) {
+                // load from file
+                gameHeuristic = JSONUtils.loadClassFromFile(params.evalMethod);
+            } else {
+                if (params.evalMethod.contains(".json"))
+                    throw new AssertionError("File not found : " + params.evalMethod);
+                try {
+                    Class<?> evalClass = Class.forName("evaluation.heuristics." + params.evalMethod);
+                    gameHeuristic = (IGameHeuristic) evalClass.getConstructor().newInstance();
+                } catch (ClassNotFoundException e) {
+                    throw new AssertionError("evaluation.heuristics." + params.evalMethod + " not found");
+                } catch (NoSuchMethodException e) {
+                    throw new AssertionError("evaluation.heuristics." + params.evalMethod + " has no no-arg constructor");
+                } catch (ReflectiveOperationException e) {
+                    throw new AssertionError("evaluation.heuristics." + params.evalMethod + " reflection error");
                 }
             }
 
+        } else {
             if (params.evalMethod.equals("Win"))
                 stateHeuristic = new WinOnlyHeuristic();
             if (params.evalMethod.equals("Score"))
@@ -120,35 +129,14 @@ public class NTBEA {
         elites.add(settings);
     }
 
-    // Only works if the search space is an instance of ITPSearchSpace
-    // This sets a tunable parameter that is *NOT* in the search space itself to the specified value
-    // This will ensure that all agents in the run use this parameter
-    public void fixTunableParameter(String key, Object value) {
-        if (!hasParameter(key)) {
-            System.out.println("Not parameter: " + key + " to fix");
-            return;
+    @SuppressWarnings("unchecked")
+    public void writeAgentJSON(int[] settings, String fileName) {
+        try (FileWriter writer = new FileWriter(fileName)) {
+            JSONObject json = ((ITPSearchSpace<?>) params.searchSpace).getAgentJSON(settings);
+            writer.write(JSONUtils.prettyPrint(json, 1));
+        } catch (IOException e) {
+            throw new AssertionError("Error writing agent settings to file " + fileName);
         }
-        for (int i = 0; i < params.searchSpace.nDims(); i++) {
-            if (params.searchSpace.name(i).equals(key)) {
-                throw new IllegalArgumentException("Cannot set a tunable parameter that is in the search space. Use fixSearchDimension instead.");
-            }
-        }
-        if (params.searchSpace instanceof ITPSearchSpace<?> itp) {
-            if (itp.itp instanceof TunableParameters<?> tp) {
-                tp.setParameterValue(key, value);
-                return;
-            }
-        }
-        throw new IllegalArgumentException("Cannot add to search space - not an ITPSearchSpace");
-    }
-
-    public boolean hasParameter(String key) {
-        if (params.searchSpace instanceof ITPSearchSpace<?> itp) {
-            if (itp.itp instanceof TunableParameters<?> tp) {
-                return tp.getParameterValue(key) != null;
-            }
-        }
-        throw new IllegalArgumentException("Cannot check for parameter unless params.searchSpace is Tunable");
     }
 
     /**
@@ -159,19 +147,10 @@ public class NTBEA {
     public Pair<Object, int[]> run() {
 
         for (currentIteration = 0; currentIteration < params.repeats; currentIteration++) {
-            // Check for existence of the output file. If it already exists, then we
-            // load the file, convert it to add to winnerSettings. Then skip this iteration
-            String iterationFilename = params.destDir + File.separator + "Recommended_" + currentIteration + ".json";
-            if ((new File(iterationFilename)).exists() && params.searchSpace instanceof ITPSearchSpace<?> itp) {
-                int[] settings = itp.settingsFromJSON(iterationFilename);
-                winnerSettings.add(settings);
-                winnersPerRun.add(itp.instantiate(settings));
-                System.out.println("NTBEA for iteration " + currentIteration + " has already completed - skipping");
-            } else {
-                runIteration();
-                if (params.searchSpace instanceof ITPSearchSpace<?> itp) {
-                    itp.writeAgentJSON(winnerSettings.get(winnerSettings.size() - 1), iterationFilename);
-                }
+            runIteration();
+            if (params.searchSpace instanceof ITPSearchSpace<?>) {
+                writeAgentJSON(winnerSettings.get(winnerSettings.size() - 1),
+                        params.destDir + File.separator + "Recommended_" + currentIteration + ".json");
             }
         }
 
@@ -195,6 +174,7 @@ public class NTBEA {
             // can reduce the variance in the results (and hence the accuracy of picking the best agent) by using the exhaustive mode
             // this does rely on not having, say 20 NTBEA iterations on a 6-player game (38k combinations); but assuming
             // the advice of 10 or fewer iterations holds, then even on a 5-player game we have 252 combinations, which is fine.
+            //double combinationsOfPlayers = CombinatoricsUtils.binomialCoefficientDouble(players.size(), nPlayers);
             int nTeams = params.byTeam ? game.createGameInstance(nPlayers, params.gameParams).getGameState().getNTeams() : nPlayers;
             if (players.size() < nTeams) {
                 System.out.println("Not enough players to run a tournament with " + nTeams + " players. Skipping the final tournament - " +
@@ -217,7 +197,7 @@ public class NTBEA {
                 createListeners().forEach(tournament::addListener);
                 tournament.run();
                 // create a new list of results in descending order of score
-                IntToDoubleFunction cmp = params.evalMethod.equals("Ordinal") ? tournament::getOrdinalAlphaRank : tournament::getWinRateAlphaRank;
+                IntToDoubleFunction cmp = params.evalMethod.equals("Ordinal") ? i -> -tournament.getOrdinalRank(i) : tournament::getWinRate;
                 List<Integer> agentsInOrder = IntStream.range(0, players.size())
                         .boxed()
                         .sorted(Comparator.comparingDouble(cmp::applyAsDouble))
@@ -226,10 +206,9 @@ public class NTBEA {
                 params.logFile = "RRT_" + params.logFile;
                 for (int index : agentsInOrder) {
                     if (params.verbose)
-                        System.out.printf("Player %d %s\tWin Rate: %.3f +/- %.3f\tMean Ordinal: %.2f +/- %.2f\tWinAlpha: %.3f\tOrdinalAlpha: %.3f%n", index, Arrays.toString(winnerSettings.get(index)),
+                        System.out.printf("Player %d %s\tWin Rate: %.3f +/- %.3f\tMean Ordinal: %.2f +/- %.2f%n", index, Arrays.toString(winnerSettings.get(index)),
                                 tournament.getWinRate(index), tournament.getWinStdErr(index),
-                                tournament.getOrdinalRank(index), tournament.getOrdinalStdErr(index),
-                                tournament.getWinRateAlphaRank(index), tournament.getOrdinalAlphaRank(index));
+                                tournament.getOrdinalRank(index), tournament.getOrdinalStdErr(index));
                     Pair<Double, Double> resultToReport = new Pair<>(tournament.getWinRate(index), tournament.getWinStdErr(index));
                     if (params.evalMethod.equals("Ordinal"))
                         resultToReport = new Pair<>(tournament.getOrdinalRank(index), tournament.getOrdinalStdErr(index));
@@ -237,15 +216,12 @@ public class NTBEA {
                     logSummary(new Pair<>(resultToReport, winnerSettings.get(index)), params);
                 }
                 params.logFile = params.logFile.substring(4);
-                // Note that the bestResult uses AlphaRank, as this factors in *who* the agent beats and
-                // helps prevent a high win rate against only weak opponents from being the best result
                 bestResult = params.evalMethod.equals("Ordinal") ?
                         new Pair<>(new Pair<>(tournament.getOrdinalRank(agentsInOrder.get(0)), tournament.getOrdinalStdErr(agentsInOrder.get(0))), winnerSettings.get(agentsInOrder.get(0))) :
                         new Pair<>(new Pair<>(tournament.getWinRate(agentsInOrder.get(0)), tournament.getWinStdErr(agentsInOrder.get(0))), winnerSettings.get(agentsInOrder.get(0)));
 
                 // We then want to check the win rate against the elite agent (if one was provided)
-                // we only regard an agent as better if it beats the elite agent with about 80% confidence (adjusted for multiple comparisons)
-                double zScore = Utils.standardZScore(0.20, agentsInOrder.size() - 1);
+                // we only regard an agent as better, if it beats the elite agent by at least 2 sd (so, c. 95%) confidence
                 if (elites.size() == 1 && agentsInOrder.get(0) != winnersPerRun.size() - 1) {
                     // The elite agent is always the last one (and if the elite won fair and square, then we skip this
                     double eliteMean;
@@ -254,13 +230,12 @@ public class NTBEA {
                     // For Ordinal we want the lowest ordinal; for Win rate high is good
                     if (params.evalMethod.equals("Ordinal")) {
                         eliteMean = tournament.getOrdinalRank(winnersPerRun.size() - 1);
-                        eliteErr = tournament.getOrdinalStdErr(winnersPerRun.size() - 1);
-                        // The sqrt(2) is to adjust for a test on the difference between two means (assuming same n and sd)
-                        winnerBeatsEliteBySignificantMargin = eliteMean - zScore * Math.sqrt(2) * eliteErr > bestResult.a.a;
+                        eliteErr= tournament.getOrdinalStdErr(winnersPerRun.size() - 1);
+                        winnerBeatsEliteBySignificantMargin = eliteMean - 2 * eliteErr > bestResult.a.a;
                     } else {
                         eliteMean = tournament.getWinRate(winnersPerRun.size() - 1);
                         eliteErr = tournament.getWinStdErr(winnersPerRun.size() - 1);
-                        winnerBeatsEliteBySignificantMargin = eliteMean + zScore * Math.sqrt(2) * eliteErr < bestResult.a.a;
+                        winnerBeatsEliteBySignificantMargin = eliteMean + 2 * eliteErr < bestResult.a.a;
                     }
                     if (!winnerBeatsEliteBySignificantMargin) {
                         if (params.verbose)
@@ -269,63 +244,19 @@ public class NTBEA {
                     }
                 }
             }
-        } else {
-            // otherwise we use the evalGames results from each run to pick the best one (which is already in bestResult)
-            // However, if elites is not empty, then this means we are using the elite as the benchmark
-            // so if the best evalGames result is not better than the elite, then we should use the elite.
-            if (!elites.isEmpty()) {
-                // we assume (As the only supported use case as of April 2025) that the last
-                // element of the elite array is the one that was just used as a benchmark
-                if (params.evalMethod.equals("Ordinal")) {
-                    double maxLevel = (nPlayers + 1) / 2.0;
-                    if (bestResult.a.a > maxLevel) {
-                        // keep the elite agent as the winner
-                        System.out.format("Challenger only achieved %.3f against a maximum target of %.3f. Sticking with the current benchmark.",
-                                bestResult.a.a, maxLevel);
-                        bestResult = Pair.of(Pair.of(maxLevel, 0.0), elites.get(0));
-                    }
-                } else {
-                    double minLevel = 1.0 / nPlayers;
-                    if (bestResult.a.a < minLevel) {
-                        // keep the elite agent as the winner
-                        System.out.format("Challenger only achieved %.3f against a minimum target of %.3f. Sticking with the current benchmark.",
-                                bestResult.a.a, minLevel);
-                        bestResult = Pair.of(Pair.of(minLevel, 0.0), elites.get(0));
-                    }
-                }
-            }
         }
-        // Now we optionally apply one-step deviations to the best result
-        if (params.OSDBudget > 0) {
-            NTBEAParameters OSDParams = (NTBEAParameters) params.copy();
-            // we take the OSDBudget and split it across 10 iterations
-            // with a minimum of 1000 games per iteration
-            OSDParams.repeats = Math.max(Math.min(10, OSDParams.OSDBudget / 1000), 1);
-            OSDParams.tournamentGames = params.OSDBudget / OSDParams.repeats;
-            OneStepDeviations OSD = new OneStepDeviations(OSDParams, evaluator);
-            // now tweak the final settings
-            bestResult.b = OSD.run(bestResult.b);
-        }
-
+        // otherwise we use the evalGames results from each run to pick the best one (which is already in bestResult)
         if (params.verbose) {
             System.out.println("\nFinal Recommendation: ");
             // we don't log the final run to file to avoid duplication
             printDetailsOfRun(bestResult);
         }
         if (params.searchSpace instanceof ITPSearchSpace<?> itp) {
-            itp.writeAgentJSON(bestResult.b, finalFilename());
+            writeAgentJSON(bestResult.b,
+                    params.destDir + File.separator + "Recommended_Final.json");
             return new Pair<>(itp.instantiate(bestResult.b), bestResult.b);
         }
         return new Pair<>(null, bestResult.b);
-    }
-
-    public final String finalFilename() {
-        return params.destDir + File.separator + "Recommended_Final.json";
-    }
-
-    public boolean hasAlreadyRun() {
-        File f = new File(finalFilename());
-        return f.exists();
     }
 
     protected void runTrials() {
@@ -375,10 +306,13 @@ public class NTBEA {
                 .mapToDouble(answer -> evaluator.evaluate(winnerSettings)).toArray();
         Arrays.sort(results);
         double avg = Arrays.stream(results).average().orElse(0.0);
+        double quantileValue = results[(int) (results.length * params.quantile / 100.0)];
         double stdErr = Math.sqrt(Arrays.stream(results).map(d -> Math.pow(d - avg, 2.0)).sum()) / (params.evalGames - 1.0);
-        return new Pair<>(avg, stdErr);
+        Pair<Double, Double> resultToReport = (params.quantile > 0) ?
+                new Pair<>(quantileValue, avg) :
+                new Pair<>(avg, stdErr);
+        return resultToReport;
     }
-
     /**
      * This just prints out some useful info on the NTBEA results. It lists the full underlying recommended
      * parameter settings, and the estimated mean score of these (with std error).
@@ -394,7 +328,7 @@ public class NTBEA {
                 data.a.a, data.a.b,
                 Arrays.stream(data.b).mapToObj(it -> String.format("%d", it)).collect(joining(", ")),
                 IntStream.range(0, data.b.length).mapToObj(i -> new Pair<>(i, data.b[i]))
-                        .map(p -> String.format("\t%s:\t%s\n", params.searchSpace.name(p.a), valueToString(p.a, p.b, params.searchSpace)))
+                        .map(p -> String.format("\t%s:\t%s\n", params.searchSpace.name(p.a), valueToString(p.a, p.b, ((ITPSearchSpace<?>) params.searchSpace))))
                         .collect(joining(" ")));
     }
 
@@ -436,11 +370,4 @@ public class NTBEA {
         return valueString;
     }
 
-    public void writeAgentJSON(int[] currentBestSettings, String s) {
-        if (params.searchSpace instanceof ITPSearchSpace<?> itp) {
-            itp.writeAgentJSON(currentBestSettings, s);
-        } else {
-            throw new AssertionError("Cannot write agent JSON for non-ITP search space");
-        }
-    }
 }

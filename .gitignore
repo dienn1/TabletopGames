@@ -4,10 +4,6 @@
 # Log file
 *.log
 
-# Eclipse metadata
-.classpath/
-.project/
-
 # BlueJ files
 *.ctxt
 
@@ -27,7 +23,6 @@
 hs_err_pid*
 
 .idea/
-.settings/
 target/
 *.iml
 *.kotlin_module
@@ -42,4 +37,3 @@ src/main/java/META-INF/MANIFEST.MF
 src/pytag/env/
 metrics/out/*
 treeRecorder*
-.vscode/*

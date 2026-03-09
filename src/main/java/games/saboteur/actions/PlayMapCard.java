@@ -55,7 +55,7 @@ public class PlayMapCard extends AbstractAction {
 
     @Override
     public int hashCode() {
-        return Objects.hash(position) - 29874;
+        return Objects.hash(position);
     }
 
     @Override

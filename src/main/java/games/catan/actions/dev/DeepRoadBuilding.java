@@ -32,7 +32,7 @@ public class DeepRoadBuilding extends AbstractAction implements IExtendedSequenc
 
         // Set in progress for the rest of the roads
         if (nSteps != nStepsTaken && _computeAvailableActions(gs).size() > 0) {
-            gs.setActionInProgress(this);
+            return gs.setActionInProgress(this);
         } else {
             nStepsTaken = nSteps;
         }

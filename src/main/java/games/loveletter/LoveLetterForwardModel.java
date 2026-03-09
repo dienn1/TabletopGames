@@ -13,7 +13,6 @@ import games.loveletter.cards.LoveLetterCard;
 import utilities.ActionTreeNode;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static core.CoreConstants.*;
 
@@ -30,7 +29,6 @@ public class LoveLetterForwardModel extends StandardForwardModel implements ITre
         LoveLetterGameState llgs = (LoveLetterGameState) firstState;
 
         llgs.effectProtection = new boolean[llgs.getNPlayers()];
-        llgs.currentlyActive = new boolean[llgs.getNPlayers()];
         // Set up all variables
         llgs.drawPile = new PartialObservableDeck<>("drawPile", -1, llgs.getNPlayers(), VisibilityMode.HIDDEN_TO_ALL);
         llgs.reserveCards = new Deck<>("reserveCards", VisibilityMode.VISIBLE_TO_ALL);
@@ -39,7 +37,7 @@ public class LoveLetterForwardModel extends StandardForwardModel implements ITre
         llgs.playerDiscardCards = new ArrayList<>(llgs.getNPlayers());
 
         // Set up first round
-        setupRound(llgs, new ArrayList<>());
+        setupRound(llgs, null);
     }
 
     /**
@@ -48,13 +46,16 @@ public class LoveLetterForwardModel extends StandardForwardModel implements ITre
      * @param llgs            - current game state.
      * @param previousWinners - winners of previous round.
      */
-    private void setupRound(LoveLetterGameState llgs, List<Integer> previousWinners) {
+    private void setupRound(LoveLetterGameState llgs, Set<Integer> previousWinners) {
         LoveLetterParameters llp = (LoveLetterParameters) llgs.getGameParameters();
 
         // No protection this round
-        Arrays.fill(llgs.effectProtection, false);
+        llgs.effectProtection = new boolean[llgs.getNPlayers()];
+
         // Reset player status
-        Arrays.fill(llgs.currentlyActive, true);
+        for (int i = 0; i < llgs.getNPlayers(); i++) {
+            llgs.setPlayerResult(GameResult.GAME_ONGOING, i);
+        }
 
         // Add all cards to the draw pile
         llgs.drawPile.clear();
@@ -110,7 +111,7 @@ public class LoveLetterForwardModel extends StandardForwardModel implements ITre
             }
         }
 
-        if (!previousWinners.isEmpty()) {
+        if (previousWinners != null) {
             // Next winner in turn order starts
             for (int i = 0; i < llgs.getNPlayers(); i++) {
                 int p = (i + 1) % llgs.getNPlayers();
@@ -143,7 +144,7 @@ public class LoveLetterForwardModel extends StandardForwardModel implements ITre
             int nextPlayer = gameState.getCurrentPlayer();
             do {
                 nextPlayer = (nextPlayer + 1) % llgs.getNPlayers();
-            } while (!llgs.isCurrentlyActive(nextPlayer));
+            } while (llgs.getPlayerResults()[nextPlayer] == GameResult.LOSE_ROUND);
             endPlayerTurn(llgs, nextPlayer);
 
             // Next turn starts with drawing card and removing protection
@@ -161,9 +162,11 @@ public class LoveLetterForwardModel extends StandardForwardModel implements ITre
     public boolean checkEndOfRound(LoveLetterGameState llgs, AbstractAction actionPlayed) {
         // Count the number of active players
         int playersAlive = 0;
+        int soleWinner = -1;
         for (int i = 0; i < llgs.getNPlayers(); i++) {
-            if (llgs.isCurrentlyActive(i) && llgs.playerHandCards.get(i).getSize() > 0) {
+            if (llgs.getPlayerResults()[i] != GameResult.LOSE_ROUND && llgs.playerHandCards.get(i).getSize() > 0) {
                 playersAlive += 1;
+                soleWinner = i;
             }
         }
 
@@ -171,16 +174,22 @@ public class LoveLetterForwardModel extends StandardForwardModel implements ITre
         if (playersAlive == 1 || llgs.getRemainingCards() == 0) {
 
             // End the round and add up points
-            List<Integer> winners = roundEnd(llgs);
+            Set<Integer> winners = roundEnd(llgs, playersAlive, soleWinner);
 
             if (llgs.getCoreGameParameters().recordEventHistory) {
                 if (playersAlive == 1) {
-                    llgs.recordHistory("Winner only player left: " + winners.get(0) + " (" + actionPlayed.toString() + ")");
+                    llgs.recordHistory("Winner only player left: " + soleWinner + " (" + actionPlayed.toString() + ")");
                 } else if (llgs.getRemainingCards() == 0) {
-                    llgs.recordHistory("No more cards remaining. Winners: " + winners.stream().map(Object::toString).collect(Collectors.joining()));
+                    llgs.recordHistory("No more cards remaining. Winners: " + winners.toString());
                 }
             }
 
+            GameResult result = GameResult.WIN_ROUND;
+            if (winners.size() > 1) result = GameResult.DRAW_ROUND;
+            for (int i = 0; i < llgs.getNPlayers(); i++) {
+                if (winners.contains(i)) llgs.setPlayerResult(result, i);
+                else llgs.setPlayerResult(GameResult.LOSE_ROUND, i);
+            }
             endRound(llgs);
 
             if (checkEndOfGame(llgs)) {
@@ -234,15 +243,63 @@ public class LoveLetterForwardModel extends StandardForwardModel implements ITre
      * Ends the current round and awards affection tokens to winners.
      *
      * @param llgs          - current game state
+     * @param nPlayersAlive - number of players still in the game
+     * @param soleWinner    - player ID of the winner if only one (otherwise last winner ID)
      */
-    private List<Integer> roundEnd(LoveLetterGameState llgs) {
-        List<Integer> winners = llgs.getRoundWinners();
+    private Set<Integer> roundEnd(LoveLetterGameState llgs, int nPlayersAlive, int soleWinner) {
+        Set<Integer> winners = getWinners(llgs, nPlayersAlive, soleWinner);
         for (int i : winners) {
             llgs.affectionTokens[i] += 1;
         }
         return winners;
     }
 
+    public Set<Integer> getWinners(LoveLetterGameState llgs, int nPlayersAlive, int soleWinner) {
+        if (nPlayersAlive == 1) {
+            // They win and get 1 affection token
+            return Collections.singleton(soleWinner);
+        } else {
+            // Highest number in hand wins the round
+            HashSet<Integer> bestPlayers = new HashSet<>();
+            int bestValue = 0;
+            for (int i = 0; i < llgs.getNPlayers(); i++) {
+                if (llgs.getPlayerResults()[i] != GameResult.LOSE_ROUND) {
+                    int points = llgs.playerHandCards.get(i).peek().cardType.getValue();
+                    if (points > bestValue) {
+                        bestValue = points;
+                        bestPlayers.clear();
+                        bestPlayers.add(i);
+                    } else if (points == bestValue) {
+                        bestPlayers.add(i);
+                    }
+                }
+            }
+
+            if (bestPlayers.size() == 1) {
+                // This is the winner of the round, 1 affection token
+                return bestPlayers;
+            } else {
+                // If tie, add numbers in discard pile, highest wins
+                bestValue = 0;
+                HashSet<Integer> bestPlayersByDiscardPoints = new HashSet<>();
+                for (int i : bestPlayers) {
+                    int points = 0;
+                    for (LoveLetterCard card : llgs.playerDiscardCards.get(i).getComponents()) {
+                        points += card.cardType.getValue();
+                    }
+                    if (points > bestValue) {
+                        bestValue = points;
+                        bestPlayersByDiscardPoints.clear();
+                        bestPlayersByDiscardPoints.add(i);
+                    } else if (points == bestValue) {
+                        bestPlayersByDiscardPoints.add(i);
+                    }
+                }
+                // Everyone tied for most points here wins the round
+                return bestPlayersByDiscardPoints;
+            }
+        }
+    }
 
     /**
      * Calculates the list of currently available actions, possibly depending on the game phase.
@@ -262,7 +319,7 @@ public class LoveLetterForwardModel extends StandardForwardModel implements ITre
     @Override
     public List<AbstractAction> _computeAvailableActions(AbstractGameState gameState, ActionSpace actionSpace) {
         LoveLetterGameState llgs = (LoveLetterGameState) gameState;
-        if (!llgs.isCurrentlyActive(llgs.getCurrentPlayer()))
+        if (llgs.getPlayerResults()[llgs.getCurrentPlayer()] == CoreConstants.GameResult.LOSE_ROUND)
             throw new AssertionError("???.");
 
         Set<AbstractAction> actions = new LinkedHashSet<>();

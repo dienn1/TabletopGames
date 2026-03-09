@@ -1,8 +1,6 @@
 package players.learners;
 
 import com.globalmentor.apache.hadoop.fs.BareLocalFileSystem;
-import core.interfaces.IActionFeatureVector;
-import core.interfaces.IStateFeatureVector;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -32,20 +30,12 @@ public abstract class ApacheLearner extends AbstractLearner {
         // And the hack to get this to work on Windows (without the Winutils.exe and hadoop.dll nightmare)
         spark.sparkContext().hadoopConfiguration().setClass("fs.file.impl", BareLocalFileSystem.class, FileSystem.class);
     }
-
-    public ApacheLearner() {
-        super();
+    public ApacheLearner(double gamma, Target target) {
+        super(gamma, target);
     }
-    public ApacheLearner(double gamma, Target target, IStateFeatureVector stateFeatureVector) {
-        super(gamma, target, stateFeatureVector);
-    }
-    public ApacheLearner(double gamma, Target target, IStateFeatureVector stateFeatureVector, IActionFeatureVector actionFeatureVector) {
-        super(gamma, target, stateFeatureVector, actionFeatureVector);
-    }
-
 
     @Override
-    public Object learnFrom(String... files) {
+    public void learnFrom(String... files) {
         loadData(files);
         // first add the target to the data array so that we can convert to an apache dataset (we just add on the target)
         double[][] apacheDataArray = new double[dataArray.length][dataArray[0].length];
@@ -75,9 +65,9 @@ public abstract class ApacheLearner extends AbstractLearner {
         if (debug)
             apacheData.show(10);
 
-        return learnFromApacheData();
+        learnFromApacheData();
     }
 
-    abstract Object learnFromApacheData();
+    abstract void learnFromApacheData();
 
 }

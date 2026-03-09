@@ -43,11 +43,8 @@ public class NTBEAParameters extends TunableParameters<NTBEA> {
     public boolean simpleRegret;
     public boolean verbose;
     public Mode mode;
-    public int quantile = 0;
+    public int quantile = -1;
     public int evaluationsPerTrial = 1;
-    public int OSDBudget = 0;
-    public boolean OSDTournament = false;
-    public double OSDConfidence = 0.9;
 
     // and those that are not (so must be included separately in copy etc)
     public boolean tuningGame = false;
@@ -78,11 +75,8 @@ public class NTBEAParameters extends TunableParameters<NTBEA> {
         addTunableParameter("simpleRegret", false);
         addTunableParameter("verbose", false);
         addTunableParameter("mode", Mode.NTBEA);
-        addTunableParameter("quantile", 0);
+        addTunableParameter("quantile", -1);
         addTunableParameter("evalsPerTrial", 1);
-        addTunableParameter("OSDBudget", 0);
-        addTunableParameter("OSDTournament", false);
-        addTunableParameter("OSDConfidence", 0.9);
     }
 
     @Override
@@ -106,9 +100,6 @@ public class NTBEAParameters extends TunableParameters<NTBEA> {
         mode = (Mode) getParameterValue("mode");
         quantile = (int) getParameterValue("quantile");
         evaluationsPerTrial = (int) getParameterValue("evalsPerTrial");
-        OSDBudget = (int) getParameterValue("OSDBudget");
-        OSDTournament = (boolean) getParameterValue("OSDTournament");
-        OSDConfidence = (double) getParameterValue("OSDConfidence");
 
         if (evalGames == -1) evalGames = iterationsPerRun / 5;
     }
@@ -135,13 +126,11 @@ public class NTBEAParameters extends TunableParameters<NTBEA> {
         setParameterValue("mode", Mode.valueOf(args.get(RunArg.NTBEAMode).toString()));
         setParameterValue("quantile", args.get(RunArg.quantile));
         setParameterValue("evalsPerTrial", args.get(RunArg.evalsPerTrial));
-        setParameterValue("OSDBudget", args.get(RunArg.OSDBudget));
-        setParameterValue("OSDTournament", args.get(RunArg.OSDTournament));
-        setParameterValue("OSDConfidence", args.get(RunArg.OSDConfidence));
 
-        _reset();
+        configure(args);
+    }
 
-        // then the non-tunable parameters
+    public void configure(Map<RunArg, Object> args) {
         tuningGame = (boolean) args.get(RunArg.tuneGame);
         byTeam = (boolean) args.get(RunArg.byTeam);
         gameType = GameType.valueOf(args.get(RunArg.game).toString());
@@ -149,6 +138,7 @@ public class NTBEAParameters extends TunableParameters<NTBEA> {
         gameParams = args.get(RunArg.gameParams).equals("") ? null :
                 AbstractParameters.createFromFile(gameType, (String) args.get(RunArg.gameParams));
 
+        mode = Mode.valueOf((String) args.get(RunArg.NTBEAMode));
         listenerClasses = (List<String>) args.get(RunArg.listener);
         destDir = (String) args.get(RunArg.destDir);
         if (destDir.isEmpty()) destDir = "NTBEA";
@@ -165,7 +155,8 @@ public class NTBEAParameters extends TunableParameters<NTBEA> {
                 Constructor<ITunableParameters<?>> constructor;
                 if (fileExists) {
                     // We import the file as a JSONObject
-                    json = JSONUtils.loadJSONFile(searchSpaceFile);
+                    String rawJSON = JSONUtils.readJSONFile(searchSpaceFile, Function.identity());
+                    json = (JSONObject) parser.parse(rawJSON);
                     className = (String) json.get("class");
                     if (className == null) {
                         System.out.println("No class property found in SearchSpaceJSON file. This is required to specify the ITunableParameters class that the file complements");
@@ -223,14 +214,13 @@ public class NTBEAParameters extends TunableParameters<NTBEA> {
     protected NTBEAParameters _copy() {
         NTBEAParameters ntp = new NTBEAParameters();
         ntp.searchSpace = searchSpace;
-        ntp.gameParams = gameParams == null ? null : gameParams.copy();
+        ntp.gameParams = gameParams.copy();
         ntp.tuningGame = tuningGame;
         ntp.byTeam = byTeam;
         ntp.listenerClasses = listenerClasses;
         ntp.destDir = destDir;
         ntp.gameType = gameType;
         ntp.nPlayers = nPlayers;
-        ntp.logFile = logFile;
         return ntp;
     }
 
@@ -238,13 +228,12 @@ public class NTBEAParameters extends TunableParameters<NTBEA> {
     protected boolean _equals(Object o) {
         if (o instanceof NTBEAParameters parameters) {
             return searchSpace.equals(parameters.searchSpace) &&
-                    ((gameParams == null && parameters.gameParams == null) || gameParams.equals(parameters.gameParams)) &&
+                    gameParams.equals(parameters.gameParams) &&
                     tuningGame == parameters.tuningGame &&
                     byTeam == parameters.byTeam &&
                     listenerClasses.equals(parameters.listenerClasses) &&
                     destDir.equals(parameters.destDir) &&
                     gameType.equals(parameters.gameType) &&
-                    logFile.equals(parameters.logFile) &&
                     nPlayers == parameters.nPlayers;
         }
         return false;

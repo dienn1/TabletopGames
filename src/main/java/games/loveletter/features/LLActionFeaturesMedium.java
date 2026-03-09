@@ -10,6 +10,7 @@ import games.loveletter.cards.CardType;
 import java.util.ArrayList;
 import java.util.List;
 
+import static java.util.stream.Collectors.toList;
 import static utilities.Utils.enumNames;
 import static utilities.Utils.enumToOneHot;
 
@@ -21,9 +22,9 @@ public class LLActionFeaturesMedium implements IActionFeatureVector {
     public LLActionFeaturesMedium() {
         List<String> allNames = new ArrayList<>();
         // For each card type, is this the card played
-        allNames.addAll(enumNames(CardType.class).stream().map(s -> s + "_PLAY").toList());
+        allNames.addAll(enumNames(CardType.class).stream().map(s -> s + "_PLAY").collect(toList()));
         // For each card type, is this the card guessed (where that is relevant - for GUARD)
-        allNames.addAll(enumNames(CardType.class).stream().map(s -> s + "_GUESS").toList());
+        allNames.addAll(enumNames(CardType.class).stream().map(s -> s + "_GUESS").collect(toList()));
         localNames = allNames.toArray(new String[0]);
     }
 
@@ -33,8 +34,9 @@ public class LLActionFeaturesMedium implements IActionFeatureVector {
     }
 
     @Override
-    public double[] doubleVector(AbstractAction a, AbstractGameState state, int playerID) {
+    public double[] featureVector(AbstractAction a, AbstractGameState state, int playerID) {
         double[] retValue = new double[names().length];
+        LoveLetterGameState llgs = (LoveLetterGameState) state;
         if (!(a instanceof PlayCard))
             return retValue;
         CardType cardPlayed = ((PlayCard) a).getCardType();

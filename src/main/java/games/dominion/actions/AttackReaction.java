@@ -53,7 +53,8 @@ public class AttackReaction implements IExtendedSequence {
     public void _afterAction(AbstractGameState state, AbstractAction action) {
         if (action instanceof DoNothing)
             cardsToPlay.clear();
-        if (action instanceof IDominionReaction actionTaken) {
+        if (action instanceof IDominionReaction) {
+            IDominionReaction actionTaken = (IDominionReaction) action;
             if (actionTaken.getPlayer() == defender) {
                 cardsToPlay.remove(actionTaken.getCardType());
             }

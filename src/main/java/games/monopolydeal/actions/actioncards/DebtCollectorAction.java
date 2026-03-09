@@ -122,16 +122,12 @@ public class DebtCollectorAction extends AbstractAction implements IExtendedSequ
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         DebtCollectorAction action = (DebtCollectorAction) o;
-        return playerID == action.playerID &&
-                target == action.target &&
-                actionState == action.actionState &&
-                reaction == action.reaction &&
-                executed == action.executed;
+        return playerID == action.playerID;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(playerID, target, actionState, reaction, executed);
+        return Objects.hash(playerID);
     }
 
     @Override

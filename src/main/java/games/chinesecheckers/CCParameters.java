@@ -4,13 +4,10 @@ import core.AbstractParameters;
 import games.chinesecheckers.components.Peg;
 import gametemplate.GTParameters;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
 
 public class CCParameters extends AbstractParameters {
-
-    public CCParameters() {
-        setTimeoutRounds(200);
-    }
 
     // These are the colours of the base/target nodes for each player (where they need to get to)
     // To find the starting nodes, look at the colour from boardOpposites
@@ -25,7 +22,6 @@ public class CCParameters extends AbstractParameters {
     }
 
     public Map<Peg.Colour, Peg.Colour> boardOpposites = new HashMap<>();
-
     {
         boardOpposites.put(Peg.Colour.red, Peg.Colour.purple);
         boardOpposites.put(Peg.Colour.purple, Peg.Colour.red);
@@ -35,14 +31,13 @@ public class CCParameters extends AbstractParameters {
         boardOpposites.put(Peg.Colour.blue, Peg.Colour.orange);
     }
 
-    public List<Peg.Colour[]> playerColours = Arrays.asList(
-            new Peg.Colour[0], new Peg.Colour[0],
-            new Peg.Colour[]{Peg.Colour.purple, Peg.Colour.red},
-            new Peg.Colour[]{Peg.Colour.purple, Peg.Colour.yellow, Peg.Colour.orange},
-            new Peg.Colour[]{Peg.Colour.purple, Peg.Colour.yellow, Peg.Colour.red, Peg.Colour.green},
-            new Peg.Colour[0],
-            new Peg.Colour[]{Peg.Colour.purple, Peg.Colour.red, Peg.Colour.blue, Peg.Colour.yellow, Peg.Colour.orange, Peg.Colour.green}
-    );
+    public Map<Integer, Peg.Colour[]> playerColours = new HashMap<>();
+    {
+        playerColours.put(2, new Peg.Colour[]{Peg.Colour.purple, Peg.Colour.red});
+        playerColours.put(3, new Peg.Colour[]{Peg.Colour.purple, Peg.Colour.yellow, Peg.Colour.orange});
+        playerColours.put(4, new Peg.Colour[]{Peg.Colour.purple, Peg.Colour.yellow, Peg.Colour.red, Peg.Colour.green});
+        playerColours.put(6, new Peg.Colour[]{Peg.Colour.purple, Peg.Colour.red, Peg.Colour.blue, Peg.Colour.yellow, Peg.Colour.orange, Peg.Colour.green});
+    }
 
     @Override
     protected AbstractParameters _copy() {

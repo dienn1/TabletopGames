@@ -20,25 +20,18 @@ public class BuildCosts {
     Wonders7GameParameters params;
     Wonders7GameState state;
 
-    Wonder7Card lumberyard;
-    Wonder7Card timberyard;
-    Wonder7Card apothecary;
-    Wonder7Card library;
-    Wonder7Card scriptorium;
-    Wonder7Card temple;
+    Wonder7Card lumberyard = Wonder7Card.factory(LumberYard);
+    Wonder7Card timberyard = Wonder7Card.factory(TimberYard);
+    Wonder7Card apothecary = Wonder7Card.factory(Apothecary);
+    Wonder7Card library = Wonder7Card.factory(Library);
+    Wonder7Card scriptorium = Wonder7Card.factory(Scriptorium);
+    Wonder7Card temple = Wonder7Card.factory(Temple);
 
     @Before
     public void setup() {
         params = new Wonders7GameParameters();
         params.setRandomSeed(4902);
         state = new Wonders7GameState(params, 4);
-
-        lumberyard = Wonder7Card.factory(LumberYard, state.getParams());
-        timberyard = Wonder7Card.factory(TimberYard, state.getParams());
-        apothecary = Wonder7Card.factory(Apothecary, state.getParams());
-        library = Wonder7Card.factory(Library, state.getParams());
-        scriptorium = Wonder7Card.factory(Scriptorium, state.getParams());
-        temple = Wonder7Card.factory(Temple, state.getParams());
         fm.setup(state);
     }
 
@@ -109,7 +102,7 @@ public class BuildCosts {
         state.getPlayerResources(1).put(Textile, 1);
         state.getPlayerResources(3).put(Textile, 1);
 
-        state.playedCards.get(0).add(Wonder7Card.factory(Marketplace, state.getParams()));
+        state.playedCards.get(0).add(Wonder7Card.factory(Marketplace));
         assertEquals(0, state.getPlayerResources(0).get(Textile).intValue());
         Pair<Boolean, List<TradeSource>> required = apothecary.isPlayable(0, state);
 
@@ -127,7 +120,7 @@ public class BuildCosts {
         state.getPlayerResources(0).put(Stone, 0);
         state.getPlayerResources(0).put(Textile, 1);
         state.getPlayerResources(0).put(Coin, 1);  // 1 coin is not enough to buy the card
-        state.playedCards.get(0).add(Wonder7Card.factory(EastTradingPost, state.getParams()));
+        state.playedCards.get(0).add(Wonder7Card.factory(EastTradingPost));
 
         // P0 now has 1 Coin, 1 Textile and needs to buy 2 Stone
         assertEquals(new Pair<>(false, Collections.emptyList()), library.isPlayable(0, state));
@@ -143,7 +136,7 @@ public class BuildCosts {
 
         // iii) now flip to the West Trading Post - they should now spend the coin to player 1
         state.playedCards.get(0).clear();
-        state.playedCards.get(0).add(Wonder7Card.factory(WestTradingPost, state.getParams()));
+        state.playedCards.get(0).add(Wonder7Card.factory(WestTradingPost));
         assertEquals(new Pair<>(true, List.of(new TradeSource(Stone, 1, 1))), library.isPlayable(0, state));
 
     }

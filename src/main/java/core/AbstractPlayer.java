@@ -18,16 +18,14 @@ public abstract class AbstractPlayer {
     public PlayerParameters parameters;
     protected List<IPlayerDecorator> decorators;
 
-    public AbstractPlayer(PlayerParameters parameters, String name) {
-        this.parameters = parameters != null ? parameters : new PlayerParameters();
+    public AbstractPlayer(PlayerParameters params, String name) {
+        this.parameters = params != null ? params : new PlayerParameters();
         this.name = name;
-        initializeDecorators();
-    }
-
-    private void initializeDecorators() {
-        this.decorators = new ArrayList<>();
+        // We may have one Decorator defined in the Parameters
+        // others can then be added by calling addDecorator()
+        decorators = new ArrayList<>();
         if (parameters.decorator != null) {
-            this.decorators.add(parameters.decorator);
+            decorators.add(parameters.decorator);
         }
     }
 

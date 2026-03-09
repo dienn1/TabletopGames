@@ -20,12 +20,9 @@ public class TournamentMetric extends AbstractMetric {
 
     AbstractMetric wrappedMetric;
 
-    private boolean firstReport;
-
     public TournamentMetric(AbstractMetric metric) {
         super(metric.getEventTypes());
         this.wrappedMetric = metric;
-        this.firstReport = true;
     }
 
     /**
@@ -121,7 +118,7 @@ public class TournamentMetric extends AbstractMetric {
 
                 if (reportType == IDataLogger.ReportType.RawData) {
                     if (reportDestination == IDataLogger.ReportDestination.ToFile || reportDestination == IDataLogger.ReportDestination.ToBoth) {
-                        dataProcessor.processRawDataToFile(logger, folder, !firstReport);
+                        dataProcessor.processRawDataToFile(logger, folder);
                     }
                     if (reportDestination == IDataLogger.ReportDestination.ToConsole || reportDestination == IDataLogger.ReportDestination.ToBoth) {
                         dataProcessor.processRawDataToConsole(logger);
@@ -143,6 +140,5 @@ public class TournamentMetric extends AbstractMetric {
                 }
             }
         }
-        firstReport = false;
     }
 }

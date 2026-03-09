@@ -10,7 +10,6 @@ import gui.GamePanel;
 
 import javax.swing.*;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 public class LLGUIListener implements IGameListener {
@@ -30,12 +29,13 @@ public class LLGUIListener implements IGameListener {
             // Paint final state of previous round, showing all hands
             LoveLetterGameState llgs = (LoveLetterGameState) event.state;
 
-            List<Integer> winners = llgs.getRoundWinners();
+            Set<Integer> winners = new HashSet<>();
 
             // Show all hands
             for (int i = 0; i < llgs.getNPlayers(); i++) {
-                if (llgs.isCurrentlyActive(i))
-                    playerHands[i].update(llgs, true);
+                if (llgs.getPlayerResults()[i] == CoreConstants.GameResult.WIN_GAME || llgs.getPlayerResults()[i] == CoreConstants.GameResult.WIN_ROUND || llgs.getPlayerResults()[i] == CoreConstants.GameResult.DRAW_ROUND)
+                    winners.add(i);
+                playerHands[i].update(llgs, true);
             }
             // Repaint
             parent.repaint();

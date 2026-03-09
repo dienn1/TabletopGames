@@ -65,8 +65,7 @@ public class DeepCounterOffer extends AbstractAction implements IExtendedSequenc
     @Override
     public boolean execute(AbstractGameState gs) {
         if (!execute) return true;
-        gs.setActionInProgress(this);
-        return true;
+        return gs.setActionInProgress(this);
     }
 
     @Override

@@ -32,7 +32,7 @@
     }
   },
   "rolloutTermination": [
-    "EXACT",
+    "DEFAULT",
     "END_ROUND",
     "END_TURN"
   ],

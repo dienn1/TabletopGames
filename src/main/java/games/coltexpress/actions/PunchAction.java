@@ -78,7 +78,7 @@ public class PunchAction  extends DrawCard {
                     potentialLoot.add(l);
             }
 
-            if (!potentialLoot.isEmpty()){
+            if (potentialLoot.size() > 0){
                 Loot chosenLoot = potentialLoot.get(gameState.getRnd().nextInt(potentialLoot.size()));
                 if (playerIsCheyenne && loot == ColtExpressTypes.LootType.Purse)
                     ((ColtExpressGameState) gameState).addLoot(card.playerID, chosenLoot);

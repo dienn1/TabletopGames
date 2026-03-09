@@ -19,7 +19,7 @@ public class BoatDuo extends PlayDuo {
 
     @Override
     public BoatDuo copy() {
-        return this;
+        return new BoatDuo(playerId, cardsIdx.clone());
     }
 
     @Override

@@ -138,13 +138,12 @@ public class DealBreakerAction extends AbstractAction implements IExtendedSequen
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         DealBreakerAction that = (DealBreakerAction) o;
-        return playerID == that.playerID && target == that.target && reaction == that.reaction &&
-                executed == that.executed && actionState == that.actionState && setType == that.setType;
+        return playerID == that.playerID;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(playerID, target, setType, actionState, reaction, executed);
+        return Objects.hash(playerID);
     }
 
     @Override

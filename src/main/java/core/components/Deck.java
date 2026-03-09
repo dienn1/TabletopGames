@@ -227,7 +227,6 @@ public class Deck<T extends Component> extends Component implements IComponentCo
 
     /**
      * Adds a component to a deck at its bottom. Manages the case that the deck is empty.
-     *
      * @param c component to add
      * @return true if within capacity, false otherwise.
      */
@@ -278,18 +277,15 @@ public class Deck<T extends Component> extends Component implements IComponentCo
      * Remove the given component.
      *
      * @param component - component to remove.
+     * @return true if successfully removed, false otherwise.
      */
-    public void remove(T component) {
-        // implementation note. We deliberately do not call components.remove(component)
-        // because for PartialObservableDecks we need to remove the element visibility at the correct index
-        // hence we *always* only remove from a deck by index
-        int index = components.indexOf(component);
+    public boolean remove(T component) {
         component.setOwnerId(-1);
+        int index = components.indexOf(component);
         if (index != -1) {
-            remove(index);
-            return;
+            return remove(index);
         }
-        throw new IllegalArgumentException(component + " not found in " + this);
+        return false;
     }
 
 
@@ -297,19 +293,23 @@ public class Deck<T extends Component> extends Component implements IComponentCo
      * Remove the component at the given index.
      *
      * @param idx - index of component to remove.
+     * @return true if successfully removed, false otherwise.
      */
-    public void remove(int idx) {
+    public boolean remove(int idx) {
         if (idx >= 0 && idx < components.size()) {
             components.get(idx).setOwnerId(-1);
             components.remove(idx);
-        } else {
-            throw new IndexOutOfBoundsException("Index " + idx + " is out of bounds for deck of size " + components.size());
+            return true;
         }
+        return false;
     }
 
     public void removeAll(List<T> items) {
-        for (T component : items)
-            remove(component);
+        for (T component : items) {
+            boolean found = remove(component);
+            if (!found)
+                throw new IllegalArgumentException(component + " not found in " + this);
+        }
     }
 
     public boolean contains(T card) {

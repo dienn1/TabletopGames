@@ -59,7 +59,7 @@ public class SaboteurPlayerView extends DeckView<SaboteurCard> {
                     }
                 }
             } else if (component instanceof PathCard) {
-                drawPathCard(g, (PathCard) component, rect.x, rect.y, true);
+                drawPathCard(g, (PathCard) component, rect.x, rect.y);
             } else if (component instanceof RoleCard roleCard) {
                 g.drawString(""+roleCard.type.name().charAt(0), rect.x + 5, rect.y + 20);
             }
@@ -72,17 +72,14 @@ public class SaboteurPlayerView extends DeckView<SaboteurCard> {
 
         // Draw player role and number of nugget cards
         g.setColor(Color.black);
-        if (human)
-            g.drawString( gs.getRole(idx).name() + "; Nuggets: " + gs.getPlayerNuggetDecks().get(idx).getSize(), 7, (int) (SaboteurBoardView.cellHeight * 1.5));
-        else
-            g.drawString( "Nuggets: " + gs.getPlayerNuggetDecks().get(idx).getSize(), 7, (int) (SaboteurBoardView.cellHeight * 1.5));
+        g.drawString("Role: " + gs.getRole(idx).name() + "; nuggetCards: " + gs.getPlayerNuggetDecks().get(idx).getSize(), 7, (int) (SaboteurBoardView.cellHeight * 1.5));
 
         // Draw tool status
-        StringBuilder tools = new StringBuilder();
+        String tools = "";
         for (ActionCard.ToolCardType tt: ActionCard.ToolCardType.values()) {
-            tools.append(tt.shortString()).append(": ").append(gs.isToolFunctional(idx, tt) ? "ok" : "XX").append("   ");
+            tools += tt.name() + ": " + (gs.isToolFunctional(idx, tt) ? "ok" : "broken") + "   ";
         }
-        g.drawString(tools.toString(), 7, (int) (SaboteurBoardView.cellHeight * 1.5) + 20);
+        g.drawString(tools, 7, (int) (SaboteurBoardView.cellHeight * 1.5) + 20);
     }
 
     public void update(boolean front) {
@@ -91,14 +88,6 @@ public class SaboteurPlayerView extends DeckView<SaboteurCard> {
 
     @Override
     public Dimension getPreferredSize() {
-        return new Dimension(SaboteurBoardView.cellWidth * 6, SaboteurGUIManager.playerAreaHeight);
-    }
-    @Override
-    public Dimension getMinimumSize() {
-        return getPreferredSize();
-    }
-    @Override
-    public Dimension getMaximumSize() {
-        return getPreferredSize();
+        return new Dimension(SaboteurBoardView.cellWidth*8, SaboteurBoardView.cellHeight*3);
     }
 }

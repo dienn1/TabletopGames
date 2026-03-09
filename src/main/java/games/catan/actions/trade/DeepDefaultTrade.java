@@ -30,8 +30,7 @@ public class DeepDefaultTrade extends AbstractAction implements IExtendedSequenc
 
     @Override
     public boolean execute(AbstractGameState gs) {
-        gs.setActionInProgress(this);
-        return true;
+        return gs.setActionInProgress(this);
     }
 
     @Override

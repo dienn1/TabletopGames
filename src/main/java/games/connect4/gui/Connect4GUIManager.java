@@ -71,8 +71,7 @@ public class Connect4GUIManager extends AbstractGUIManager {
                     SetGridValueAction action = (SetGridValueAction) abstractAction;
                     if (action.getX() == r.x/defaultItemSize) { // && action.getY() == r.y/defaultItemSize) {
                         actionButtons[0].setVisible(true);
-                        actionButtons[0].setButtonAction(action, "Play " +
-                                Connect4Constants.playerMapping.get(player.getPlayerID()).getComponentName()
+                        actionButtons[0].setButtonAction(action, "Play " + Connect4Constants.playerMapping.get(player.getPlayerID())
                           + " in column " + (action.getX() + 1));
                         break;
                     }

@@ -36,12 +36,4 @@ public class ScoreHeuristic implements IStateHeuristic {
     public String toString() {
         return "ScoreHeuristic";
     }
-    @Override
-    public boolean equals(Object obj) {
-        return obj instanceof ScoreHeuristic;
-    }
-    @Override
-    public int hashCode() {
-        return 3;
-    }
 }

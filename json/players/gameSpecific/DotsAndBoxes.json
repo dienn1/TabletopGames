@@ -6,7 +6,7 @@
     "class": "players.heuristics.LeaderHeuristic"
   },
   "exploreEpsilon": 0.3,
-  "treePolicy": "NoAveragingRM",
+  "treePolicy": "RegretMatching",
   "rolloutType": "RANDOM",
   "information": "Information_Set",
   "class": "players.mcts.MCTSParams",

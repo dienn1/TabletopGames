@@ -101,25 +101,24 @@ public class MCTSPlayer extends AbstractPlayer implements IAnyTimePlayer, IHasSt
         // We retain this, but update the root nodes
         // We could have run through the history once...but more robust to do this once per player
         // and reuse the code for SelfOnly
-        SingleTreeNode[] newRoots = new SingleTreeNode[state.getNPlayers()];
-
         for (int p = 0; p < state.getNPlayers(); p++) {
             SingleTreeNode oldRoot = mtRoot.roots[p];
             if (oldRoot == null)
                 continue;
             if (debug)
                 System.out.println("\tBacktracking for player " + mtRoot.roots[p].decisionPlayer);
-            newRoots[p] = backtrack(mtRoot.roots[p], state);
-            if (newRoots[p] != null) {
+            mtRoot.roots[p] = backtrack(mtRoot.roots[p], state);
+            if (mtRoot.roots[p] != null) {
                 // here we do not do a full rootification as that would set the turnOwner and currentPlayer
                 // to the decision player, which we want to avoid
-                newRoots[p].rootify(oldRoot, null);
-                newRoots[p].resetDepth(newRoots[p]);
-                newRoots[p].state = state.copy();
+                // TODO: Make this more elegant
+                mtRoot.roots[p].rootify(oldRoot, null);
+                mtRoot.roots[p].resetDepth(mtRoot.roots[p]);
+                mtRoot.roots[p].state = state.copy();
             }
         }
-        mtRoot.roots = newRoots;
         mtRoot.state = state.copy();
+        // TODO: Also set decisionPlayer....as this may have changed (which it won't do with oneTree)
         return mtRoot;
     }
 
@@ -249,15 +248,8 @@ public class MCTSPlayer extends AbstractPlayer implements IAnyTimePlayer, IHasSt
         if (newRoot == null) {
             if (getParameters().opponentTreePolicy == MultiTree)
                 root = new MultiTreeNode(this, gameState, rnd);
-            else {
-                if(getParameters().numDeterminizations > 1)
-                {
-                    root = new ForestNode(this, gameState, rnd);
-                }
-                else {
-                    root = SingleTreeNode.createRootNode(this, gameState, rnd, getFactory());
-                }
-            }
+            else
+                root = SingleTreeNode.createRootNode(this, gameState, rnd, getFactory());
         } else {
             root = newRoot;
         }
@@ -267,10 +259,10 @@ public class MCTSPlayer extends AbstractPlayer implements IAnyTimePlayer, IHasSt
                     .collect(Collectors.toList());
 
         if (getParameters().getRolloutStrategy() instanceof IMASTUser) {
-            ((IMASTUser) getParameters().getRolloutStrategy()).setMASTStats(root.MASTStatistics);
+            ((IMASTUser) getParameters().getRolloutStrategy()).setStats(root.MASTStatistics);
         }
         if (getParameters().getOpponentModel() instanceof IMASTUser) {
-            ((IMASTUser) getParameters().getOpponentModel()).setMASTStats(root.MASTStatistics);
+            ((IMASTUser) getParameters().getOpponentModel()).setStats(root.MASTStatistics);
         }
     }
 
@@ -367,28 +359,21 @@ public class MCTSPlayer extends AbstractPlayer implements IAnyTimePlayer, IHasSt
     public Map<AbstractAction, Map<String, Object>> getDecisionStats() {
         Map<AbstractAction, Map<String, Object>> retValue = new LinkedHashMap<>();
 
-        int players = root.state.getNPlayers();
         if (root != null && root.getVisits() > 1) {
             for (AbstractAction action : root.actionValues.keySet()) {
                 ActionStats stats = root.actionValues.get(action);
                 int visits = stats == null ? 0 : stats.nVisits;
                 double visitProportion = visits / (double) root.getVisits();
-                double[] meanValues = new double[players];
-                double[] heuristicValues = new double[players];
-                if (stats != null && visits > 0) {
-                    for (int p = 0; p < players; p++) {
-                        meanValues[p] = stats.totValue[p] / visits;
-                        heuristicValues[p] = getStateHeuristic().evaluateState(root.getState(), p);
-                    }
-                }
+                double meanValue = stats == null || visits == 0 ? 0.0 : stats.totValue[root.decisionPlayer] / visits;
+                double heuristicValue = getParameters().heuristic.evaluateState(root.state, root.decisionPlayer);
                 double actionValue = getParameters().actionHeuristic.evaluateAction(action, root.state, root.actionsFromOpenLoopState);
 
                 Map<String, Object> actionValues = new HashMap<>();
                 actionValues.put("visits", visits);
                 actionValues.put("visitProportion", visitProportion);
-                actionValues.put("nodeValue", meanValues);
-                actionValues.put("heuristicValue", heuristicValues);
-                actionValues.put("actionHeuristicValue", actionValue);
+                actionValues.put("meanValue", meanValue);
+                actionValues.put("heuristic", heuristicValue);
+                actionValues.put("actionValue", actionValue);
                 retValue.put(action, actionValues);
             }
         }

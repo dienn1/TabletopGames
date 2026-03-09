@@ -18,24 +18,22 @@ public class CCNode extends Component {
     private int x;
     private int y;
 
-    private List<CCNode> neighbours;  // Neighbours of this board node
+    private Set<CCNode> neighbours;  // Neighbours of this board node
+    private Map<CCNode, Integer> neighbourSideMapping;  // Neighbours mapping to a side of this board node
     private int maxNeighbours = 6;  // Maximum number of neighbours for this board node
-    private int[] neighboursBySide;// Neighbours by side
 
 
     public CCNode() {
         super(CoreConstants.ComponentType.BOARD_NODE, "CC", 0);
-        this.neighbours = new ArrayList<>();
-        this.neighboursBySide = new int[maxNeighbours];
-        Arrays.fill(neighboursBySide, -1);
+        this.neighbours = new HashSet<>();
+        this.neighbourSideMapping = new HashMap<>();
     }
 
     public CCNode(int id) {
         super(CoreConstants.ComponentType.BOARD_NODE, "CC", id);
         colour = Peg.Colour.neutral;
-        this.neighbours = new ArrayList<>();
-        this.neighboursBySide = new int[maxNeighbours];
-        Arrays.fill(neighboursBySide, -1);
+        this.neighbours = new HashSet<>();
+        this.neighbourSideMapping = new HashMap<>();
     }
 
     public void setOccupiedPeg(Peg peg) {
@@ -89,6 +87,18 @@ public class CCNode extends Component {
     }
 
     /**
+     * Removes neighbour of this node.
+     *
+     * @param neighbour - neighbour to remove.
+     */
+    public void removeNeighbour(CCNode neighbour) {
+        if (neighbours.contains(neighbour)) {
+            neighbours.remove(neighbour);
+            neighbourSideMapping.remove(neighbour);
+        }
+    }
+
+    /**
      * Adds neighbour to specific side of this node.
      *
      * @param neighbour - new neighbour to be added.
@@ -97,44 +107,36 @@ public class CCNode extends Component {
      */
     public void addNeighbour(CCNode neighbour, int side) {
         if (neighbours.size() <= maxNeighbours && side <= maxNeighbours || maxNeighbours == -1) {
-            if (neighbours.contains(neighbour)) {
-                throw new IllegalArgumentException("Neighbour already exists in this node's neighbours.");
+            if (!(neighbours.contains(neighbour)) && !(neighbourSideMapping.containsKey(neighbour))) {
+                neighbours.add(neighbour);
+                neighbourSideMapping.put(neighbour, side);
             }
-            if (neighboursBySide[side] != -1) {
-                throw new IllegalArgumentException("Neighbour already exists in this node's neighbours by side mapping.");
-            }
-            neighbours.add(neighbour);
-            neighboursBySide[side] = neighbour.getID();
         }
     }
 
-
+    /**
+     * Copies all node properties to a new instance of this node.
+     *
+     * @return - a new instance of this node.
+     */
     @Override
     public BoardNode copy() {
-        throw new UnsupportedOperationException("Use copy() without parameters instead.");
+        // WARNING: DO not copy this directly, the GraphBoard copies it to correctly assign neighbour references!
+        return null;
     }
 
     /**
      * @return the neighbours of this node.
      */
-    public List<CCNode> getNeighbours() {
+    public Set<CCNode> getNeighbours() {
         return neighbours;
     }
 
     /**
      * @return the neighbours mapping to sides of this node.
      */
-    public int getNeighbourBySide(int side) {
-        return neighboursBySide[side];
-    }
-
-    public int getSideOfNeighbour(int neighbourID) {
-        for (int i = 0; i < neighboursBySide.length; i++) {
-            if (neighboursBySide[i] == neighbourID) {
-                return i;
-            }
-        }
-        return -1; // Not found
+    public Map<CCNode, Integer> getNeighbourSideMapping() {
+        return neighbourSideMapping;
     }
 
     public void loadBoardNode(JSONObject node) {
@@ -155,16 +157,14 @@ public class CCNode extends Component {
 
     @Override
     public final int hashCode() {
-        return componentID;
+        return Objects.hash(componentID);
     }
 
     @Override
     public boolean equals(Object o) {
-        if (o instanceof CCNode other) {
-            return componentID == other.componentID && occupiedPeg == other.occupiedPeg &&
-                    x == other.x && y == other.y && Objects.equals(neighbours, other.neighbours) &&
-                    Arrays.equals(neighboursBySide, other.neighboursBySide) &&
-                    maxNeighbours == other.maxNeighbours;
+        if (o instanceof CCNode) {
+            CCNode other = (CCNode) o;
+            return componentID == other.componentID && occupiedPeg.equals(other.occupiedPeg) && x == other.x && y == other.y && Objects.equals(neighbours, other.neighbours) && Objects.equals(neighbourSideMapping, other.neighbourSideMapping) && maxNeighbours == other.maxNeighbours;
         }
         return false;
     }

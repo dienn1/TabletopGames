@@ -62,7 +62,7 @@ public class PropertySet extends Deck<MonopolyDealCard> {
         return super.add(c);
     }
     @Override
-    public void remove(MonopolyDealCard c) {
+    public boolean remove(MonopolyDealCard c) {
         if(c.type == CardType.House ) hasHouse = false;
         else if (c.type == CardType.Hotel ) hasHotel = false;
         if(c.isPropertyCard() && getPropertySetSize() <= getSetType().setSize) isComplete = false;
@@ -73,7 +73,7 @@ public class PropertySet extends Deck<MonopolyDealCard> {
             }
             if(wildCount==1)hasWild = false;
         }
-        super.remove(c);
+        return super.remove(c);
     }
 
     @Override
@@ -82,13 +82,12 @@ public class PropertySet extends Deck<MonopolyDealCard> {
         if (o == null || getClass() != o.getClass()) return false;
         if (!super.equals(o)) return false;
         PropertySet that = (PropertySet) o;
-        return isComplete == that.isComplete && hasWild == that.hasWild && hasHouse == that.hasHouse &&
-                hasHotel == that.hasHotel && type == that.type;
+        return isComplete == that.isComplete && hasWild == that.hasWild && hasHouse == that.hasHouse && hasHotel == that.hasHotel && type == that.type;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(super.hashCode(), type.ordinal(), isComplete, hasWild, hasHouse, hasHotel);
+        return Objects.hash(super.hashCode(), type, isComplete, hasWild, hasHouse, hasHotel);
     }
 
     @Override

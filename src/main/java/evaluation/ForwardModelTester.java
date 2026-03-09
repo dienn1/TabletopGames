@@ -4,7 +4,6 @@ import core.*;
 import core.actions.AbstractAction;
 import core.interfaces.IExtendedSequence;
 import games.GameType;
-import players.IAnyTimePlayer;
 import players.PlayerFactory;
 import utilities.Utils;
 
@@ -44,9 +43,7 @@ public class ForwardModelTester {
 
     public ForwardModelTester(AbstractParameters params, String... args) {
         String agentToPlay = Utils.getArg(args, "agent", "random");
-        System.out.println(agentToPlay);
         int numberOfGames = Utils.getArg(args, "nGames", 1);
-        int budget = Utils.getArg(args, "budget", 50);
         String gameToRun = Utils.getArg(args, "game", "MonopolyDeal");
         int nPlayers = Utils.getArg(args, "nPlayers", 2);
         boolean verbose = Arrays.asList(args).contains("verbose");
@@ -55,9 +52,6 @@ public class ForwardModelTester {
         Game game = params == null ? gt.createGameInstance(nPlayers, seed) : gt.createGameInstance(nPlayers, params);
         List<AbstractPlayer> allPlayers = new ArrayList<>();
         AbstractPlayer agent = PlayerFactory.createPlayer(agentToPlay);
-        if (agent instanceof IAnyTimePlayer mcts) {
-            mcts.setBudget(budget);
-        }
         for (int i = 0; i < nPlayers; i++)
             allPlayers.add(agent.copy());
         Random rnd = new Random(seed);
