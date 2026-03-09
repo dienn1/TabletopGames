@@ -232,32 +232,31 @@ public class ExpertIteration {
             }
 
             long dataGatheringTime = System.currentTimeMillis() - iterationStartTime;
-            if (finished)
-                break; // we are done, so we don't need to learn heuristics
+            if (!finished) {
+                Pair<IStateHeuristic, IActionHeuristic> learnedHeuristics = learnFromNewData();
+                long learningTime = System.currentTimeMillis() - iterationStartTime - dataGatheringTime;
 
-            Pair<IStateHeuristic, IActionHeuristic> learnedHeuristics = learnFromNewData();
-            long learningTime = System.currentTimeMillis() - iterationStartTime - dataGatheringTime;
+                IActionHeuristic newActionHeuristic = learnedHeuristics.b;
+                IStateHeuristic newStateHeuristic = learnedHeuristics.a;
 
-            IActionHeuristic newActionHeuristic = learnedHeuristics.b;
-            IStateHeuristic newStateHeuristic = learnedHeuristics.a;
+                tuneAgents(newStateHeuristic, newActionHeuristic, currentActionHeuristic);
+                long tuningTime = System.currentTimeMillis() - iterationStartTime - dataGatheringTime - learningTime;
 
-            tuneAgents(newStateHeuristic, newActionHeuristic, currentActionHeuristic);
-            long tuningTime = System.currentTimeMillis() - iterationStartTime - dataGatheringTime - learningTime;
-
-            currentActionHeuristic = newActionHeuristic;
-            Pair<Long, Long> totalTime = calculateHoursAndMinutes(System.currentTimeMillis() - iterationStartTime);
-            Pair<Long, Long> dataTime = calculateHoursAndMinutes(dataGatheringTime);
-            Pair<Long, Long> learnTime = calculateHoursAndMinutes(learningTime);
-            Pair<Long, Long> tuneTime = calculateHoursAndMinutes(tuningTime);
-            System.out.printf(
-                    "Iteration %d completed in %d h %2d m (data: %d h %2d m, learn: %d h %2d m, tune: %d h %2d m)%n",
-                    iter, totalTime.a, totalTime.b,
-                    dataTime.a, dataTime.b,
-                    learnTime.a, learnTime.b,
-                    tuneTime.a, tuneTime.b
-            );
-            iter++;
-        } while (true);
+                currentActionHeuristic = newActionHeuristic;
+                Pair<Long, Long> totalTime = calculateHoursAndMinutes(System.currentTimeMillis() - iterationStartTime);
+                Pair<Long, Long> dataTime = calculateHoursAndMinutes(dataGatheringTime);
+                Pair<Long, Long> learnTime = calculateHoursAndMinutes(learningTime);
+                Pair<Long, Long> tuneTime = calculateHoursAndMinutes(tuningTime);
+                System.out.printf(
+                        "Iteration %d completed in %d h %2d m (data: %d h %2d m, learn: %d h %2d m, tune: %d h %2d m)%n",
+                        iter, totalTime.a, totalTime.b,
+                        dataTime.a, dataTime.b,
+                        learnTime.a, learnTime.b,
+                        tuneTime.a, tuneTime.b
+                );
+                iter++;
+            }
+        } while (!finished && iter < (int) config.get(RunArg.expertIterations));
 
         // Now we want to write out the final winning agent, and also all other agents still in the competition
         // as these may have non-transitive behaviours
@@ -266,14 +265,16 @@ public class ExpertIteration {
         // where X is a unique identifier for the agent (e.g. its rank in the final tournament)
         // and YY is the alpha rank of the agent in the final tournament.
 
+        // TODO: For the final set of agents, we really just want the Pareto front
         AlphaRankAnalysis alphaRankAnalysis = new AlphaRankAnalysis(false);
         Map<String, Pair<Double, Double>> alphaRankings = alphaRankAnalysis.getRanking(runningTournamentResults);
         agents.sort(comparingDouble(a -> -alphaRankings.get(a.toString()).a)); // then sort by alpha rank
         for (int i = 0; i < agents.size(); i++) {
             AbstractPlayer agent = agents.get(i);
-            int originalIteration = Integer.parseInt(agent.toString().split("_")[1]);
+            // format is XXX_03.json"
+            int originalIteration = Integer.parseInt(agent.toString().split("_")[1].replaceAll("\\D+", ""));
             String originalFileName = String.format("%sNTBEA_%02d.json", config.get(RunArg.valueSS).equals("") ? "Action" : "Value", originalIteration);
-            String newFileName = String.format("FinalAgent_R%02d_A%2.0f.json", i + 1, alphaRankings.get(agent.toString()).a);
+            String newFileName = String.format("FinalAgent_R%02d_A%2d.json", i + 1, Math.round(alphaRankings.get(agent.toString()).a * 100.0));
             try {
                 // we now copy the file for the agent
                 File oldFile = new File(dataDir + File.separator + originalFileName);
@@ -453,9 +454,8 @@ public class ExpertIteration {
                 }
             }
         }
-        // we end if any agent has won 7 tournaments in total, or 4 consecutive tournaments
-        if (consecutiveWins >= 4 || tournamentWinsByAgent.values().stream()
-                .mapToInt(Integer::intValue).max().orElse(0) >= 7) {
+        // we end if any agent has won N consecutive tournaments
+        if (consecutiveWins >= (int) config.get(RunArg.expertConvergence)) {
             System.out.println("Converged after " + iter + " iterations");
             return true;
         }

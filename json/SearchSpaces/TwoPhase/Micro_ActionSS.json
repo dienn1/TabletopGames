@@ -2,7 +2,7 @@
         "class":"players.mcts.MCTSParams",
         "rolloutType" : "PARAMS",
         "rolloutLengthPerPlayer" : true,
-        "rolloutLength" : 10,
+        "rolloutLength" : 1000,
         "rolloutPolicyParams" : {
                 "class" : "players.simple.BoltzmannActionParams",
                 "temperature" : [0.1, 1.0, 10.0],
