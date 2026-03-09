@@ -63,9 +63,13 @@ public class JSONBagHeuristic implements IStateHeuristic {
         for (int i = 0; i < prototypes.size(); i++) {
             distances[i] = jsd(prototypes.get(i), newJSONBag);
         }
-        double[] values = invertNormalized(distances);
-//        values = softmax(values, 1.0);
+//        double[] values = invertNormalized(distances);
+//        double[] values = subtractNormalized(distances);
+        double[] values = negative(distances);
+
+        values = softmax(values, 1.0);
         return values[playerId];
+//        return 1.0 - distances[playerId];
     }
 
     private double[] invertNormalized(double[] distancesArray) {
@@ -77,6 +81,27 @@ public class JSONBagHeuristic implements IStateHeuristic {
         }
         for (int i = 0; i < ret.length; i++) {
             ret[i] /= sum;
+        }
+        return ret;
+    }
+
+    private double[] subtractNormalized(double[] distancesArray) {
+        double[] ret = new double[distancesArray.length];
+        double sum = 0.0;
+        for (int i = 0; i < distancesArray.length; i++) {
+            ret[i] = 1.0 - distancesArray[i];
+            sum += ret[i];
+        }
+        for (int i = 0; i < ret.length; i++) {
+            ret[i] /= sum;
+        }
+        return ret;
+    }
+
+    private double[] negative(double[] distances) {
+        double[] ret = new double[distances.length];
+        for (int i = 0; i < distances.length; i++) {
+            ret[i] = - distances[i];
         }
         return ret;
     }
