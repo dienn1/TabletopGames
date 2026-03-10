@@ -2,6 +2,7 @@ package games.backgammon;
 
 import games.XIIScripta.XIIParameters;
 import games.backgammon.actions.MovePiece;
+import games.backgammon.actions.RollDice;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -21,6 +22,7 @@ public class XIITests {
         gameState = new BGGameState(parameters, 2);
         forwardModel = new BGForwardModel();
         forwardModel.setup(gameState);
+        forwardModel.next(gameState, new RollDice());
     }
 
     public void initialiseHalfA() {
@@ -30,6 +32,7 @@ public class XIITests {
         gameState = new BGGameState(parameters, 2);
         forwardModel = new BGForwardModel();
         forwardModel.setup(gameState);
+        forwardModel.next(gameState, new RollDice());
     }
 
     @Test
@@ -150,6 +153,7 @@ public class XIITests {
         do {
             forwardModel.next(gameState, forwardModel.computeAvailableActions(gameState).get(0));
         } while (gameState.getCurrentPlayer() == 0);
+        forwardModel.next(gameState, new RollDice());
 
         gameState.setDiceValues(new int[]{1, 4});
         var availableActions = forwardModel.computeAvailableActions(gameState);
@@ -171,6 +175,8 @@ public class XIITests {
         gameState.setDiceValues(new int[]{2, 3});
         forwardModel.next(gameState, new MovePiece(0, 35));
         forwardModel.next(gameState, new MovePiece(0, 34));
+        forwardModel.next(gameState, new RollDice());
+
         assertEquals(1, gameState.getCurrentPlayer());
         gameState.setDiceValues(new int[]{3, 4});
         var availableActions = forwardModel.computeAvailableActions(gameState);
@@ -192,6 +198,8 @@ public class XIITests {
         forwardModel.next(gameState, new MovePiece(0, 34));
         forwardModel.next(gameState, new MovePiece(0, 34));
         assertEquals(1, gameState.getCurrentPlayer());
+        forwardModel.next(gameState, new RollDice());
+
         gameState.setDiceValues(new int[]{3, 4});
         var availableActions = forwardModel.computeAvailableActions(gameState);
         assertTrue(availableActions.contains(new MovePiece(0, 33)));
