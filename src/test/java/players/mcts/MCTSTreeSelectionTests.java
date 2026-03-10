@@ -420,7 +420,6 @@ public class MCTSTreeSelectionTests {
 
     @Test
     public void pUCT10VisitsNoTemperature() {
-        params.pUCT = true;
         params.pUCTTemperature = 0.0;
         params.actionHeuristic = (a, s, l) -> {
             if (a.equals(new LMRAction("Left"))) {
@@ -447,7 +446,6 @@ public class MCTSTreeSelectionTests {
 
     @Test
     public void pUCT10VisitsWithTemperature() {
-        params.pUCT = true;
         params.pUCTTemperature = 2.0;
         params.actionHeuristic = (a, s, l) -> {
             if (a.equals(new LMRAction("Left"))) {
@@ -641,7 +639,6 @@ public class MCTSTreeSelectionTests {
     public void fpuWithpUCT() {
         // Check that pUCT is applied after FPU, so that we get effective pruning of values
         params.firstPlayUrgency = 2.0;
-        params.pUCT = true;
         params.pUCTTemperature = 0.0;
         params.actionHeuristic = (a, s, l) -> {
             if (a.equals(new LMRAction("Left"))) {

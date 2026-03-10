@@ -9,7 +9,8 @@ import java.util.List;
 public class ParetoAnalysis implements IResultsAnalysis {
 
     @Override
-    public LinkedHashMap<String, Pair<Double, Double>> getRanking(TournamentResults results) {
+    public LinkedHashMap<String, Pair<Double, Double>> getRanking(TournamentResults input) {
+        TournamentResults results = input.shallowCopy(); // make copy for use (as we whittle it down)
         List<String> paretoFront = getParetoFront(results);
         // we then remove the first pareto front, to find the second pareto front, and so on until we have no agents left
 
@@ -22,11 +23,11 @@ public class ParetoAnalysis implements IResultsAnalysis {
                 ranking.put(agent, new Pair<>(rank + 0.0, winRate));
             }
             rank++;
-            TournamentResults copy = results.shallowCopy();
+            results = results.shallowCopy();
             for (String agent : paretoFront) {
-                copy.filterPlayer(agent);
+                results.filterPlayer(agent);
             }
-            paretoFront = getParetoFront(copy);
+            paretoFront = getParetoFront(results);
         }
 
         return ranking;
@@ -38,9 +39,10 @@ public class ParetoAnalysis implements IResultsAnalysis {
             // if any other agent has a better win rate against every other agent, then agent cannot be in the Pareto front
             for (String otherAgent : results.getAllAgentNames()) {
                 if (otherAgent.equals(agent)) continue;
-                if (!results.getAllAgentNames().stream()
+                if (results.getWins(agent, otherAgent) > results.getWins(otherAgent, agent)) continue; // if agent beats otherAgent, then otherAgent cannot dominate agent, so skip
+                if (results.getAllAgentNames().stream()
                         .filter(a -> !(a.equals(otherAgent) || a.equals(agent)))
-                        .allMatch(a -> results.getWins(otherAgent, a) > results.getWins(agent, a))) {
+                        .allMatch(a -> results.getWinRate(otherAgent, a) >= results.getWinRate(agent, a))) {
                     paretoFront.remove(agent); // another agent dominates this agent, so remove it from the Pareto front
                     break;
                 }

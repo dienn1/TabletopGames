@@ -188,6 +188,11 @@ public class TournamentResults {
     public int getWins(String winner, String loser) {
         return mapGet(winsPerPlayerPerOpponent, winner, loser);
     }
+    public double getWinRate(String winner, String loser) {
+        int wins = getWins(winner, loser);
+        int gamesPlayed = getGamesPlayed(winner, loser);
+        return gamesPlayed > 0 ? (double) wins / gamesPlayed : 0.0;
+    }
 
     public int getOrdinalDelta(String agentName1, String agentName2) {
         return mapGet(ordinalDeltaPerOpponent, agentName1, agentName2);
@@ -205,9 +210,18 @@ public class TournamentResults {
         // the top level maps are copied, but the inner maps and lists are shared
         TournamentResults copy = new TournamentResults();
         copy.agentsByName = new HashMap<>(this.agentsByName);
-        copy.nGamesPlayedPerOpponent = new HashMap<>(this.nGamesPlayedPerOpponent);
-        copy.winsPerPlayerPerOpponent = new HashMap<>(this.winsPerPlayerPerOpponent);
-        copy.ordinalDeltaPerOpponent = new HashMap<>(this.ordinalDeltaPerOpponent);
+        copy.nGamesPlayedPerOpponent = new HashMap<>();
+        for (Map.Entry<String, Map<String, Integer>> entry : this.nGamesPlayedPerOpponent.entrySet()) {
+            copy.nGamesPlayedPerOpponent.put(entry.getKey(), new HashMap<>(entry.getValue()));
+        }
+        copy.winsPerPlayerPerOpponent = new HashMap<>();
+        for (Map.Entry<String, Map<String, Integer>> entry : this.winsPerPlayerPerOpponent.entrySet()) {
+            copy.winsPerPlayerPerOpponent.put(entry.getKey(), new HashMap<>(entry.getValue()));
+        }
+        copy.ordinalDeltaPerOpponent = new HashMap<>();
+        for (Map.Entry<String, Map<String, Integer>> entry : this.ordinalDeltaPerOpponent.entrySet()) {
+            copy.ordinalDeltaPerOpponent.put(entry.getKey(), new HashMap<>(entry.getValue()));
+        }
         copy.playerResults = new HashMap<>();
         for (Map.Entry<String, List<Result>> entry : this.playerResults.entrySet()) {
             copy.playerResults.put(entry.getKey(), new ArrayList<>(entry.getValue()));
