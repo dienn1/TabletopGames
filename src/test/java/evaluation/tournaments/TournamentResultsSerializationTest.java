@@ -1,8 +1,7 @@
-package test.evaluation;
+package evaluation.tournaments;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import evaluation.tournaments.TournamentResults;
 import org.junit.Test;
 import players.simple.RandomPlayer;
 

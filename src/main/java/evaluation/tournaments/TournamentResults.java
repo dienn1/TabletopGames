@@ -91,7 +91,7 @@ public class TournamentResults {
 
     @JsonIgnore
     public List<String> getAllAgentNames() {
-        return agentsByName.keySet().stream().toList();
+        return playerResults.keySet().stream().toList();
     }
 
     public void addResult(AbstractPlayer player, double points, int ordinal, double score, int win) {
