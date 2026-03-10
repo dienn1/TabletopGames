@@ -40,6 +40,7 @@ public class MCTSPlayer extends AbstractPlayer implements IAnyTimePlayer, IHasSt
     public MCTSPlayer(MCTSParams params, String name) {
         super(params, name);
         rnd = new Random(parameters.getRandomSeed());
+        considerSingletonActions = true;
     }
 
     @Override
@@ -272,6 +273,8 @@ public class MCTSPlayer extends AbstractPlayer implements IAnyTimePlayer, IHasSt
     @Override
     public AbstractAction _getAction(AbstractGameState gameState, List<AbstractAction> actions) {
         // Search for best action from the root
+        if (actions.size() == 1)
+            return actions.getFirst();  // take the only action available
         long currentTimeNano = System.nanoTime();
         createRootNode(gameState);
         long timeTaken = System.nanoTime() - currentTimeNano;

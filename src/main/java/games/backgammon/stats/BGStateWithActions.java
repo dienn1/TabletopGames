@@ -1,6 +1,7 @@
-package games.backgammon;
+package games.backgammon.stats;
 
 import core.AbstractGameState;
+import games.backgammon.BGForwardModel;
 
 public class BGStateWithActions extends BGStateFeatures {
 

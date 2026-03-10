@@ -1,15 +1,15 @@
 package games.backgammon;
 
 import core.AbstractGameState;
-import core.CoreConstants;
 import core.StandardForwardModel;
 import core.actions.AbstractAction;
 import core.actions.DoNothing;
 import core.components.*;
-import gametemplate.actions.GTAction;
+import games.backgammon.actions.MovePiece;
 
 import java.util.*;
 
+import static games.backgammon.BGGamePhase.RollDice;
 import static games.backgammon.BGParameters.EntryRule.*;
 
 /**
@@ -93,8 +93,8 @@ public class BGForwardModel extends StandardForwardModel {
             else
                 gameState.dice[i] = new Dice(bgp.diceSides);
         }
-        gameState.rollDice();
 
+        gameState.setGamePhase(RollDice);
         gameState.blots = new int[2];
     }
 

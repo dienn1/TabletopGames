@@ -47,6 +47,12 @@ public class Dice extends Component {
         this.nSides = nSides;
         this.type = Type.sidesToType(nSides);
     }
+    public Dice(double[] pdf) {
+        super(CoreConstants.ComponentType.DICE);
+        this.pdf = pdf.clone();
+        this.nSides = pdf.length;
+        this.type = Type.sidesToType(nSides);
+    }
     public Dice(String json) {
         super(CoreConstants.ComponentType.DICE);
         JSONObject data = JSONUtils.loadJSONFile(json);

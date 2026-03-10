@@ -168,6 +168,12 @@ public class BGGameState extends AbstractGameState {
         updateAvailableDiceValues();
     }
 
+    public void setDicePdf(int dieIndex, double[] newPDF) {
+        if (dice[dieIndex].nSides != newPDF.length)
+            throw new IllegalArgumentException("New PDF has wrong number of sides. Expecting " + dice[dieIndex].nSides + " but got " + newPDF.length);
+        dice[dieIndex] = new Dice(newPDF);
+    }
+
     public void useDiceValue(int dieValue) {
         for (int i = 0; i < availableDiceValues.length; i++) {
             if (!diceUsed[i] && availableDiceValues[i] == dieValue) {

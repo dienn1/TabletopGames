@@ -1,6 +1,7 @@
 package games.backgammon;
 
 import games.XIIScripta.XIIParameters;
+import games.backgammon.actions.MovePiece;
 import org.junit.Before;
 import org.junit.Test;
 

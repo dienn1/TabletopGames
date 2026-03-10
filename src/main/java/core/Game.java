@@ -425,9 +425,9 @@ public class Game {
         // Either ask player which action to use or, in case no actions are available, report the updated observation
         AbstractAction action = null;
         if (!observedActions.isEmpty()) {
-            if (observedActions.size() == 1 && (!(currentPlayer instanceof HumanGUIPlayer || currentPlayer instanceof HumanConsolePlayer) || observedActions.get(0) instanceof DoNothing)) {
+            if (observedActions.size() == 1 && !currentPlayer.considerSingletonActions) {
                 // Can only do 1 action, so do it.
-                action = observedActions.get(0);
+                action = observedActions.getFirst();
                 currentPlayer.registerUpdatedObservation(observation);
             } else {
                 // Get action from player, and time it

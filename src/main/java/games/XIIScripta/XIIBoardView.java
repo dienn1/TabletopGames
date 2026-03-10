@@ -5,6 +5,8 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 
 import games.backgammon.*;
+import games.backgammon.actions.MovePiece;
+import games.backgammon.gui.BGBoardView;
 
 import static java.util.stream.Collectors.toList;
 

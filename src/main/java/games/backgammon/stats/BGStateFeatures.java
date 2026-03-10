@@ -1,7 +1,9 @@
-package games.backgammon;
+package games.backgammon.stats;
 
 import core.AbstractGameState;
 import core.interfaces.IStateFeatureVector;
+import games.backgammon.BGGameState;
+import games.backgammon.BGParameters;
 
 public class BGStateFeatures implements IStateFeatureVector {
 

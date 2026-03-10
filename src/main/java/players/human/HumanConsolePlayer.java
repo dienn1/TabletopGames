@@ -13,6 +13,7 @@ public class HumanConsolePlayer extends AbstractPlayer {
 
     public HumanConsolePlayer() {
         super(null, "HumanConsolePlayer");
+        considerSingletonActions = true;
     }
 
     @Override

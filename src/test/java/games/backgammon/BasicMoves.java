@@ -5,6 +5,7 @@ import core.CoreConstants;
 import core.actions.AbstractAction;
 import core.actions.DoNothing;
 import core.components.Token;
+import games.backgammon.actions.MovePiece;
 import org.junit.Before;
 import org.junit.Test;
 

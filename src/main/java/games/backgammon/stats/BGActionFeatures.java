@@ -1,9 +1,12 @@
-package games.backgammon;
+package games.backgammon.stats;
 
 import core.AbstractGameState;
 import core.actions.AbstractAction;
 import core.actions.DoNothing;
 import core.interfaces.IActionFeatureVector;
+import games.backgammon.BGGameState;
+import games.backgammon.BGParameters;
+import games.backgammon.actions.MovePiece;
 
 public class BGActionFeatures implements IActionFeatureVector {
 

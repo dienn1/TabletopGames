@@ -1,8 +1,9 @@
-package games.backgammon;
+package games.backgammon.actions;
 
 import core.AbstractGameState;
 import core.actions.AbstractAction;
-import games.descent2e.actions.Move;
+import games.backgammon.BGGameState;
+import games.backgammon.BGParameters;
 
 public class MovePiece extends AbstractAction {
 

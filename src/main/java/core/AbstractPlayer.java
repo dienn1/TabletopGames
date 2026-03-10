@@ -17,6 +17,7 @@ public abstract class AbstractPlayer {
     private AbstractForwardModel forwardModel;
     public PlayerParameters parameters;
     protected List<IPlayerDecorator> decorators;
+    protected boolean considerSingletonActions = false;
 
     public AbstractPlayer(PlayerParameters parameters, String name) {
         this.parameters = parameters != null ? parameters : new PlayerParameters();
