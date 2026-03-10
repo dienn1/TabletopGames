@@ -188,6 +188,11 @@ public class TournamentResults {
     public int getWins(String winner, String loser) {
         return mapGet(winsPerPlayerPerOpponent, winner, loser);
     }
+    public double getWinRate(String winner, String loser) {
+        int wins = getWins(winner, loser);
+        int gamesPlayed = getGamesPlayed(winner, loser);
+        return gamesPlayed > 0 ? (double) wins / gamesPlayed : 0.0;
+    }
 
     public int getOrdinalDelta(String agentName1, String agentName2) {
         return mapGet(ordinalDeltaPerOpponent, agentName1, agentName2);
