@@ -1,23 +1,17 @@
 package players.jsonBagPlayers;
 
 import core.AbstractGameState;
-import core.AbstractGameStateContainer;
 import core.CoreConstants;
 import core.interfaces.IStateHeuristic;
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-
-import players.jsonBagPlayers.Tokenizer;
+import java.util.*;
 
 import static players.jsonBagPlayers.JensenShannonDistance.jsd;
 
 public class JSONBagHeuristic implements IStateHeuristic {
 
     Map<String, Integer> currentJSONBag;
-    List<String> filterList;
+    Set<String> filterSet;
 
     final List<Map<String, Integer>> prototypes;
 
@@ -26,17 +20,18 @@ public class JSONBagHeuristic implements IStateHeuristic {
     }
     public JSONBagHeuristic(List<Map<String, Integer>> prototypes_, List<String> filterList_) {
         prototypes = prototypes_;
-        filterList = filterList_;
+        filterSet = new HashSet<>(filterList_);
         currentJSONBag = new LinkedHashMap<String, Integer>();
     }
 
-    public void setFilterList(List<String> filterList_) {
-        filterList = filterList_;
+
+    public void setFilterSet(Collection<String> filterSet_) {
+        filterSet = new HashSet<>(filterSet_);
     }
 
     public void updateJSONBag(AbstractGameState gs) {
-        Map<String, Integer> tokenizedGameState = Tokenizer.tokenize(gs);
-        Tokenizer.filter(tokenizedGameState, filterList,true);
+        Map<String, Integer> tokenizedGameState = Tokenizer.tokenize(gs, filterSet, true);
+//        Tokenizer.filter(tokenizedGameState, filterSet,true);
         Tokenizer.merge(currentJSONBag, tokenizedGameState);
     }
 
@@ -55,8 +50,8 @@ public class JSONBagHeuristic implements IStateHeuristic {
         if (gs.getPlayerResults()[playerId] == CoreConstants.GameResult.WIN_GAME)
             return 1.0;
         Map<String, Integer> newJSONBag = new LinkedHashMap<>(currentJSONBag);
-        Map<String, Integer> newGameStateTokenized = Tokenizer.tokenize(gs);
-        Tokenizer.filter(newGameStateTokenized, filterList,true);
+        Map<String, Integer> newGameStateTokenized = Tokenizer.tokenize(gs, filterSet, true);
+//        Tokenizer.filter(newGameStateTokenized, filterSet,true);
         Tokenizer.merge(newJSONBag, newGameStateTokenized);
 
         double[] distances = new double[prototypes.size()];
@@ -124,7 +119,7 @@ public class JSONBagHeuristic implements IStateHeuristic {
     }
 
     public JSONBagHeuristic copy() {
-        JSONBagHeuristic copy = new JSONBagHeuristic(prototypes, new ArrayList<>(filterList));
+        JSONBagHeuristic copy = new JSONBagHeuristic(prototypes, new ArrayList<>(filterSet));
         copy.currentJSONBag = new LinkedHashMap<>(currentJSONBag);
         return copy;
     }

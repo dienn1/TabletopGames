@@ -872,7 +872,7 @@ public class Game {
         ArrayList<AbstractPlayer> players = new ArrayList<>();
 
         /* Load prototypes */
-        GameType gameTypeTest = GameType.SeaSaltPaper;
+        GameType gameTypeTest = GameType.Wonders7;
         String prototypesPath = "Experiments/valueFuncTest/" + gameTypeTest.name();
         int n_prototypes = 4; // Set number of prototypes to load
         List<Map<String, Integer>> prototypes = Tokenizer.loadPrototypes(prototypesPath, n_prototypes);
@@ -882,14 +882,17 @@ public class Game {
         List<String> topFeaturesFilterList = Tokenizer.loadStringList(filterListPath);
         JSONBagOSLAPlayer jsonBagOSLAPlayer = new JSONBagOSLAPlayer(prototypes, topFeaturesFilterList);
 
-        players.add(new OSLAPlayer());
-        players.add(new OSLAPlayer());
-        players.add(new OSLAPlayer());
+//        players.add(new OSLAPlayer());
+//        players.add(new OSLAPlayer());
+//        players.add(new OSLAPlayer());
+        players.add(new SimultaneousOSLAPlayer());
+        players.add(new SimultaneousOSLAPlayer());
+        players.add(new SimultaneousOSLAPlayer());
 //        players.add(new RandomPlayer());
 //        players.add(new RandomPlayer());
 //        players.add(new RandomPlayer());
 
-        int jsonBagOSLAPlayerIndex = 2;
+        int jsonBagOSLAPlayerIndex = 3;
         players.add(jsonBagOSLAPlayerIndex, jsonBagOSLAPlayer);
 
 //        List<String> gameNames = new ArrayList<>(){{

@@ -3,24 +3,18 @@ package players.jsonBagPlayers;
 import core.AbstractGameState;
 import core.AbstractPlayer;
 import core.actions.AbstractAction;
-import core.interfaces.IStateHeuristic;
-import players.simple.OSLAPlayer;
+import players.simple.RandomPlayer;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-
-import static utilities.Utils.noise;
+import java.util.*;
 
 public class JSONBagOSLAPlayer extends AbstractPlayer {
 
     JSONBagHeuristic heuristic;
 
-    public JSONBagOSLAPlayer(List<Map<String, Integer>> prototypes, List<String> filterList, Random random) {
+    public JSONBagOSLAPlayer(List<Map<String, Integer>> prototypes, Collection<String> filterList, Random random) {
         super(null, "JSONBagOSLAPlayer");
         this.heuristic = new JSONBagHeuristic(prototypes);
-        this.heuristic.filterList = filterList;
+        this.heuristic.filterSet = new HashSet<>(filterList);
         this.rnd = random;
     }
 
@@ -34,8 +28,8 @@ public class JSONBagOSLAPlayer extends AbstractPlayer {
         this.rnd = random;
     }
 
-    public void setFilterList(List<String> filterList) {
-        this.heuristic.setFilterList(filterList);
+    public void setFilterList(Collection<String> filterList) {
+        this.heuristic.setFilterSet(filterList);
     }
 
     @Override
@@ -72,6 +66,19 @@ public class JSONBagOSLAPlayer extends AbstractPlayer {
     // Override this when need to roll toward endRound or endTurn (not just one step)
     protected void rollNextGameState(AbstractGameState gs, AbstractAction a) {
         getForwardModel().next(gs, a);
+
+        // for simultaneous turn game
+//        int currentRound = gs.getRoundCounter();
+//        getForwardModel().next(gs, a);
+//        RandomPlayer randomPlayer = new RandomPlayer(new Random(rnd.nextInt()));
+//        List<AbstractAction> actions;
+//        while (gs.getRoundCounter() == currentRound) {
+//            actions = getForwardModel().computeAvailableActions(gs);
+//            if (actions.isEmpty()) {
+//                break;
+//            }
+//            getForwardModel().next(gs, randomPlayer.getAction(gs, actions));
+//        }
     }
 
     @Override

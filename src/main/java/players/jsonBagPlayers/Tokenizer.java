@@ -11,6 +11,7 @@ import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
 import core.AbstractGameState;
 import core.AbstractGameStateContainer;
+import org.apache.commons.lang3.NotImplementedException;
 
 import java.io.FileReader;
 import java.io.IOException;
@@ -21,34 +22,46 @@ public class Tokenizer {
     private static final Gson gson = new Gson();
 
     public static Map<String, Integer> tokenize(String json) {
-        return tokenize(json, "", false, "both", false, false, false);
+        return tokenize(json, "", false, "both", false, false, false, null, false);
+    }
+
+    public static Map<String, Integer> tokenize(String json, Set<String> filterSet, boolean whitelist) {
+        return tokenize(json, "", false, "both", false, false, false, filterSet, whitelist);
     }
 
     /**
      * Convenience overload: accept any object, serialize with Gson, then tokenize.
      */
     public static Map<String, Integer> tokenize(Object obj) {
-        return tokenize(obj, "", true, "both", false, false, false);
+        return tokenize(obj, "", true, "both", false, false, false, null, false);
+    }
+
+    public static Map<String, Integer> tokenize(Object obj, Set<String> filterSet, boolean whitelist) {
+        return tokenize(obj, "", true, "both", false, false, false, filterSet, whitelist);
     }
 
     public static Map<String, Integer> tokenize(AbstractGameState gs) {
         AbstractGameStateContainer gsContainer = GameStateContainerFactory.createContainer(gs);
         return Tokenizer.tokenize(gsContainer);
     }
+    public static Map<String, Integer> tokenize(AbstractGameState gs, Set<String> filterSet, boolean whitelist) {
+        AbstractGameStateContainer gsContainer = GameStateContainerFactory.createContainer(gs);
+        return Tokenizer.tokenize(gsContainer, filterSet, whitelist);
+    }
 
     /**
      * Convenience overload: accept any object with full options, serialize with Gson, then tokenize.
      */
     public static Map<String, Integer> tokenize(Object obj, String prefix, boolean ordered,
-                                                String mode, boolean filterPlayer, boolean binning,
-                                                boolean pairXY) {
+                                                String mode, boolean filterPlayer, boolean binning, boolean pairXY,
+                                                Set<String> filterSet, boolean whitelist) {
         JsonElement el = gson.toJsonTree(obj);
-        return tokenize(el, prefix, ordered, mode, filterPlayer, binning, pairXY);
+        return tokenize(el, prefix, ordered, mode, filterPlayer, binning, pairXY, filterSet, whitelist);
     }
 
     public static Map<String, Integer> tokenize(String json, String prefix, boolean ordered,
-                                                String mode, boolean filterPlayer, boolean binning,
-                                                boolean pairXY) {
+                                                String mode, boolean filterPlayer, boolean binning, boolean pairXY,
+                                                Set<String> filterSet, boolean whitelist) {
         JsonElement root;
         try {
             root = JsonParser.parseString(json);
@@ -56,16 +69,17 @@ public class Tokenizer {
             // treat as primitive string if not valid JSON
             root = new JsonPrimitive(json);
         }
-        return tokenize(root, prefix, ordered, mode, filterPlayer, binning, pairXY);
+        return tokenize(root, prefix, ordered, mode, filterPlayer, binning, pairXY, filterSet, whitelist);
     }
 
     public static Map<String, Integer> tokenize(JsonElement collection, String prefix, boolean ordered,
-                                                String mode, boolean filterPlayer, boolean binning,
-                                                boolean pairXY) {
+                                                String mode, boolean filterPlayer, boolean binning, boolean pairXY,
+                                                Set<String> filterSet, boolean whitelist) {
         Map<String, Integer> freq = new LinkedHashMap<>();
         if ("char".equals(mode)) {
-            addToken(freq, collection.toString());
-            return freq;
+//            addToken(freq, collection.toString());
+//            return freq;
+            throw new NotImplementedException("Tokenize mode 'char' is not supported");
         }
 
         if (collection == null || collection instanceof JsonNull) return freq;
@@ -74,22 +88,22 @@ public class Tokenizer {
             JsonArray arr = collection.getAsJsonArray();
             for (int i = 0; i < arr.size(); i++) {
                 String orderedPrefix = prefix + "[" + i + "]";
-                JsonElement item = loadJsonIfString(arr.get(i));
+                JsonElement item = arr.get(i);
                 if (isAtomic(item)) {
                     String s = primitiveToString(item);
                     if (ordered && !"unordered".equals(mode)) {
-                        addToken(freq, orderedPrefix + "." + s);
+                        addToken(freq, orderedPrefix + "." + s, filterSet, whitelist);
                     }
                     if (!"ordered".equals(mode) || !ordered) {
-                        addToken(freq, prefix + "." + s);
+                        addToken(freq, prefix + "." + s, filterSet, whitelist);
                     }
                 } else {
                     if (ordered && !"unordered".equals(mode)) {
-                        merge(freq, tokenize(item, orderedPrefix, ordered, mode, filterPlayer, binning, pairXY));
+                        merge(freq, tokenize(item, orderedPrefix, ordered, mode, filterPlayer, binning, pairXY, filterSet, whitelist));
                     }
                     if (!"ordered".equals(mode) || !ordered) {
                         // Set subsequent call ordered = True if mode is not unordered
-                        merge(freq, tokenize(item, prefix, !"unordered".equals(mode), mode, filterPlayer, binning, pairXY));
+                        merge(freq, tokenize(item, prefix, !"unordered".equals(mode), mode, filterPlayer, binning, pairXY, filterSet, whitelist));
                     }
                 }
             }
@@ -97,63 +111,56 @@ public class Tokenizer {
             JsonObject obj = collection.getAsJsonObject();
             // filter player (if present and > 0)
             if (filterPlayer && obj.has("player") && obj.get("player").isJsonPrimitive()) {
-                try {
-                    int p = obj.get("player").getAsInt();
-                    if (p > 0) return freq;
-                } catch (NumberFormatException ignored) {
-                }
+                int p = obj.get("player").getAsInt();
+                if (p > 0) return freq;
             }
 
             int pairX = -99, pairY = -99;
             for (Map.Entry<String, JsonElement> e : obj.entrySet()) {
                 String key = e.getKey();
                 String keyPrefix = prefix + "." + key;
-                JsonElement value = loadJsonIfString(e.getValue());
+                JsonElement value = e.getValue();
                 if (isAtomic(value)) {
                     // binning numerical value
                     if (binning && ("x".equals(key) || "y".equals(key))) {
                         int n = 2;
-                        try {
-                            double dv = value.getAsDouble();
-                            int b = ((int) Math.floor(dv / n)) * n;
-                            value = new JsonPrimitive(b);
-                        } catch (Exception ignored) {
-                        }
+                        double dv = value.getAsDouble();
+                        int b = ((int) Math.floor(dv / n)) * n;
+                        value = new JsonPrimitive(b);
                     }
                     if ("x".equals(key)) {
-                        try { pairX = value.getAsInt(); } catch (Exception ignored) {}
+                        pairX = value.getAsInt();
                         if (pairXY) continue;
                     }
                     if ("y".equals(key)) {
-                        try { pairY = value.getAsInt(); } catch (Exception ignored) {}
+                        pairY = value.getAsInt();
                         if (pairXY) continue;
                     }
-                    addToken(freq, keyPrefix + "." + primitiveToString(value));
+                    addToken(freq, keyPrefix + "." + primitiveToString(value), filterSet, whitelist);
                 } else {
-                    merge(freq, tokenize(value, keyPrefix, ordered, mode, filterPlayer, binning, pairXY));
+                    merge(freq, tokenize(value, keyPrefix, ordered, mode, filterPlayer, binning, pairXY, filterSet, whitelist));
                 }
             }
             if (pairXY && pairX >= 0) {
-                addToken(freq, prefix + ".x." + pairX + ".y." + pairY);
+                addToken(freq, prefix + ".x." + pairX + ".y." + pairY, filterSet, whitelist);
             }
         } else { // primitive
-            addToken(freq, prefix + "." + primitiveToString(collection));
+            addToken(freq, prefix + "." + primitiveToString(collection), filterSet, whitelist);
         }
 
         return freq;
     }
 
-    private static JsonElement loadJsonIfString(JsonElement el) {
-        if (el != null && el.isJsonPrimitive() && el.getAsJsonPrimitive().isString()) {
-            String s = el.getAsString();
-            try {
-                JsonElement parsed = JsonParser.parseString(s);
-                return parsed;
-            } catch (JsonSyntaxException ex) {
-                return el;
-            }
+    private static boolean isValidToken(String token, Set<String> filterSet, boolean whitelist) {
+        if (token == null) return false;
+        if (filterSet == null || filterSet.isEmpty()) return true;
+        if (!whitelist) {   // Blacklist filtering
+            // TODO MAKE THIS BLACKLIST FILTER WITH REGEX INSTEAD (as to also include substrings filtering)
+            return !filterSet.contains(token);
         }
-        return el;
+        else {  // Whitelist filtering
+            return filterSet.contains(token);
+        }
     }
 
     private static boolean isAtomic(JsonElement el) {
@@ -176,13 +183,20 @@ public class Tokenizer {
         map.put(token, v == null ? 1 : v + 1);
     }
 
+    // With filterList
+    public static void addToken(Map<String, Integer> map, String token, Set<String> filterSet, boolean whitelist) {
+        if (!isValidToken(token, filterSet, whitelist)) return;
+        Integer v = map.get(token);
+        map.put(token, v == null ? 1 : v + 1);
+    }
+
     public static void merge(Map<String, Integer> dest, Map<String, Integer> src) {
         for (Map.Entry<String, Integer> e : src.entrySet()) {
             dest.put(e.getKey(), dest.getOrDefault(e.getKey(), 0) + e.getValue());
         }
     }
 
-    public static void filter(Map<String, Integer> freq, List<String> filterList, boolean whitelist) {
+    public static void filter(Map<String, Integer> freq, Set<String> filterList, boolean whitelist) {
         if (whitelist) {
             freq.keySet().retainAll(filterList);
         } else {
@@ -239,5 +253,19 @@ public class Tokenizer {
         }
     }
 
+
+    // AI LMAO
+    private static JsonElement loadJsonIfString(JsonElement el) {
+//        if (el != null && el.isJsonPrimitive() && el.getAsJsonPrimitive().isString()) {
+//            String s = el.getAsString();
+//            try {
+//                JsonElement parsed = JsonParser.parseString(s);
+//                return parsed;
+//            } catch (JsonSyntaxException ex) {
+//                return el;
+//            }
+//        }
+        return el;
+    }
     
 }
