@@ -221,43 +221,6 @@ public class TestUndoOpponentFlank {
         assertEquals(1, state.getCurrentPlayer());
     }
 
-//    @Test
-//    public void multiTreeWorksWithReuse() {
-//        mctsParams.budgetType = PlayerConstants.BUDGET_ITERATIONS;
-//        mctsParams.budget = 1000;
-//        mctsParams.opponentTreePolicy = MCTSEnums.OpponentTreePolicy.MultiTree;
-//        mctsParams.reuseTree = true;
-//        ToadMCTSPlayer player = new ToadMCTSPlayer(mctsParams);
-//        player.setForwardModel(fm);
-//        moveStateForwardToFirstDefenderMove();
-//        List<AbstractAction> actions = fm._computeAvailableActions(state);
-//        AbstractAction actionChosen = player.getAction(state, actions);
-//        fm.next(state, actionChosen);
-//        AbstractAction dummyAction = state.getHistory().get(2).b;
-//        assertTrue(dummyAction instanceof PlayFlankCard);
-//        // at this stage we have a tree that has an invalid root node
-//        // this should be removed before the next action
-//        SingleTreeNode expectedNewRootP1 = ((MultiTreeNode) player.getRoot()).getRoot(1).getChildren().get(actionChosen)[1];
-//        actions = fm._computeAvailableActions(state);
-//        actionChosen = player.getAction(state, actions);
-//        assertSame(expectedNewRootP1, ((MultiTreeNode) player.getRoot()).getRoot(1));
-//        // and the opponent node is always reset
-//        assertEquals(1000, ((MultiTreeNode) player.getRoot()).getRoot(0).getVisits());
-//        fm.next(state, actionChosen);
-//
-//        // if we carry on, everything should run OK
-//        do {
-//            actions = fm._computeAvailableActions(state);
-//            actionChosen = switch(state.getCurrentPlayer()) {
-//                case 0 -> actions.get(rnd.nextInt(actions.size()));
-//                case 1 -> player.getAction(state, actions);
-//                default -> throw new AssertionError("Invalid player");
-//            };
-//            fm.next(state, actionChosen);
-//        } while (state.isNotTerminal());
-//
-//    }
-
     @Test
     public void OMAWorks() {
         mctsParams.budgetType = PlayerConstants.BUDGET_ITERATIONS;

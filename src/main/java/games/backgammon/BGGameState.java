@@ -245,8 +245,8 @@ public class BGGameState extends AbstractGameState {
         for (int i = 0; i < dice.length; i++) {
             copy.dice[i] = dice[i].copy();
         }
-        copy.diceUsed = Arrays.copyOf(diceUsed, diceUsed.length);
-        copy.availableDiceValues = Arrays.copyOf(availableDiceValues, availableDiceValues.length);
+        copy.diceUsed = diceUsed == null ? null : Arrays.copyOf(diceUsed, diceUsed.length);
+        copy.availableDiceValues = availableDiceValues == null ? null : Arrays.copyOf(availableDiceValues, availableDiceValues.length);
 
         copy.counters = new ArrayList<>();
         for (int i = 0; i < counters.size(); i++) {

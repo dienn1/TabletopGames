@@ -204,6 +204,7 @@ public class SingleTreeNode {
                 throw new AssertionError("Duplicate actions found in action list: " +
                         actionsFromOpenLoopState.stream().map(a -> "\t" + a.toString() + "\n").collect(joining()));
             if ((params.useActionHeuristicForMoveOrdering && nVisits < actionsFromOpenLoopState.size())
+                    || params.pUCTTemperature <= 10000.0  || params.progressiveWideningConstant > 1.0
                     || params.progressiveBias > 0 || params.initialiseVisits > 0) {
                 // We only need to calculate actionValueEstimates if we are going to be using the data in one of these variants
                 // If not, then we can save processing time by not calculating them
