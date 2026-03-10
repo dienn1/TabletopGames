@@ -38,4 +38,8 @@ public interface IPlayerDecorator {
         return false;
     }
 
+    default void reset() {
+        // do nothing by default, but can be overridden if the decorator needs to reset internal state at the start of a new game/move
+    }
+
 }

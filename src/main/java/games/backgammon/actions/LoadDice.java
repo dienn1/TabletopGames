@@ -27,6 +27,12 @@ public class LoadDice extends AbstractAction {
         return true;
     }
 
+    public double[] getPdf() {
+        double[] copy = new double[newPDF.length];
+        System.arraycopy(newPDF, 0, copy, 0, newPDF.length);
+        return copy;
+    }
+
     @Override
     public AbstractAction copy() {
         return this; // immutable

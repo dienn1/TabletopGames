@@ -48,6 +48,10 @@ public class LoadedDiceDecorator implements IPlayerDecorator {
         return pdfs.size();
     }
 
+    public int getCurrentPDF() {
+        return currentPDFIndex;
+    }
+
     @Override
     public List<AbstractAction> actionFilter(AbstractGameState state, List<AbstractAction> possibleActions) {
         // we add the LoadDice action to the list of possible actions for the decision player
