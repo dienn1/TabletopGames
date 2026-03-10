@@ -1,0 +1,24 @@
+{
+  "budgetType" : "BUDGET_TIME",
+  "rolloutLengthPerPlayer" : true,
+  "rolloutLength" : 100,
+  "opponentTreePolicy" : "MultiTree",
+  "heuristic" : {
+    "class" : "players.heuristics.LeaderHeuristic"
+  },
+  "maxTreeDepth" : 1,
+  "treePolicy" : "UCB_Tuned",
+  "reuseTree" : true,
+  "information" : "Open_Loop",
+  "actionRestriction" : {
+    "class" : "games.backgammon.actions.LoadedDiceDecorator",
+    "sides" : 6,
+    "probabilities" : [
+      0.167, 0.166, 0.166, 0.166, 0.166, 0.167,
+      0.1, 0.1, 0.1, 0.1, 0.1, 0.5,
+      1.0, 0.0, 0.0, 0.0, 0.0, 0.0
+    ]
+  },
+  "class" : "players.mcts.MCTSParams",
+  "budget" : -999
+}

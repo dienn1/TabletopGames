@@ -160,7 +160,7 @@ public class JSONUtils {
                 Class<?> clazz = Class.forName(cl);
                 Constructor<?> constructor = ConstructorUtils.getMatchingAccessibleConstructor(clazz, argClasses);
                 if (constructor == null)
-                    throw new AssertionError("No matching Constructor found for " + clazz);
+                    throw new AssertionError("No matching Constructor found for " + clazz + " with args " + Arrays.toString(args));
                 //   System.out.println("Invoking constructor for " + clazz + " with " + Arrays.toString(args));
                 return (T) constructor.newInstance(args);
             }

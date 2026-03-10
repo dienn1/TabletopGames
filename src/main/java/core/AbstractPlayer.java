@@ -119,6 +119,10 @@ public abstract class AbstractPlayer {
         decorators.remove(decorator);
     }
 
+    public final List<IPlayerDecorator> getDecorators() {
+        return new ArrayList<>(decorators);
+    }
+
     @Override
     public String toString() {
         if (name != null) return name;
