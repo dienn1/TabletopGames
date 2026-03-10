@@ -56,7 +56,7 @@ public class MovePiece extends AbstractAction {
             return bgp.getLogicalPosition(player, to);
         } else if (to == -1) {
             // in this case any die value will do...so we take the lowest available one
-            int minDieValue = bgp.playerTrackMapping[0].length - bgp.getLogicalPosition(player, from);
+            int minDieValue = bgp.getLengthOfTrack() - bgp.getLogicalPosition(player, from);
             int min = params.diceSides + 1;
             for (int d : bgp.getAvailableDiceValues()) {
                 if (d < min && d >= minDieValue) {

@@ -94,6 +94,10 @@ public class BGGameState extends AbstractGameState {
         return playerTrackMapping[playerId][nthPoint];
     }
 
+    public int getLengthOfTrack() {
+        return playerTrackMapping[0].length;
+    }
+
     /*
     The reverse mapping from the physical space on the board to the logical position on the player's track.
      */

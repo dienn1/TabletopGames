@@ -24,7 +24,7 @@ public class BGActionFeatures implements IActionFeatureVector {
         if (action instanceof DoNothing) {
             return new double[names.length];
         }
-        int boardLength = bgState.playerTrackMapping[0].length;
+        int boardLength = bgState.getLengthOfTrack();
 
         MovePiece move = (MovePiece) action;
         double[] features = new double[names.length];
