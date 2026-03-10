@@ -87,7 +87,6 @@ public class LearnFromData {
 
     public Object learn() {
         long startTime = System.currentTimeMillis();
-        long iterationStart = startTime;
         File dataFile = new File(data);
         String convertedDataFile = data.replaceAll("\\.[^.]+$", "_ASF$0");
         String[] dataFiles = new String[]{data};
