@@ -40,6 +40,15 @@ public class ParetoAnalysisTest {
         recordHeadToHead(tr, C, D);
         recordHeadToHead(tr, D, B);
 
+        assertEquals(1, (int) tr.nGamesPlayedPerOpponent.get("A").get("B"));
+        assertEquals(1, (int) tr.nGamesPlayedPerOpponent.get("A").get("C"));
+        assertEquals(1, (int) tr.nGamesPlayedPerOpponent.get("A").get("D"));
+        assertEquals(1, (int) tr.nGamesPlayedPerOpponent.get("B").get("C"));
+        assertEquals(1, (int) tr.nGamesPlayedPerOpponent.get("C").get("D"));
+        assertEquals(1, (int) tr.nGamesPlayedPerOpponent.get("D").get("B"));
+        assertEquals(1, (int) tr.nGamesPlayedPerOpponent.get("B").get("A"));
+        assertEquals(1, (int) tr.nGamesPlayedPerOpponent.get("D").get("A"));
+
         ParetoAnalysis pa = new ParetoAnalysis();
         LinkedHashMap<String, Pair<Double, Double>> ranking = pa.getRanking(tr);
 
@@ -61,6 +70,15 @@ public class ParetoAnalysisTest {
             assertTrue("Agent " + agent + " should be present", ranking.containsKey(agent));
             assertEquals("Agent " + agent + " should be on second front", 2.0, ranking.get(agent).a, 0.0);
         }
+
+        assertEquals(1, (int) tr.nGamesPlayedPerOpponent.get("A").get("B"));
+        assertEquals(1, (int) tr.nGamesPlayedPerOpponent.get("A").get("C"));
+        assertEquals(1, (int) tr.nGamesPlayedPerOpponent.get("A").get("D"));
+        assertEquals(1, (int) tr.nGamesPlayedPerOpponent.get("B").get("C"));
+        assertEquals(1, (int) tr.nGamesPlayedPerOpponent.get("C").get("D"));
+        assertEquals(1, (int) tr.nGamesPlayedPerOpponent.get("D").get("B"));
+        assertEquals(1, (int) tr.nGamesPlayedPerOpponent.get("B").get("A"));
+        assertEquals(1, (int) tr.nGamesPlayedPerOpponent.get("D").get("A"));
     }
 
     // Helper to record a single head-to-head game where 'winner' beats 'loser'
