@@ -6,6 +6,7 @@ import core.actions.AbstractAction;
 import core.actions.DoNothing;
 import core.components.*;
 import games.backgammon.actions.MovePiece;
+import games.backgammon.actions.RollDice;
 
 import java.util.*;
 
@@ -120,6 +121,11 @@ public class BGForwardModel extends StandardForwardModel {
     @Override
     protected List<AbstractAction> _computeAvailableActions(AbstractGameState gameState) {
         List<AbstractAction> actions = new ArrayList<>();
+        if (gameState.getGamePhase() == RollDice) {
+            // the only action available in this phase is to roll the dice
+            actions.add(new RollDice());
+            return actions;
+        }
         // We create the set of possible actions
         // For each available dice value we consider each point that has player tokens on
         // and add the possible moves to the list of actions
@@ -204,6 +210,13 @@ public class BGForwardModel extends StandardForwardModel {
         // a player's turn ends when they have used all the dice values, or have no valid moves
         BGGameState bgs = (BGGameState) currentState;
         BGParameters bgp = (BGParameters) currentState.getGameParameters();
+
+        if (bgs.getGamePhase() == RollDice) {
+            // after rolling dice, we just move to the next phase (where the player can move pieces)
+            bgs.setGamePhase(BGGamePhase.MovePieces);
+            return;
+        }
+
         // check for game end
         if (bgs.piecesBorneOff[0] == bgp.piecesPerPlayer || bgs.piecesBorneOff[1] == bgp.piecesPerPlayer) {
             endGame(bgs);
@@ -211,7 +224,7 @@ public class BGForwardModel extends StandardForwardModel {
             int[] diceAvailable = bgs.getAvailableDiceValues();
             if (diceAvailable.length == 0 || computeAvailableActions(currentState).stream().noneMatch(c -> c instanceof MovePiece)) {
                 // end of turn: switch player
-                bgs.rollDice();
+                bgs.setGamePhase(RollDice);
                 bgs.movedThisTurn = new ArrayList<>();
                 endPlayerTurn(bgs);  // default is to move to next player
                 if (bgs.getCurrentPlayer() == 0) {
