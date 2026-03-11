@@ -4,8 +4,6 @@ import core.AbstractParameters;
 import core.Game;
 import evaluation.optimisation.TunableParameters;
 import games.GameType;
-import games.dominion.DominionForwardModel;
-import games.dominion.DominionGameState;
 
 import java.util.Arrays;
 import java.util.Objects;
@@ -34,10 +32,48 @@ public class CantStopParameters extends TunableParameters {
     public int ELEVEN_MAX = 4;
     public int TWELVE_MAX = 2;
 
-    public final int DICE_NUMBER = 4; // If you change this, then you'll need to also update code in ForwardModel._computeAvailableActions()
-    public final int DICE_SIDES = 6;
-    public final int COLUMNS_TO_WIN = 3;
-    public final int MARKERS = 3; // number of temporary markers
+    public int DICE_NUMBER = 4; // If you change this, then you'll need to also update code in ForwardModel._computeAvailableActions()
+    public int DICE_SIDES = 6; // Same here (but with scoring)
+    public int COLUMNS_TO_WIN = 3;
+    public int MARKERS = 3; // number of temporary markers
+
+    public CantStopParameters() {
+        // Column sizes
+        addTunableParameter("TWO_MAX", 2, Arrays.asList(1,2,3,4,5));
+        addTunableParameter("THREE_MAX", 4, Arrays.asList(2,3,4,5,6));
+        addTunableParameter("FOUR_MAX", 6, Arrays.asList(4,5,6,7,8));
+        addTunableParameter("FIVE_MAX", 8, Arrays.asList(6,7,8,9,10));
+        addTunableParameter("SIX_MAX", 10, Arrays.asList(8,9,10,11,12));
+        addTunableParameter("SEVEN_MAX", 12, Arrays.asList(10,11,12,13,14));
+        addTunableParameter("EIGHT_MAX", 10, Arrays.asList(8,9,10,11,12));
+        addTunableParameter("NINE_MAX", 8, Arrays.asList(6,7,8,9,10));
+        addTunableParameter("TEN_MAX", 6, Arrays.asList(4,5,6,7,8));
+        addTunableParameter("ELEVEN_MAX", 4, Arrays.asList(2,3,4,5,6));
+        addTunableParameter("TWELVE_MAX", 2, Arrays.asList(1,2,3,4,5));
+
+        addTunableParameter("COLUMNS_TO_WIN", 3, Arrays.asList(2, 3, 4, 5, 6));
+        addTunableParameter("MARKERS", 3, Arrays.asList(2, 3, 4, 5, 6));
+
+    }
+
+    @Override
+    public void _reset() {
+        // Column sizes
+        TWO_MAX = (int) getParameterValue("TWO_MAX");
+        THREE_MAX = (int) getParameterValue("THREE_MAX");
+        FOUR_MAX = (int) getParameterValue("FOUR_MAX");
+        FIVE_MAX = (int) getParameterValue("FIVE_MAX");
+        SIX_MAX = (int) getParameterValue("SIX_MAX");
+        SEVEN_MAX = (int) getParameterValue("SEVEN_MAX");
+        EIGHT_MAX = (int) getParameterValue("EIGHT_MAX");
+        NINE_MAX = (int) getParameterValue("NINE_MAX");
+        TEN_MAX = (int) getParameterValue("TEN_MAX");
+        ELEVEN_MAX = (int) getParameterValue("ELEVEN_MAX");
+        TWELVE_MAX = (int) getParameterValue("TWELVE_MAX");
+
+        COLUMNS_TO_WIN = (int) getParameterValue("COLUMNS_TO_WIN");
+        MARKERS = (int) getParameterValue("MARKERS");
+    }
 
 
     public CantStopParameters() {
@@ -128,6 +164,11 @@ public class CantStopParameters extends TunableParameters {
     @Override
     public int hashCode() {
         return Objects.hash(super.hashCode(), TWO_MAX, THREE_MAX, FOUR_MAX, FIVE_MAX, SIX_MAX, SEVEN_MAX, EIGHT_MAX, NINE_MAX, TEN_MAX, ELEVEN_MAX, TWELVE_MAX, DICE_NUMBER, DICE_SIDES, COLUMNS_TO_WIN, MARKERS);
+    }
+
+    @Override
+    public Object instantiate() {
+        return new Game(GameType.CantStop, new CantStopForwardModel(), new CantStopGameState(this, GameType.CantStop.getMinPlayers()));
     }
 
     @Override
