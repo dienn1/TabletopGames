@@ -41,7 +41,7 @@ public class SimultaneousOSLAPlayer extends OSLAPlayer{
             randomPlayer = new RandomPlayer(new Random(rnd.nextInt()));
         }
         List<AbstractAction> actions;
-        while (gs.getRoundCounter() == currentRound) {
+        while (gs.getRoundCounter() == currentRound && gs.isNotTerminal()) {
             actions = getForwardModel().computeAvailableActions(gs);
             if (actions.isEmpty()) {
                 break;
