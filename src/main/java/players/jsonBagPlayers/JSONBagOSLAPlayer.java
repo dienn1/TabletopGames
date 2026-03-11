@@ -14,7 +14,6 @@ public class JSONBagOSLAPlayer extends AbstractPlayer {
     public JSONBagOSLAPlayer(List<Map<String, Integer>> prototypes, Collection<String> filterList, Random random) {
         super(null, "JSONBagOSLAPlayer");
         this.heuristic = new JSONBagHeuristic(prototypes, filterList);
-//        this.heuristic.filterSet = Set.copyOf(filterList);
         this.rnd = random;
     }
 

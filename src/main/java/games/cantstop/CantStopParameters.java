@@ -75,37 +75,6 @@ public class CantStopParameters extends TunableParameters {
         MARKERS = (int) getParameterValue("MARKERS");
     }
 
-
-    public CantStopParameters() {
-        addTunableParameter("TWO_MAX", 2, Arrays.asList(2, 4, 6, 8, 10, 12));
-        addTunableParameter("THREE_MAX", 4, Arrays.asList(2, 4, 6, 8, 10, 12));
-        addTunableParameter("FOUR_MAX", 6, Arrays.asList(2, 4, 6, 8, 10, 12));
-        addTunableParameter("FIVE_MAX", 8, Arrays.asList(2, 4, 6, 8, 10, 12));
-        addTunableParameter("SIX_MAX", 10, Arrays.asList(2, 4, 6, 8, 10, 12));
-        addTunableParameter("SEVEN_MAX", 12, Arrays.asList(2, 4, 6, 8, 10, 12));
-        addTunableParameter("EIGHT_MAX", 10, Arrays.asList(2, 4, 6, 8, 10, 12));
-        addTunableParameter("NINE_MAX", 8, Arrays.asList(2, 4, 6, 8, 10, 12));
-        addTunableParameter("TEN_MAX", 6, Arrays.asList(2, 4, 6, 8, 10, 12));
-        addTunableParameter("ELEVEN_MAX", 4, Arrays.asList(2, 4, 6, 8, 10, 12));
-        addTunableParameter("TWELVE_MAX", 2, Arrays.asList(2, 4, 6, 8, 10, 12));
-    }
-
-    @Override
-    public void _reset() {
-        TWO_MAX = (int) getParameterValue("TWO_MAX");
-        THREE_MAX = (int) getParameterValue("THREE_MAX");
-        FOUR_MAX = (int) getParameterValue("FOUR_MAX");
-        FIVE_MAX = (int) getParameterValue("FIVE_MAX");
-        SIX_MAX = (int) getParameterValue("SIX_MAX");
-        SEVEN_MAX = (int) getParameterValue("SEVEN_MAX");
-        EIGHT_MAX = (int) getParameterValue("EIGHT_MAX");
-        NINE_MAX = (int) getParameterValue("NINE_MAX");
-        TEN_MAX = (int) getParameterValue("TEN_MAX");
-        ELEVEN_MAX = (int) getParameterValue("ELEVEN_MAX");
-        TWELVE_MAX = (int) getParameterValue("TWELVE_MAX");
-
-    }
-
     public int maxValue(int number) {
         switch (number) {
             case 2:
@@ -164,11 +133,6 @@ public class CantStopParameters extends TunableParameters {
     @Override
     public int hashCode() {
         return Objects.hash(super.hashCode(), TWO_MAX, THREE_MAX, FOUR_MAX, FIVE_MAX, SIX_MAX, SEVEN_MAX, EIGHT_MAX, NINE_MAX, TEN_MAX, ELEVEN_MAX, TWELVE_MAX, DICE_NUMBER, DICE_SIDES, COLUMNS_TO_WIN, MARKERS);
-    }
-
-    @Override
-    public Object instantiate() {
-        return new Game(GameType.CantStop, new CantStopForwardModel(), new CantStopGameState(this, GameType.CantStop.getMinPlayers()));
     }
 
     @Override

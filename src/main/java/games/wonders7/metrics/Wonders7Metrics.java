@@ -198,8 +198,9 @@ public class Wonders7Metrics implements IMetricsCollection {
                 if (a instanceof ChooseCard c) {
                     a = c.actionChosen;
                 }
+                Wonders7GameParameters params = (Wonders7GameParameters) e.state.getGameParameters();
                 if (a instanceof PlayCard p) {
-                    Wonder7Card card = Wonder7Card.factory(p.cardType);
+                    Wonder7Card card = Wonder7Card.factory(p.cardType, params);
                     cardTypeCount.put(card.buildingType.name(), cardTypeCount.getOrDefault(card.buildingType.name(), 0) + 1);
                 }
                 return false;

@@ -872,9 +872,9 @@ public class Game {
         ArrayList<AbstractPlayer> players = new ArrayList<>();
 
         /* Load prototypes */
-        GameType gameTypeTest = GameType.DotsAndBoxes;
+        GameType gameTypeTest = GameType.Dominion;
         String prototypesPath = "Experiments/valueFuncTest/" + gameTypeTest.name();
-        int n_prototypes = 2; // Set number of prototypes to load
+        int n_prototypes = 4; // Set number of prototypes to load
         List<Map<String, Integer>> prototypes = Tokenizer.loadPrototypes(prototypesPath, n_prototypes);
         // Load top_features
         int topKFeatures = 500;
@@ -883,17 +883,17 @@ public class Game {
         JSONBagOSLAPlayer jsonBagOSLAPlayer = new JSONBagOSLAPlayer(prototypes, topFeaturesFilterList);
 
 //        players.add(new FirstActionPlayer());
-//        players.add(new OSLAPlayer());
-//        players.add(new OSLAPlayer());
-//        players.add(new OSLAPlayer());
+        players.add(new OSLAPlayer());
+        players.add(new OSLAPlayer());
+        players.add(new OSLAPlayer());
 //        players.add(new SimultaneousOSLAPlayer());
 //        players.add(new SimultaneousOSLAPlayer());
 //        players.add(new SimultaneousOSLAPlayer());
-        players.add(new RandomPlayer());
+//        players.add(new RandomPlayer());
 //        players.add(new RandomPlayer());
 //        players.add(new RandomPlayer());
 
-        int jsonBagOSLAPlayerIndex = 1;
+        int jsonBagOSLAPlayerIndex = 2;
         players.add(jsonBagOSLAPlayerIndex, jsonBagOSLAPlayer);
         for (AbstractPlayer p : players) {
             System.out.println(p);
