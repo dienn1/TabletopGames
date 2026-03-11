@@ -7,26 +7,35 @@ import core.interfaces.IStateHeuristic;
 import java.util.*;
 
 import static players.jsonBagPlayers.JensenShannonDistance.jsd;
+import static players.jsonBagPlayers.JensenShannonDistance.normalize;
 
 public class JSONBagHeuristic implements IStateHeuristic {
 
     Map<String, Integer> currentJSONBag;
     Set<String> filterSet;
 
-    final List<Map<String, Integer>> prototypes;
+    final List<Map<String, Double>> prototypes;
 
-    public JSONBagHeuristic(List<Map<String, Integer>> prototypes_) {
+    public JSONBagHeuristic(List<? extends Map<String, ? extends Number>> prototypes_) {
         this(prototypes_, new ArrayList<>());
     }
-    public JSONBagHeuristic(List<Map<String, Integer>> prototypes_, List<String> filterList_) {
-        prototypes = prototypes_;
-        filterSet = new HashSet<>(filterList_);
-        currentJSONBag = new LinkedHashMap<String, Integer>();
+
+    public JSONBagHeuristic(List<? extends Map<String, ? extends Number>> prototypes_, Collection<String> filterList_) {
+        prototypes = new ArrayList<>(prototypes_.size());
+        for (Map<String, ? extends Number> p : prototypes_) {
+            Map<String, Double> m = new HashMap<>();
+            for (Map.Entry<String, ? extends Number> e : p.entrySet()) {
+                m.put(e.getKey(), e.getValue().doubleValue());
+            }
+            prototypes.add(normalize(m));
+        }
+        filterSet = Set.copyOf(filterList_);
+        currentJSONBag = new HashMap<String, Integer>();
     }
 
 
     public void setFilterSet(Collection<String> filterSet_) {
-        filterSet = new HashSet<>(filterSet_);
+        filterSet = Set.copyOf(filterSet_);
     }
 
     public void updateJSONBag(AbstractGameState gs) {
@@ -36,7 +45,7 @@ public class JSONBagHeuristic implements IStateHeuristic {
     }
 
     public void resetCurrentBag(AbstractGameState gs) {
-        currentJSONBag = new LinkedHashMap<String, Integer>();
+        currentJSONBag = new HashMap<String, Integer>();
         updateJSONBag(gs);
     }
 
@@ -49,7 +58,7 @@ public class JSONBagHeuristic implements IStateHeuristic {
             return 0;
         if (gs.getPlayerResults()[playerId] == CoreConstants.GameResult.WIN_GAME)
             return 1.0;
-        Map<String, Integer> newJSONBag = new LinkedHashMap<>(currentJSONBag);
+        Map<String, Integer> newJSONBag = new HashMap<>(currentJSONBag);
         Map<String, Integer> newGameStateTokenized = Tokenizer.tokenize(gs, filterSet, true);
 //        Tokenizer.filter(newGameStateTokenized, filterSet,true);
         Tokenizer.merge(newJSONBag, newGameStateTokenized);
@@ -59,10 +68,10 @@ public class JSONBagHeuristic implements IStateHeuristic {
             distances[i] = jsd(prototypes.get(i), newJSONBag);
         }
 //        double[] values = invertNormalized(distances);
-//        double[] values = subtractNormalized(distances);
-        double[] values = negative(distances);
+        double[] values = subtractNormalized(distances);
+//        double[] values = negative(distances);
 
-        values = softmax(values, 1.0);
+//        values = softmax(values, 1.0);
         return values[playerId];
 //        return 1.0 - distances[playerId];
     }
@@ -120,7 +129,7 @@ public class JSONBagHeuristic implements IStateHeuristic {
 
     public JSONBagHeuristic copy() {
         JSONBagHeuristic copy = new JSONBagHeuristic(prototypes, new ArrayList<>(filterSet));
-        copy.currentJSONBag = new LinkedHashMap<>(currentJSONBag);
+        copy.currentJSONBag = new HashMap<>(currentJSONBag);
         return copy;
     }
 

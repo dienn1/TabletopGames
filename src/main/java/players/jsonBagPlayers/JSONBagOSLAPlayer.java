@@ -13,8 +13,8 @@ public class JSONBagOSLAPlayer extends AbstractPlayer {
 
     public JSONBagOSLAPlayer(List<Map<String, Integer>> prototypes, Collection<String> filterList, Random random) {
         super(null, "JSONBagOSLAPlayer");
-        this.heuristic = new JSONBagHeuristic(prototypes);
-        this.heuristic.filterSet = new HashSet<>(filterList);
+        this.heuristic = new JSONBagHeuristic(prototypes, filterList);
+//        this.heuristic.filterSet = Set.copyOf(filterList);
         this.rnd = random;
     }
 
@@ -72,7 +72,7 @@ public class JSONBagOSLAPlayer extends AbstractPlayer {
 //        getForwardModel().next(gs, a);
 //        RandomPlayer randomPlayer = new RandomPlayer(new Random(rnd.nextInt()));
 //        List<AbstractAction> actions;
-//        while (gs.getRoundCounter() == currentRound) {
+//        while (gs.getRoundCounter() == currentRound && gs.isNotTerminal()) {
 //            actions = getForwardModel().computeAvailableActions(gs);
 //            if (actions.isEmpty()) {
 //                break;

@@ -75,7 +75,7 @@ public class Tokenizer {
     public static Map<String, Integer> tokenize(JsonElement collection, String prefix, boolean ordered,
                                                 String mode, boolean filterPlayer, boolean binning, boolean pairXY,
                                                 Set<String> filterSet, boolean whitelist) {
-        Map<String, Integer> freq = new LinkedHashMap<>();
+        Map<String, Integer> freq = new HashMap<>();
         if ("char".equals(mode)) {
 //            addToken(freq, collection.toString());
 //            return freq;
@@ -192,7 +192,8 @@ public class Tokenizer {
 
     public static void merge(Map<String, Integer> dest, Map<String, Integer> src) {
         for (Map.Entry<String, Integer> e : src.entrySet()) {
-            dest.put(e.getKey(), dest.getOrDefault(e.getKey(), 0) + e.getValue());
+//            dest.put(e.getKey(), dest.getOrDefault(e.getKey(), 0) + e.getValue());
+            dest.merge(e.getKey(), e.getValue(), Integer::sum);
         }
     }
 
@@ -251,21 +252,6 @@ public class Tokenizer {
             System.err.println("Error loading string list from " + filePath + ": " + e.getMessage());
             return new ArrayList<>();
         }
-    }
-
-
-    // AI LMAO
-    private static JsonElement loadJsonIfString(JsonElement el) {
-//        if (el != null && el.isJsonPrimitive() && el.getAsJsonPrimitive().isString()) {
-//            String s = el.getAsString();
-//            try {
-//                JsonElement parsed = JsonParser.parseString(s);
-//                return parsed;
-//            } catch (JsonSyntaxException ex) {
-//                return el;
-//            }
-//        }
-        return el;
     }
     
 }

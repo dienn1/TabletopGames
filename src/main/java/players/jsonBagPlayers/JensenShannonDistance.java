@@ -1,9 +1,7 @@
 package players.jsonBagPlayers;
 
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 
 public class JensenShannonDistance {
 
@@ -12,17 +10,24 @@ public class JensenShannonDistance {
      * @param p The map to normalize
      * @return A normalized map with double values
      */
-    public static Map<String, Double> normalize(Map<String, Integer> p) {
-        Map<String, Double> result = new HashMap<>();
-        double total = 0;
-        for (int value : p.values()) {
-            total += value;
+    public static Map<String, Double> normalize(Map<String, ? extends Number> p) {
+        Map<String, Double> result = new HashMap<>(p.size());
+        if (p.isEmpty()) return result;
+        double total = 0.0;
+        for (Number value : p.values()) {
+            if (value != null) total += value.doubleValue();
         }
-        if (total == 0) {
-            total = 1;
+        if (Math.abs(total-1.0) < 0.00001) {  // UGLY OPTIMIZATION TO ALWAYS RETURN p and not having to create a new map
+            @SuppressWarnings("unchecked")
+            Map<String, Double> same = (Map<String, Double>) p;
+            return same;
         }
-        for (Map.Entry<String, Integer> entry : p.entrySet()) {
-            result.put(entry.getKey(), entry.getValue() / total);
+
+        if (Double.compare(total, 0.0) == 0) total = 1.0;
+
+        for (Map.Entry<String, ? extends Number> entry : p.entrySet()) {
+            double dv = entry.getValue().doubleValue();
+            result.put(entry.getKey(), dv / total);
         }
         return result;
     }
@@ -33,7 +38,7 @@ public class JensenShannonDistance {
      * @param q Second distribution as a map of string keys to integer counts
      * @return The Jensen-Shannon distance (between 0 and 1)
      */
-    public static double jsd(Map<String, Integer> p, Map<String, Integer> q) {
+    public static double jsd(Map<String, ? extends Number> p, Map<String, ? extends Number> q) {
         // Handle empty cases
         if ((p == null || p.isEmpty()) && (q == null || q.isEmpty())) {
             return 0;
@@ -46,15 +51,12 @@ public class JensenShannonDistance {
         Map<String, Double> pNorm = normalize(p);
         Map<String, Double> qNorm = normalize(q);
 
-        // Get all keys from both distributions
-        Set<String> allKeys = new HashSet<>();
-        allKeys.addAll(pNorm.keySet());
-        allKeys.addAll(qNorm.keySet());
-
         double jsDist = 0;
-        for (String k : allKeys) {
-            double pK = pNorm.getOrDefault(k, 0.0);
-            double qK = qNorm.getOrDefault(k, 0.0);
+        // Process keys in pNorm, looking up each in qNorm once
+        for (Map.Entry<String, Double> entry : pNorm.entrySet()) {
+            double pK = entry.getValue();
+            Double qVal = qNorm.get(entry.getKey());
+            double qK = (qVal != null) ? qVal : 0.0;
             double mK = (pK + qK) / 2;
 
             if (pK != 0) {
@@ -62,6 +64,16 @@ public class JensenShannonDistance {
             }
             if (qK != 0) {
                 jsDist += qK * log2(qK / mK);
+            }
+        }
+        // Process keys only in qNorm
+        for (Map.Entry<String, Double> entry : qNorm.entrySet()) {
+            if (!pNorm.containsKey(entry.getKey())) {
+                double qK = entry.getValue();
+                if (qK != 0) {
+                    double mK = qK / 2;
+                    jsDist += qK * log2(qK / mK);
+                }
             }
         }
 
