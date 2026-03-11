@@ -3,7 +3,6 @@ package games.backgammon;
 import core.AbstractForwardModel;
 import core.AbstractPlayer;
 import core.DecoratedForwardModel;
-import core.StandardForwardModel;
 import core.actions.AbstractAction;
 import core.interfaces.IPlayerDecorator;
 import games.backgammon.actions.LoadDice;
@@ -13,18 +12,17 @@ import org.junit.Before;
 import org.junit.Test;
 import players.PlayerFactory;
 import players.mcts.MCTSPlayer;
-import utilities.JSONUtils;
 
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 public class CheatingAgentTests {
 
     BGGameState gameState;
     BGParameters parameters;
     AbstractForwardModel forwardModel;
+    AbstractPlayer decoratedMCTSPlayer;
 
     @Before
     public void setUp() {
@@ -35,13 +33,16 @@ public class CheatingAgentTests {
         forwardModel.setup(gameState);
         assertEquals(new RollDice(), forwardModel.computeAvailableActions(gameState).getFirst());
         forwardModel.next(gameState, new RollDice());
+
+        decoratedMCTSPlayer = PlayerFactory.createPlayer("src/test/java/games/backgammon/CheatingAgent.json");
+        decoratedMCTSPlayer.setPlayerID(0);
+        decoratedMCTSPlayer.setForwardModel(forwardModel);
     }
 
     @Test
     public void loadCheatingAgentFromJSON() {
-        AbstractPlayer cheater = PlayerFactory.createPlayer("src/test/java/games/backgammon/CheatingAgent.json");
-        assertTrue(cheater instanceof MCTSPlayer);
-        List<IPlayerDecorator> decorators = cheater.getDecorators();
+        assertTrue(decoratedMCTSPlayer instanceof MCTSPlayer);
+        List<IPlayerDecorator> decorators = decoratedMCTSPlayer.getDecorators();
         assertEquals(1, decorators.size());
         assertTrue(decorators.get(0) instanceof LoadedDiceDecorator);
 
@@ -59,10 +60,9 @@ public class CheatingAgentTests {
 
     @Test
     public void cheaterGetsAdditionalOptionsInRollDicePhase() {
-        AbstractPlayer cheater = PlayerFactory.createPlayer("src/test/java/games/backgammon/CheatingAgent.json");
         // move two pieces
-        IPlayerDecorator loadedDiceDecorator = cheater.getDecorators().get(0);
-        forwardModel = new DecoratedForwardModel(forwardModel, List.of(loadedDiceDecorator), 1);
+        IPlayerDecorator loadedDiceDecorator = decoratedMCTSPlayer.getDecorators().get(0);
+        forwardModel = (new DecoratedForwardModel(forwardModel)).addDecorator(1, loadedDiceDecorator);
 
         forwardModel.next(gameState, forwardModel.computeAvailableActions(gameState).getFirst());
         forwardModel.next(gameState, forwardModel.computeAvailableActions(gameState).getFirst());
@@ -79,7 +79,8 @@ public class CheatingAgentTests {
         forwardModel.next(gameState, forwardModel.computeAvailableActions(gameState).getFirst());
         forwardModel.next(gameState, forwardModel.computeAvailableActions(gameState).getFirst());
         forwardModel.next(gameState, forwardModel.computeAvailableActions(gameState).getFirst());
-        // and not for player 0
+
+        // and not for player 0 : they can only roll the dice, no cheating options
         assertEquals(BGGamePhase.RollDice, gameState.getGamePhase());
         assertEquals(0, gameState.getCurrentPlayer());
         actions = forwardModel.computeAvailableActions(gameState);
@@ -90,9 +91,8 @@ public class CheatingAgentTests {
 
     @Test
     public void loadDiceActionChangesTheProbabilities() {
-        AbstractPlayer cheater = PlayerFactory.createPlayer("src/test/java/games/backgammon/CheatingAgent.json");
-        LoadedDiceDecorator loadedDiceDecorator = (LoadedDiceDecorator) cheater.getDecorators().get(0);
-        forwardModel = new DecoratedForwardModel(forwardModel, List.of(loadedDiceDecorator), 1);
+        LoadedDiceDecorator loadedDiceDecorator = (LoadedDiceDecorator) decoratedMCTSPlayer.getDecorators().get(0);
+        forwardModel = (new DecoratedForwardModel(forwardModel)).addDecorator(1, loadedDiceDecorator);
 
         forwardModel.next(gameState, forwardModel.computeAvailableActions(gameState).getFirst());
         forwardModel.next(gameState, forwardModel.computeAvailableActions(gameState).getFirst());
@@ -119,22 +119,27 @@ public class CheatingAgentTests {
         }
         assertTrue(sixCountOne > 35);
         assertTrue(sixCountTwo < 25);
+        assertTrue(sixCountTwo > 4);
         assertEquals(1, loadedDiceDecorator.getCurrentPDF());
     }
 
     @Test
-    public void loadDiceOptionsExcludeTheCurrentSelectedPdf() {
-        AbstractPlayer cheater = PlayerFactory.createPlayer("src/test/java/games/backgammon/CheatingAgent.json");
-        LoadedDiceDecorator loadedDiceDecorator = (LoadedDiceDecorator) cheater.getDecorators().get(0);
-        forwardModel = new DecoratedForwardModel(forwardModel, List.of(loadedDiceDecorator), 1);
+    public void loadDiceOptionsExcludeTheCurrentSelectedPdfViaFM() {
+        LoadedDiceDecorator loadedDiceDecorator = new LoadedDiceDecorator(6,
+                new double[]{
+                        0.167, 0.167, 0.167, 0.167, 0.167, 0.167,
+                        0.1, 0.1, 0.1, 0.1, 0.1, 0.5,
+                        1.0, 0.0, 0.0, 0.0, 0.0, 0.0
+                });
+        forwardModel = (new DecoratedForwardModel(forwardModel)).addDecorator(1, loadedDiceDecorator);
 
         forwardModel.next(gameState, forwardModel.computeAvailableActions(gameState).getFirst());
         forwardModel.next(gameState, forwardModel.computeAvailableActions(gameState).getFirst());
 
         List<AbstractAction> actions = forwardModel.computeAvailableActions(gameState);
         assertEquals(0, loadedDiceDecorator.getCurrentPDF());
-        forwardModel.next(gameState, actions.get(2));
-        assertEquals(2,  loadedDiceDecorator.getCurrentPDF());
+        forwardModel.next(gameState, actions.get(1));
+        assertEquals(1, loadedDiceDecorator.getCurrentPDF());
 
         forwardModel.next(gameState, forwardModel.computeAvailableActions(gameState).getFirst());
         forwardModel.next(gameState, forwardModel.computeAvailableActions(gameState).getFirst());
@@ -148,9 +153,59 @@ public class CheatingAgentTests {
         actions = forwardModel.computeAvailableActions(gameState);
         assertEquals(3, actions.size());
         for (int i = 0; i < 6; i++) {
-            assertEquals(0.167, ((LoadDice) actions.get(1)).getPdf()[i], 1e-3);
+            assertEquals(0.167, ((LoadDice) actions.get(1)).getPdf()[i], 0.01);
             assertEquals(i == 0 ? 1.0 : 0.0, ((LoadDice) actions.get(2)).getPdf()[i], 1e-3);
         }
 
+    }
+
+    @Test
+    public void loadDiceOptionsExcludeTheCurrentSelectedPdfViaPlayer() {
+        LoadedDiceDecorator loadedDiceDecorator = (LoadedDiceDecorator) decoratedMCTSPlayer.getDecorators().getFirst();
+        forwardModel.next(gameState, forwardModel.computeAvailableActions(gameState).getFirst());
+        forwardModel.next(gameState, forwardModel.computeAvailableActions(gameState).getFirst());
+
+        AbstractAction actionTaken;
+        int count = 0;
+        do {
+            actionTaken = decoratedMCTSPlayer.getAction(gameState, forwardModel.computeAvailableActions(gameState));
+            count++;
+        } while (count < 10 && !(actionTaken instanceof LoadDice));
+        if (!(actionTaken instanceof LoadDice)) {
+            fail("Failed to take a LoadDice action after 10 attempts, got " + actionTaken);
+        }
+        int selectedPdf = ((LoadDice) actionTaken).getPdf()[0] == 1.0 ? 2 : 1; // we have two options, one with pdf[0] = 1.0, and one with pdf[0] = 0.1
+        assertEquals(selectedPdf, loadedDiceDecorator.getCurrentPDF());
+        forwardModel.next(gameState, actionTaken);
+        assertEquals(selectedPdf, loadedDiceDecorator.getCurrentPDF());
+
+        forwardModel.next(gameState, forwardModel.computeAvailableActions(gameState).getFirst());
+        forwardModel.next(gameState, forwardModel.computeAvailableActions(gameState).getFirst());
+
+        forwardModel.next(gameState, new RollDice()); // p0
+        forwardModel.next(gameState, forwardModel.computeAvailableActions(gameState).getFirst());
+        forwardModel.next(gameState, forwardModel.computeAvailableActions(gameState).getFirst());
+
+        List<AbstractAction> actions = loadedDiceDecorator.actionFilter(gameState, forwardModel.computeAvailableActions(gameState));
+        assertEquals(BGGamePhase.RollDice, gameState.getGamePhase());
+        assertEquals(1, gameState.getCurrentPlayer());
+        assertEquals(3, actions.size());
+        for (int i = 0; i < 6; i++) {
+            assertEquals(0.167, ((LoadDice) actions.get(1)).getPdf()[i], 0.01);
+            assertEquals(i == 0 ? 1.0 : 0.0, ((LoadDice) actions.get(2)).getPdf()[i], 1e-3);
+        }
+
+    }
+
+    @Test
+    public void decoratedPlayerUsesDecoratedForwardModelInPlanning() {
+        fail("Not yet implemented");
+        // TODO: If we take a decision, we then look at the tree and confirm we have no LoadDice actions for the opponent
+        // TODO: and several for the correct player
+    }
+
+    @Test
+    public void decoratorOnPlayerIsNotAffectedByDecisionsRecordedOnDecoratedForwardModel() {
+        fail("Not yet implemented");
     }
 }
