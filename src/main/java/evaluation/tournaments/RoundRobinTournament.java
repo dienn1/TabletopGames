@@ -6,9 +6,6 @@ import evaluation.RunArg;
 import evaluation.listeners.IGameListener;
 import evaluation.listeners.TournamentMetricsGameListener;
 import games.GameType;
-import org.apache.commons.math3.linear.EigenDecomposition;
-import org.apache.commons.math3.linear.MatrixUtils;
-import org.apache.commons.math3.linear.RealMatrix;
 import players.IAnyTimePlayer;
 import utilities.*;
 
@@ -20,7 +17,6 @@ import java.util.stream.IntStream;
 
 import static core.CoreConstants.GameResult;
 import static evaluation.tournaments.AbstractTournament.TournamentMode.*;
-import static java.lang.Math.sqrt;
 import static java.util.stream.Collectors.toList;
 
 public class RoundRobinTournament extends AbstractTournament {

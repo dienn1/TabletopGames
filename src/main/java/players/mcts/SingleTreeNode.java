@@ -229,10 +229,10 @@ public class SingleTreeNode {
                         }
                     }
                 } else {
-                    params.setParameterValue("pUCTTemperature", 10001.0);
-                    params.setParameterValue("progressiveBias", 0.0);
-                    params.setParameterValue("initialiseVisits", 0);
-                    params.setParameterValue("progressiveWideningConstant", 0.0);
+                    params.pUCTTemperature = 10001.0;
+                    params.progressiveBias = 0.0;
+                    params.initialiseVisits = 0;
+                    params.progressiveWideningConstant = 0.0;
                     //System.out.println("Warning: actionHeuristic is nullReturn, so pUCT, initialiseVisits, progressive bias and pruning are disabled");
                 }
             }

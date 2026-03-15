@@ -254,7 +254,7 @@ public class ExpertIteration {
                 );
                 iter++;
             }
-        } while (!finished && iter < (int) config.get(RunArg.expertIterations));
+        } while (!finished);
 
         // Now we want to write out the final winning agent, and also all other agents still in the competition
         // as these may have non-transitive behaviours
@@ -468,6 +468,10 @@ public class ExpertIteration {
             System.out.println("Converged after " + iter + " iterations");
             return true;
         }
+        if (iter >= (int) config.get(RunArg.expertIterations)) {
+            System.out.println("Reached maximum iterations of " + iter);
+            return true;
+        }
         return false;
     }
 
@@ -517,23 +521,28 @@ public class ExpertIteration {
             }
         }
         if (actionLearnerFile != null) {
-            MCTSPlayer oracle = (MCTSPlayer) bestAgent.copy();
-            // For the oracle we set a high budget, and tweak parameters to ensure some exploration
-            oracle.setName("Oracle");
-            oracle.setBudget((int) config.get(RunArg.budget) * expertTime);
-            oracle.getParameters().setParameterValue("reuseTree", false); // we only look at occasional actions
-            //       oracle.getParameters().setParameterValue("maxTreeDepth", 1000);
-            if (((double) oracle.getParameters().getParameterValue("FPU")) < 1000.0)
-                oracle.getParameters().setParameterValue("FPU", 1000.0);
-            if (((double) oracle.getParameters().getParameterValue("K")) < 1.0)
-                oracle.getParameters().setParameterValue("K", 1.0);
+
             actionListener = switch (config.get(RunArg.actionTarget)) {
                 case ActionTarget.Base -> new ActionFeatureListener(actionFeatureVector, stateFeatureVector,
                         Event.GameEvent.ACTION_CHOSEN,
                         true);
-                case ActionTarget.MCTS ->
-                        new MCTSExpertIterationListener(oracle, actionFeatureVector, stateFeatureVector,
-                                100, 0, stateLearnerFile != null && stateListener == null);
+                case ActionTarget.MCTS -> {
+                    MCTSPlayer oracle = (bestAgent instanceof MCTSPlayer) ? (MCTSPlayer) bestAgent.copy() : ((MCTSPlayer) agents.getLast()).copy();
+                    if (!(oracle instanceof MCTSPlayer)) {
+                        throw new IllegalArgumentException("Best agent must be an MCTSPlayer to use MCTS as action target");
+                    }
+                    // For the oracle we set a high budget, and tweak parameters to ensure some exploration
+                    oracle.setName("Oracle");
+                    oracle.setBudget((int) config.get(RunArg.budget) * expertTime);
+                    oracle.getParameters().setParameterValue("reuseTree", false); // we only look at occasional actions
+                    //       oracle.getParameters().setParameterValue("maxTreeDepth", 1000);
+                    if (((double) oracle.getParameters().getParameterValue("FPU")) < 1000.0)
+                        oracle.getParameters().setParameterValue("FPU", 1000.0);
+                    if (((double) oracle.getParameters().getParameterValue("K")) < 1.0)
+                        oracle.getParameters().setParameterValue("K", 1.0);
+                    yield new MCTSExpertIterationListener(oracle, actionFeatureVector, stateFeatureVector,
+                            100, 0, stateLearnerFile != null && stateListener == null);
+                }
                 // we record the MCTS stats for every action, plus the state features if we are not already recording them with a separate listener
                 default ->
                         throw new IllegalArgumentException("Unexpected value for expert: " + config.get(RunArg.actionTarget));
