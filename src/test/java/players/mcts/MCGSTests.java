@@ -255,7 +255,9 @@ public class MCGSTests {
 
         Game game = createLoveLetter(params);
         // We now have a total space of 7 + 6 + 5 + 5 + 4 + 3 + 2 + 1 = 33 states
-        game.oneAction();
+        do {
+            game.oneAction();
+        } while (mctsPlayer.getRoot(0) == null);
         MCGSNode root = (MCGSNode) mctsPlayer.getRoot(0);
         assertEquals(0, root.getTranspositionMap().keySet().stream().filter(s -> !((String)s).startsWith("0-")).count());
         assertEquals(33, root.getTranspositionMap().size());

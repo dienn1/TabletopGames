@@ -212,7 +212,12 @@ public class BasicTurns {
         GoFishAsk ask = new GoFishAsk(target, rank);
         fm.next(state, ask);
 
-        assertEquals(takenCount + 2, totalOfRankInHand(asker, rank));
+        // TODO: Split this into two tests
+        if (takenCount == 2) {
+            assertEquals(0, totalOfRankInHand(asker, rank));
+            assertEquals(1, state.getPlayerBooks().get(asker).stream().filter(b -> b.number == rank).count());
+        } else
+            assertEquals(takenCount + 2, totalOfRankInHand(asker, rank));
         assertEquals(takenCount + 1, visibleToAllOfRankInHand(asker, rank));
     }
 

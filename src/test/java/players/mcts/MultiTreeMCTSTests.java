@@ -233,8 +233,11 @@ public class MultiTreeMCTSTests {
         LoveLetterGameState state = (LoveLetterGameState) game.getGameState();
 
         // need to call this to set up root
-        AbstractAction actionChosen = game.getPlayers().get(state.getCurrentPlayer())
-                ._getAction(state, fm.computeAvailableActions(state));
+        do {
+            game.getPlayers().get(state.getCurrentPlayer())
+                    ._getAction(state, fm.computeAvailableActions(state));
+        } while (mctsPlayer.getRoot(0) == null);
+
 
         TreeStatistics stats = new TreeStatistics(mctsPlayer.getRoot(0));
         System.out.println(stats);
@@ -308,8 +311,10 @@ public class MultiTreeMCTSTests {
         state.addAffectionToken(1);
         // this puts player 1 in the lead
 
-        AbstractAction actionChosen = game.getPlayers().get(state.getCurrentPlayer())
-                ._getAction(state, fm.computeAvailableActions(state));
+        do {
+            game.getPlayers().get(state.getCurrentPlayer())
+                    ._getAction(state, fm.computeAvailableActions(state));
+        } while (mctsPlayer.getRoot(0) == null);
 
 
         // the invariant then to check is that for each node in the tree p1 has a higher score than p0 or p3 for all trees
@@ -341,8 +346,10 @@ public class MultiTreeMCTSTests {
         state.addAffectionToken(1);
         // this puts player 1 in the lead
 
-        AbstractAction actionChosen = game.getPlayers().get(state.getCurrentPlayer())
-                ._getAction(state, fm.computeAvailableActions(state));
+        do {
+            game.getPlayers().get(state.getCurrentPlayer())
+                    ._getAction(state, fm.computeAvailableActions(state));
+        } while (mctsPlayer.getRoot(0) == null);
 
 
         // the invariant then to check is that for each node in the tree p1 has a higher score than p0 or p3 for all trees
