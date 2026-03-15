@@ -276,6 +276,7 @@ public class MCTSPlayer extends AbstractPlayer implements IAnyTimePlayer, IHasSt
         if (actions.size() == 1)
             return actions.getFirst();  // take the only action available
         long currentTimeNano = System.nanoTime();
+        // creating the root node also sets the Forward Model (and wraps it in any decorators)
         createRootNode(gameState);
         long timeTaken = System.nanoTime() - currentTimeNano;
 

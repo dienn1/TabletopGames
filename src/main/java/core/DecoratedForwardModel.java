@@ -38,6 +38,14 @@ public class DecoratedForwardModel extends AbstractForwardModel {
         return this;
     }
 
+    public List<IPlayerDecorator> getDecorators(int playerId) {
+        List<IPlayerDecorator> decorators = new ArrayList<>(generalDecorators);
+        if (playerSpecificDecorators.containsKey(playerId)) {
+            decorators.addAll(playerSpecificDecorators.get(playerId));
+        }
+        return decorators;
+    }
+
     public void clearDecorators() {
         generalDecorators.clear();
         for (List<IPlayerDecorator> decorators : playerSpecificDecorators.values()) {
@@ -65,7 +73,7 @@ public class DecoratedForwardModel extends AbstractForwardModel {
 
     @Override
     protected List<AbstractAction> _computeAvailableActions(AbstractGameState gameState) {
-        List<AbstractAction> actions = wrappedFM.computeAvailableActions(gameState);
+        List<AbstractAction> actions = wrappedFM._computeAvailableActions(gameState);
 
         // Then apply Decorators regardless of source of actions
         for (IPlayerDecorator decorator : generalDecorators) {
@@ -82,5 +90,19 @@ public class DecoratedForwardModel extends AbstractForwardModel {
     @Override
     protected void endPlayerTurn(AbstractGameState state) {
         wrappedFM.endPlayerTurn(state);
+    }
+
+    @Override
+    public void reset() {
+        // we call reset on all decorators, and the wrapped FM
+        for (IPlayerDecorator decorator : generalDecorators) {
+            decorator.reset();
+        }
+        for (List<IPlayerDecorator> decorators : playerSpecificDecorators.values()) {
+            for (IPlayerDecorator decorator : decorators) {
+                decorator.reset();
+            }
+        }
+        wrappedFM.reset();
     }
 }

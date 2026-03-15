@@ -3,6 +3,7 @@ package games.backgammon.actions;
 import core.AbstractGameState;
 import core.actions.AbstractAction;
 import core.interfaces.IPlayerDecorator;
+import games.backgammon.BGGameState;
 import org.json.simple.JSONObject;
 
 import java.util.ArrayList;
@@ -10,8 +11,8 @@ import java.util.List;
 
 public class LoadedDiceDecorator implements IPlayerDecorator {
 
-    List<double[]> pdfs;
-    int currentPDFIndex = 0;
+    final List<double[]> pdfs;
+    // currently we only load the first die (the second/third will not be changed)
 
     public LoadedDiceDecorator(int sides, double[] probabilities) {
         pdfs = new ArrayList<>(probabilities.length / sides);
@@ -48,32 +49,39 @@ public class LoadedDiceDecorator implements IPlayerDecorator {
         return pdfs.size();
     }
 
-    public int getCurrentPDF() {
-        return currentPDFIndex;
+    private boolean pdfsAreRoughlyEqual(double[] pdf1, double[] pdf2) {
+        if (pdf1 == null ^ pdf2 == null)
+            return false;
+        if (pdf1 == null && pdf2 == null)
+            return true;
+        if (pdf1.length != pdf2.length) {
+            return false;
+        }
+        for (int i = 0; i < pdf1.length; i++) {
+            if (Math.abs(pdf1[i] -  pdf2[i]) > 0.001) {
+                return false;
+            }
+        }
+        return true;
     }
 
     @Override
     public List<AbstractAction> actionFilter(AbstractGameState state, List<AbstractAction> possibleActions) {
         // we add the LoadDice action to the list of possible actions for the decision player
         List<AbstractAction> newPossibleActions = new ArrayList<>(possibleActions);
-        for (int i = 0; i < pdfs.size(); i++) {
-            if (currentPDFIndex == i) continue; // skip the current pdf, as this is already the in use
-            double[] pdf = pdfs.get(i);
+        BGGameState bgs  = (BGGameState) state;
+        double[] currentPDF = bgs.getDicePdf(0);
+        for (double[] pdf : pdfs) {
+            if (pdfsAreRoughlyEqual(currentPDF, pdf))
+                continue; // skip the current pdf, as this is already in use
             newPossibleActions.add(new LoadDice(0, pdf));
         }
         return newPossibleActions;
     }
 
     @Override
-    public void recordDecision(AbstractGameState state, AbstractAction action) {
-        // based on the actual action selected, we amend the current pdf index
-        if (action instanceof LoadDice loadDice) {
-            currentPDFIndex = pdfs.indexOf(loadDice.newPDF);
-        }
-    }
-
-    @Override
     public boolean decisionPlayerOnly() {
         return true; // the opponent is not modelled as being able to cheat
     }
+
 }

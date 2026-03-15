@@ -208,6 +208,10 @@ public class BGGameState extends AbstractGameState {
         return Arrays.copyOf(values, count);
     }
 
+    public double[] getDicePdf(int die) {
+        return dice[die].getPdf();
+    }
+
     public int piecesOnHomeBoard(int playerId) {
         BGParameters params = (BGParameters) getGameParameters();
         int count = 0;

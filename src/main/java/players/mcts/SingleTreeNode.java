@@ -327,6 +327,9 @@ public class SingleTreeNode {
         int numIters = 0;
         boolean stop = false;
         while (!stop) {
+            // before each search iteration, we reset the forward model (and its decorators)
+            forwardModel.reset();
+
             switch (params.information) {
                 case Closed_Loop:
                     setActionsFromOpenLoopState(state);

@@ -191,4 +191,9 @@ public abstract class AbstractForwardModel {
         }
     }
 
+    public void reset() {
+        // default is that no reset is required, as a forward model does not have state
+        // although it may have decoraters that do
+    }
+
 }

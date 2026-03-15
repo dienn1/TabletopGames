@@ -1,6 +1,7 @@
 package players.mcts;
 
 import core.actions.AbstractAction;
+import utilities.Pair;
 
 import java.util.List;
 
@@ -18,5 +19,12 @@ public class STNWithTestInstrumentation extends SingleTreeNode {
 
     public AbstractAction treePolicyAction(boolean useExploration) {
         return super.treePolicyAction(useExploration);
+    }
+
+    public List<Pair<Integer, AbstractAction>> getActionsInRollout() {
+        return actionsInRollout;
+    }
+    public List<Pair<Integer, AbstractAction>> getActionsInTree() {
+        return actionsInTree;
     }
 }

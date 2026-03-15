@@ -26,7 +26,7 @@ public class MTNRollout extends MultiTreeNode {
         switch (params.rolloutTermination) {
             case EXACT:
                 // in this case we just check that we have 10 actions in the rollout
-                assertEquals(params.rolloutLength, actionsInRollout.size());
+                assertEquals(params.rolloutLength* (params.rolloutLengthPerPlayer ? openLoopState.getNPlayers() : 1), actionsInRollout.size());
                 break;
             case START_ACTION:
                 // in this case we have at least 10 actions, and finish at the end of a player's Turn

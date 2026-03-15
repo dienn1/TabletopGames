@@ -1,7 +1,6 @@
 package games.backgammon;
 
 import core.AbstractForwardModel;
-import core.AbstractPlayer;
 import core.DecoratedForwardModel;
 import core.actions.AbstractAction;
 import core.interfaces.IPlayerDecorator;
@@ -10,19 +9,23 @@ import games.backgammon.actions.LoadedDiceDecorator;
 import games.backgammon.actions.RollDice;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mockito;
 import players.PlayerFactory;
-import players.mcts.MCTSPlayer;
+import players.mcts.*;
+import players.simple.RandomPlayer;
 
-import java.util.List;
+import java.util.*;
 
 import static org.junit.Assert.*;
+import static org.mockito.Mockito.*;
 
 public class CheatingAgentTests {
 
     BGGameState gameState;
     BGParameters parameters;
     AbstractForwardModel forwardModel;
-    AbstractPlayer decoratedMCTSPlayer;
+    TestMCTSPlayer decoratedMCTSPlayer;
+    RandomPlayer decoratedRandomPlayer;
 
     @Before
     public void setUp() {
@@ -34,17 +37,27 @@ public class CheatingAgentTests {
         assertEquals(new RollDice(), forwardModel.computeAvailableActions(gameState).getFirst());
         forwardModel.next(gameState, new RollDice());
 
-        decoratedMCTSPlayer = PlayerFactory.createPlayer("src/test/java/games/backgammon/CheatingAgent.json");
+        decoratedMCTSPlayer = (TestMCTSPlayer) PlayerFactory.createPlayer("src/test/java/games/backgammon/CheatingAgent.json");
         decoratedMCTSPlayer.setPlayerID(0);
+        decoratedMCTSPlayer.rolloutTest = false;
         decoratedMCTSPlayer.setForwardModel(forwardModel);
+
+        decoratedRandomPlayer = new RandomPlayer();
+        decoratedRandomPlayer.setPlayerID(0);
+        decoratedRandomPlayer.setForwardModel(forwardModel);
+        decoratedRandomPlayer.addDecorator(new LoadedDiceDecorator(6,
+                new double[]{
+                        0.167, 0.167, 0.166, 0.166, 0.167, 0.167,
+                        0.1, 0.1, 0.1, 0.1, 0.1, 0.5,
+                        1.0, 0.0, 0.0, 0.0, 0.0, 0.0
+                }));
     }
 
     @Test
     public void loadCheatingAgentFromJSON() {
-        assertTrue(decoratedMCTSPlayer instanceof MCTSPlayer);
         List<IPlayerDecorator> decorators = decoratedMCTSPlayer.getDecorators();
         assertEquals(1, decorators.size());
-        assertTrue(decorators.get(0) instanceof LoadedDiceDecorator);
+        assertTrue(decorators.getFirst() instanceof LoadedDiceDecorator);
 
         LoadedDiceDecorator loadedDiceDecorator = (LoadedDiceDecorator) decorators.get(0);
         assertEquals(3, loadedDiceDecorator.getPDFCount());
@@ -61,7 +74,8 @@ public class CheatingAgentTests {
     @Test
     public void cheaterGetsAdditionalOptionsInRollDicePhase() {
         // move two pieces
-        IPlayerDecorator loadedDiceDecorator = decoratedMCTSPlayer.getDecorators().get(0);
+        // here we use the forward model outside of the AbstractPlayer.getAction() .. which is tested later
+        IPlayerDecorator loadedDiceDecorator = decoratedMCTSPlayer.getDecorators().getFirst();
         forwardModel = (new DecoratedForwardModel(forwardModel)).addDecorator(1, loadedDiceDecorator);
 
         forwardModel.next(gameState, forwardModel.computeAvailableActions(gameState).getFirst());
@@ -105,6 +119,12 @@ public class CheatingAgentTests {
         assertEquals(BGGamePhase.MovePieces, gameState.getGamePhase());
         assertEquals(1, gameState.getCurrentPlayer());
 
+        // check the expected pdf has been loaded
+        double[] newPDF = gameState.dice[0].getPdf();
+        for (int i = 0; i < newPDF.length; i++) {
+            assertEquals(i == 5 ? 0.5: 0.1, newPDF[i], 0.001);
+        }
+
         // Now we roll the dice 100 times, and expect about 50 sixes
         int sixCountOne = 0;
         int sixCountTwo = 0;
@@ -120,14 +140,13 @@ public class CheatingAgentTests {
         assertTrue(sixCountOne > 35);
         assertTrue(sixCountTwo < 25);
         assertTrue(sixCountTwo > 4);
-        assertEquals(1, loadedDiceDecorator.getCurrentPDF());
     }
 
     @Test
     public void loadDiceOptionsExcludeTheCurrentSelectedPdfViaFM() {
         LoadedDiceDecorator loadedDiceDecorator = new LoadedDiceDecorator(6,
                 new double[]{
-                        0.167, 0.167, 0.167, 0.167, 0.167, 0.167,
+                        0.167, 0.167, 0.166, 0.166, 0.167, 0.167,
                         0.1, 0.1, 0.1, 0.1, 0.1, 0.5,
                         1.0, 0.0, 0.0, 0.0, 0.0, 0.0
                 });
@@ -137,9 +156,7 @@ public class CheatingAgentTests {
         forwardModel.next(gameState, forwardModel.computeAvailableActions(gameState).getFirst());
 
         List<AbstractAction> actions = forwardModel.computeAvailableActions(gameState);
-        assertEquals(0, loadedDiceDecorator.getCurrentPDF());
         forwardModel.next(gameState, actions.get(1));
-        assertEquals(1, loadedDiceDecorator.getCurrentPDF());
 
         forwardModel.next(gameState, forwardModel.computeAvailableActions(gameState).getFirst());
         forwardModel.next(gameState, forwardModel.computeAvailableActions(gameState).getFirst());
@@ -161,51 +178,171 @@ public class CheatingAgentTests {
 
     @Test
     public void loadDiceOptionsExcludeTheCurrentSelectedPdfViaPlayer() {
-        LoadedDiceDecorator loadedDiceDecorator = (LoadedDiceDecorator) decoratedMCTSPlayer.getDecorators().getFirst();
         forwardModel.next(gameState, forwardModel.computeAvailableActions(gameState).getFirst());
         forwardModel.next(gameState, forwardModel.computeAvailableActions(gameState).getFirst());
+        forwardModel.next(gameState, forwardModel.computeAvailableActions(gameState).getFirst());
+        forwardModel.next(gameState, forwardModel.computeAvailableActions(gameState).getFirst());
+        forwardModel.next(gameState, forwardModel.computeAvailableActions(gameState).getFirst());
+        assertEquals(0, gameState.getCurrentPlayer());
 
+        LoadedDiceDecorator loadedDiceDecorator = (LoadedDiceDecorator) decoratedRandomPlayer.getDecorators().getFirst();
         AbstractAction actionTaken;
         int count = 0;
         do {
-            actionTaken = decoratedMCTSPlayer.getAction(gameState, forwardModel.computeAvailableActions(gameState));
+            actionTaken = decoratedRandomPlayer.getAction(gameState, forwardModel.computeAvailableActions(gameState));
             count++;
         } while (count < 10 && !(actionTaken instanceof LoadDice));
         if (!(actionTaken instanceof LoadDice)) {
             fail("Failed to take a LoadDice action after 10 attempts, got " + actionTaken);
         }
         int selectedPdf = ((LoadDice) actionTaken).getPdf()[0] == 1.0 ? 2 : 1; // we have two options, one with pdf[0] = 1.0, and one with pdf[0] = 0.1
-        assertEquals(selectedPdf, loadedDiceDecorator.getCurrentPDF());
         forwardModel.next(gameState, actionTaken);
-        assertEquals(selectedPdf, loadedDiceDecorator.getCurrentPDF());
 
         forwardModel.next(gameState, forwardModel.computeAvailableActions(gameState).getFirst());
         forwardModel.next(gameState, forwardModel.computeAvailableActions(gameState).getFirst());
 
-        forwardModel.next(gameState, new RollDice()); // p0
+        forwardModel.next(gameState, new RollDice()); // p1
         forwardModel.next(gameState, forwardModel.computeAvailableActions(gameState).getFirst());
         forwardModel.next(gameState, forwardModel.computeAvailableActions(gameState).getFirst());
 
         List<AbstractAction> actions = loadedDiceDecorator.actionFilter(gameState, forwardModel.computeAvailableActions(gameState));
         assertEquals(BGGamePhase.RollDice, gameState.getGamePhase());
-        assertEquals(1, gameState.getCurrentPlayer());
+        assertEquals(0, gameState.getCurrentPlayer());
         assertEquals(3, actions.size());
         for (int i = 0; i < 6; i++) {
             assertEquals(0.167, ((LoadDice) actions.get(1)).getPdf()[i], 0.01);
-            assertEquals(i == 0 ? 1.0 : 0.0, ((LoadDice) actions.get(2)).getPdf()[i], 1e-3);
+            if (selectedPdf == 1)
+                assertEquals(i == 0 ? 1.0 : 0.0, ((LoadDice) actions.get(2)).getPdf()[i], 1e-3);
+            else
+                assertEquals(i == 5 ? 0.5 : 0.1, ((LoadDice) actions.get(2)).getPdf()[i], 1e-3);
         }
-
     }
 
     @Test
-    public void decoratedPlayerUsesDecoratedForwardModelInPlanning() {
-        fail("Not yet implemented");
-        // TODO: If we take a decision, we then look at the tree and confirm we have no LoadDice actions for the opponent
-        // TODO: and several for the correct player
+    public void decoratorOnlyAppliesLoadedDiceForSpecifiedPlayer() {
+        // the decorator is for player 0...so player 1 cannot select anything other than rolling the dice
+        forwardModel.next(gameState, forwardModel.computeAvailableActions(gameState).getFirst());
+        forwardModel.next(gameState, forwardModel.computeAvailableActions(gameState).getFirst());
+
+        assertEquals(1, gameState.getCurrentPlayer());
+        AbstractAction actionTaken;
+        int count = 0;
+        do {
+            assertEquals(1, forwardModel.computeAvailableActions(gameState).size());
+            actionTaken = decoratedMCTSPlayer.getAction(gameState, forwardModel.computeAvailableActions(gameState));
+            count++;
+        } while (count < 10 && !(actionTaken instanceof LoadDice));
+        assertFalse(actionTaken instanceof LoadDice);
     }
 
     @Test
-    public void decoratorOnPlayerIsNotAffectedByDecisionsRecordedOnDecoratedForwardModel() {
+    public void undecoratedPlayerNeverUsesLoadDice() {
+        // first check that MCTS search for a different agent never Loads Dice
+        decoratedMCTSPlayer.clearDecorators();
+        decoratedMCTSPlayer.setForwardModel(forwardModel);  // the old was was already decorated
+        decoratedMCTSPlayer.getAction(gameState, forwardModel.computeAvailableActions(gameState));
+        SingleTreeNode root = decoratedMCTSPlayer.getRoot();
+        int[] countOfLoadDice = new int[2];
+
+        Queue<SingleTreeNode> queue = new LinkedList<>();
+        if (root instanceof MultiTreeNode mtn) {
+            queue.add(mtn.getRoot(0));
+            queue.add(mtn.getRoot(1));
+        } else {
+            queue.add(root);
+        }
+        while (!queue.isEmpty()) {
+            SingleTreeNode node = queue.poll();
+            Map<AbstractAction, SingleTreeNode[]> data = node.getChildren();
+            int player = node.getActor();
+            for (AbstractAction action : data.keySet()) {
+                // we check to see what the action is, add it to the count if relevant
+                // and then add the children nodes to the queue
+                if (action instanceof LoadDice) {
+                    countOfLoadDice[player]++;
+                }
+                SingleTreeNode[] children = data.get(action);
+                if (children != null)
+                    // add non-null entries
+                    for (SingleTreeNode child : children) {
+                        if (child != null) {
+                            queue.add(child);
+                        }
+                    }
+            }
+        }
+        assertEquals(0, countOfLoadDice[0]);
+        assertEquals(0, countOfLoadDice[1]);
+    }
+
+    @Test
+    public void decoratedPlayerNeverUsesLoadDiceForOpponent() {
+        // then check that when planning for us, we only use LoadDice for our action
+        forwardModel.next(gameState, forwardModel.computeAvailableActions(gameState).getFirst());
+        forwardModel.next(gameState, forwardModel.computeAvailableActions(gameState).getFirst());
+        assertEquals(1, gameState.getCurrentPlayer());
+
+        decoratedMCTSPlayer.getAction(gameState, forwardModel.computeAvailableActions(gameState));
+        int[] countOfLoadDice = new int[2];
+        Queue<SingleTreeNode> queue = new LinkedList<>();
+        SingleTreeNode root = decoratedMCTSPlayer.getRoot();
+        if (root instanceof MultiTreeNode mtn) {
+            queue.add(mtn.getRoot(0));
+            queue.add(mtn.getRoot(1));
+        } else {
+            queue.add(root);
+        }
+        while (!queue.isEmpty()) {
+            SingleTreeNode node = queue.poll();
+            Map<AbstractAction, SingleTreeNode[]> data = node.getChildren();
+            int player = node.getActor();
+            for (AbstractAction action : data.keySet()) {
+                // we check to see what the action is, add it to the count if relevant
+                // and then add the children nodes to the queue
+                if (action instanceof LoadDice) {
+                    countOfLoadDice[player]++;
+                }
+                SingleTreeNode[] children = data.get(action);
+                if (children != null) {
+                    // add non-null entries
+                    for (SingleTreeNode child : children) {
+                        if (child != null) {
+                            queue.add(child);
+                        }
+                    }
+                }
+            }
+        }
+        System.out.println("countOfLoadDice: " + countOfLoadDice[0] + " :   " + countOfLoadDice[1]);
+        assertNotEquals(0, countOfLoadDice[0]);
+        assertEquals(0, countOfLoadDice[1]);
+    }
+
+    @Test
+    public void decoratorResetIsCalledOncePerIteration() {
+        IPlayerDecorator mockedDecorator = Mockito.mock(IPlayerDecorator.class);
+        when(mockedDecorator.actionFilter(any(), any()))
+                .thenAnswer(invocation -> invocation.getArgument(1)); // return the actions unchanged
+        when(mockedDecorator.copy()).thenReturn(mockedDecorator); // return the same instance for simplicity
+        decoratedMCTSPlayer.addDecorator(mockedDecorator);
+        decoratedMCTSPlayer.getAction(gameState, forwardModel.computeAvailableActions(gameState));
+        verify(mockedDecorator, times(1000)).reset(); // once per iteration
+        verify(mockedDecorator, times(3)).copy();
+        // Currently we have the forward model on each of the player root nodes referenced from MultiTreeNode
+        // as well as on the MultTreeNode giving P +1 copies with MultiTree, which feels a little inefficient
+        // But, tampering with this would be too dangerous
+    }
+
+    @Test
+    public void checkNoConsecutiveLoadOrRollDiceActions() {
         fail("Not yet implemented");
+        // TODO: on each MCTS rollout we should not have any consecutive acions from the RollDice/LoadDice family
+
+        // How to test?
+        // I can just start from a starting game state, and run through one game using the
+        // decorated player!
+        // Hmm...but my suspicion is that this may be a problem within mcts
+        // I initialise with Instrumented factory
+        // then
     }
 }
