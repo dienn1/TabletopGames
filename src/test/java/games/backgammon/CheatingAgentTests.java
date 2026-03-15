@@ -13,6 +13,7 @@ import org.mockito.Mockito;
 import players.PlayerFactory;
 import players.mcts.*;
 import players.simple.RandomPlayer;
+import utilities.Pair;
 
 import java.util.*;
 
@@ -122,7 +123,7 @@ public class CheatingAgentTests {
         // check the expected pdf has been loaded
         double[] newPDF = gameState.dice[0].getPdf();
         for (int i = 0; i < newPDF.length; i++) {
-            assertEquals(i == 5 ? 0.5: 0.1, newPDF[i], 0.001);
+            assertEquals(i == 5 ? 0.5 : 0.1, newPDF[i], 0.001);
         }
 
         // Now we roll the dice 100 times, and expect about 50 sixes
@@ -335,14 +336,24 @@ public class CheatingAgentTests {
 
     @Test
     public void checkNoConsecutiveLoadOrRollDiceActions() {
-        fail("Not yet implemented");
-        // TODO: on each MCTS rollout we should not have any consecutive acions from the RollDice/LoadDice family
+        // on each MCTS rollout we should not have any consecutive actions from the RollDice/LoadDice family
 
-        // How to test?
-        // I can just start from a starting game state, and run through one game using the
-        // decorated player!
-        // Hmm...but my suspicion is that this may be a problem within mcts
-        // I initialise with Instrumented factory
-        // then
+        for (int move = 0; move > 10; move++) {
+            AbstractAction actionTaken = decoratedMCTSPlayer.getAction(gameState, forwardModel.computeAvailableActions(gameState));
+            // now check the rollout
+            STNWithTestInstrumentation root = (STNWithTestInstrumentation) decoratedMCTSPlayer.getRoot(gameState.getCurrentPlayer());
+            List<Pair<Integer, AbstractAction>> rolloutActions = root.getActionsInRollout();
+            AbstractAction previousAction = null;
+            for (Pair<Integer, AbstractAction> pair : rolloutActions) {
+                if (previousAction instanceof RollDice || previousAction instanceof LoadDice) {
+                    assertFalse(previousAction instanceof RollDice);
+                    assertFalse(previousAction instanceof LoadDice);
+                }
+                previousAction = pair.b;
+            }
+
+            forwardModel.next(gameState, actionTaken);
+        }
+
     }
 }
