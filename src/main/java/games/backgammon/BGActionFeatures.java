@@ -1,12 +1,12 @@
-package games.backgammon.stats;
+package games.backgammon;
 
 import core.AbstractGameState;
 import core.actions.AbstractAction;
 import core.actions.DoNothing;
 import core.interfaces.IActionFeatureVector;
-import games.backgammon.BGGameState;
-import games.backgammon.BGParameters;
+import games.backgammon.actions.LoadDice;
 import games.backgammon.actions.MovePiece;
+import games.backgammon.actions.RollDice;
 
 public class BGActionFeatures implements IActionFeatureVector {
 
@@ -21,7 +21,7 @@ public class BGActionFeatures implements IActionFeatureVector {
     public double[] doubleVector(AbstractAction action, AbstractGameState state, int playerID) {
         BGGameState bgState = (BGGameState) state;
         BGParameters params = (BGParameters) state.getGameParameters();
-        if (action instanceof DoNothing) {
+        if (action instanceof DoNothing || action instanceof RollDice || action instanceof LoadDice) {
             return new double[names.length];
         }
         int boardLength = bgState.getLengthOfTrack();

@@ -2,8 +2,8 @@ package players.heuristics;
 
 import core.actions.AbstractAction;
 import evaluation.features.AutomatedFeatures;
-import games.backgammon.stats.BGActionFeatures;
-import games.backgammon.stats.BGStateFeatures;
+import games.backgammon.BGActionFeatures;
+import games.backgammon.BGStateFeatures;
 import games.dominion.DominionConstants;
 import games.dominion.DominionFGParameters;
 import games.dominion.DominionForwardModel;
