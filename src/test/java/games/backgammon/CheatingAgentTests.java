@@ -51,7 +51,7 @@ public class CheatingAgentTests {
                         0.167, 0.167, 0.166, 0.166, 0.167, 0.167,
                         0.1, 0.1, 0.1, 0.1, 0.1, 0.5,
                         1.0, 0.0, 0.0, 0.0, 0.0, 0.0
-                }));
+                }, true));
     }
 
     @Test
@@ -70,6 +70,7 @@ public class CheatingAgentTests {
         for (int i = 0; i < 6; i++) {
             assertEquals(i == 0 ? 1.0 : 0.0, loadedDiceDecorator.getPDF(2)[i], 1e-3);
         }
+        assertTrue(loadedDiceDecorator.isPermanent());
     }
 
     @Test
@@ -103,6 +104,29 @@ public class CheatingAgentTests {
         assertEquals(1, actions.size());
     }
 
+
+    @Test
+    public void loadingTheDiceAlsoRollsThem() {
+        // here we use the forward model outside of the AbstractPlayer.getAction() .. which is tested later
+        IPlayerDecorator loadedDiceDecorator = decoratedMCTSPlayer.getDecorators().getFirst();
+        forwardModel = (new DecoratedForwardModel(forwardModel)).addDecorator(1, loadedDiceDecorator);
+        forwardModel.next(gameState, forwardModel.computeAvailableActions(gameState).getFirst());
+        forwardModel.next(gameState, forwardModel.computeAvailableActions(gameState).getFirst());
+
+        // check we have cheat options for player 1
+        assertEquals(BGGamePhase.RollDice, gameState.getGamePhase());
+        assertEquals(1, gameState.getCurrentPlayer());
+        List<AbstractAction> actions = forwardModel.computeAvailableActions(gameState);
+        assertEquals(3, actions.size());
+        assertTrue(actions.get(1) instanceof LoadDice);
+        assertTrue(actions.get(2) instanceof LoadDice);
+
+        int[] oldDiceValues = gameState.availableDiceValues.clone();
+        forwardModel.next(gameState, actions.get(2));
+        // check that the dice have been rolled
+        assertEquals(BGGamePhase.MovePieces, gameState.getGamePhase());
+        assertFalse(oldDiceValues[0] == gameState.availableDiceValues[0] && oldDiceValues[1] == gameState.availableDiceValues[1]);
+    }
 
     @Test
     public void loadDiceActionChangesTheProbabilities() {
@@ -150,7 +174,7 @@ public class CheatingAgentTests {
                         0.167, 0.167, 0.166, 0.166, 0.167, 0.167,
                         0.1, 0.1, 0.1, 0.1, 0.1, 0.5,
                         1.0, 0.0, 0.0, 0.0, 0.0, 0.0
-                });
+                }, true);
         forwardModel = (new DecoratedForwardModel(forwardModel)).addDecorator(1, loadedDiceDecorator);
 
         forwardModel.next(gameState, forwardModel.computeAvailableActions(gameState).getFirst());
@@ -338,14 +362,14 @@ public class CheatingAgentTests {
     public void checkNoConsecutiveLoadOrRollDiceActions() {
         // on each MCTS rollout we should not have any consecutive actions from the RollDice/LoadDice family
 
-        for (int move = 0; move > 10; move++) {
+        for (int move = 0; move < 10; move++) {
             AbstractAction actionTaken = decoratedMCTSPlayer.getAction(gameState, forwardModel.computeAvailableActions(gameState));
             // now check the rollout
-            STNWithTestInstrumentation root = (STNWithTestInstrumentation) decoratedMCTSPlayer.getRoot(gameState.getCurrentPlayer());
+            STNWithTestInstrumentation root = (STNWithTestInstrumentation) decoratedMCTSPlayer.getRoot();
             List<Pair<Integer, AbstractAction>> rolloutActions = root.getActionsInRollout();
             AbstractAction previousAction = null;
             for (Pair<Integer, AbstractAction> pair : rolloutActions) {
-                if (previousAction instanceof RollDice || previousAction instanceof LoadDice) {
+                if (pair.b instanceof RollDice || pair.b instanceof LoadDice) {
                     assertFalse(previousAction instanceof RollDice);
                     assertFalse(previousAction instanceof LoadDice);
                 }
@@ -353,6 +377,30 @@ public class CheatingAgentTests {
             }
 
             forwardModel.next(gameState, actionTaken);
+        }
+    }
+
+    @Test
+    public void oneOffShiftRevertsPdfBackAfterRoll() {
+        decoratedMCTSPlayer = (TestMCTSPlayer) PlayerFactory.createPlayer("src/test/java/games/backgammon/CheatingAgentOneOff.json");
+        decoratedMCTSPlayer.setPlayerID(1);
+        decoratedMCTSPlayer.rolloutTest = false;
+        decoratedMCTSPlayer.setForwardModel(forwardModel);
+
+        assertTrue(decoratedMCTSPlayer.getDecorators().getFirst() instanceof LoadedDiceDecorator);
+        LoadedDiceDecorator loadedDiceDecorator = (LoadedDiceDecorator) decoratedMCTSPlayer.getDecorators().getFirst();
+        assertFalse(loadedDiceDecorator.isPermanent());
+
+        forwardModel.next(gameState, forwardModel.computeAvailableActions(gameState).getFirst());
+        forwardModel.next(gameState, forwardModel.computeAvailableActions(gameState).getFirst());
+        assertEquals(1, gameState.getCurrentPlayer());
+
+        List<AbstractAction> actions = decoratedMCTSPlayer.getForwardModel().computeAvailableActions(gameState);
+        assertEquals(3,  actions.size());
+        for (int i = 0; i < 10; i++) {
+            forwardModel.next(gameState, actions.get(2)); // we take the one-off shift
+            assertEquals(1, gameState.availableDiceValues[0]);
+            assertEquals(0.167, gameState.getDicePdf(0)[0], 0.001); // check the pdf is the old one
         }
 
     }

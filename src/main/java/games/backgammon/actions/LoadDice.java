@@ -14,16 +14,31 @@ public class LoadDice extends AbstractAction {
 
     protected final double[] newPDF;
     protected final int die;
+    protected final boolean singleRoll;
 
-    public LoadDice(int die, double[] newPDF) {
+    static LoadDice getPermanentShift(int die, double[] newPDF) {
+        return new LoadDice(die, newPDF, false);
+    }
+    static LoadDice getOneOffShift(int die,  double[] newPDF) {
+        return new LoadDice(die, newPDF, true);
+    }
+
+    private LoadDice(int die, double[] newPDF, boolean singleRoll) {
         this.newPDF = newPDF;
         this.die = die;
+        this.singleRoll = singleRoll;
     }
 
     @Override
     public boolean execute(AbstractGameState gs) {
         BGGameState state = (BGGameState) gs;
+        double[] originalPDF = state.getDicePdf(die);
         state.setDicePdf(die, newPDF);
+        state.rollDice();
+        if (singleRoll) {
+            // reset pdf
+            state.setDicePdf(die, originalPDF);
+        }
         return true;
     }
 

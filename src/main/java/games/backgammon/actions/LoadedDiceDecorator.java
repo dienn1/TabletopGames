@@ -12,10 +12,12 @@ import java.util.List;
 public class LoadedDiceDecorator implements IPlayerDecorator {
 
     final List<double[]> pdfs;
+    final boolean permanentChange;
     // currently we only load the first die (the second/third will not be changed)
 
-    public LoadedDiceDecorator(int sides, double[] probabilities) {
+    public LoadedDiceDecorator(int sides, double[] probabilities, boolean permanentChange) {
         pdfs = new ArrayList<>(probabilities.length / sides);
+        this.permanentChange = permanentChange;
         int nDice = probabilities.length / sides;
         for (int i = 0; i < nDice; i++) {
             double[] pdf = new double[sides];
@@ -31,6 +33,7 @@ public class LoadedDiceDecorator implements IPlayerDecorator {
         pdfs = new ArrayList<>();
         int sides = json.get("sides") != null ? ((Long) json.get("sides")).intValue() : 6; // default to 6 sides if not specified
         List<Double> probabilities = (List<Double>) json.get("probabilities");
+        permanentChange = json.get("permanentChange") != null ? (Boolean) json.get("permanentChange") : false; // default to false if not specified
         double[] pdf = new double[sides];
         for (int i = 0; i < probabilities.size(); i++) {
             pdf[i % sides] += probabilities.get(i);
@@ -74,7 +77,11 @@ public class LoadedDiceDecorator implements IPlayerDecorator {
         for (double[] pdf : pdfs) {
             if (pdfsAreRoughlyEqual(currentPDF, pdf))
                 continue; // skip the current pdf, as this is already in use
-            newPossibleActions.add(new LoadDice(0, pdf));
+            if (permanentChange) {
+                newPossibleActions.add(LoadDice.getPermanentShift(0, pdf));
+            } else {
+                newPossibleActions.add(LoadDice.getOneOffShift(0, pdf));
+            }
         }
         return newPossibleActions;
     }
@@ -84,4 +91,7 @@ public class LoadedDiceDecorator implements IPlayerDecorator {
         return true; // the opponent is not modelled as being able to cheat
     }
 
+    public boolean isPermanent() {
+        return permanentChange;
+    }
 }
