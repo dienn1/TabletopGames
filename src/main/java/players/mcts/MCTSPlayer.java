@@ -337,6 +337,10 @@ public class MCTSPlayer extends AbstractPlayer implements IAnyTimePlayer, IHasSt
     public Map<AbstractAction, Map<String, Object>> getDecisionStats() {
         Map<AbstractAction, Map<String, Object>> retValue = new LinkedHashMap<>();
 
+        // no decision statistics
+        if (root == null)
+            return retValue;
+
         int players = root.state.getNPlayers();
         if (root != null && root.getVisits() > 1) {
             for (AbstractAction action : root.actionValues.keySet()) {

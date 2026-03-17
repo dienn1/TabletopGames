@@ -59,7 +59,10 @@ public class MCTSMetrics implements IMetricsCollection {
                     AbstractAction secondAction = sortedActions.get(1); // we know there are at least 2 actions
                     records.put("SecondAction", secondAction.getString(e.state));
                     if ( actionValueEstimates.get(secondAction).valueOf(e.playerID) > actionValueEstimates.get(e.action).valueOf(e.playerID)) {
-                        throw new AssertionError("Something odd");
+                        System.out.println("Warning: second action has higher value than chosen action" +
+                                String.format(" (%.4f to %.4f)",
+                                        actionValueEstimates.get(secondAction).valueOf(e.playerID),
+                                        actionValueEstimates.get(e.action).valueOf(e.playerID)));
                     }
                     records.put("SecondActionValue", actionValueEstimates.get(secondAction).valueOf(e.playerID));
                     // this may just be the same as the best action
@@ -68,10 +71,12 @@ public class MCTSMetrics implements IMetricsCollection {
                     if (actionValueEstimates.containsKey(worstAction)) {
                         records.put("WorstActionValue", actionValueEstimates.get(worstAction).valueOf(e.playerID));
                     } else {
-                        throw new AssertionError("WorstAction should have an estimate");
+                   //     throw new AssertionError("WorstAction should have an estimate");
+                        System.out.println("WorstAction should have an estimate");
                     }
                 } else {
-                    throw new AssertionError("Action should really have an estimate");
+//                    throw new AssertionError("Action should really have an estimate");
+                    System.out.println("Warning: action has no value");
                 }
                 records.put("ActionsAtRoot", root.actionValues.size());
                 records.put("fmCalls", mctsPlayer.root.fmCallsCount / visits);

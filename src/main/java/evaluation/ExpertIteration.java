@@ -53,6 +53,7 @@ public class ExpertIteration {
     boolean useRounds, useStateInAction;
     String prefix = "EI";
     AbstractPlayer bestAgent = null;
+    String originalOpponentName;
     Map<String, Integer> tournamentWinsByAgent = new HashMap<>();
     int consecutiveWins = 0;
     Map<RunArg, Object> config;
@@ -139,6 +140,7 @@ public class ExpertIteration {
         // load in the initial agent(s)
         agents = new ArrayList<>(PlayerFactory.createPlayers(player));
         bestAgent = agents.getFirst();
+        originalOpponentName = bestAgent.toString();
 
         IActionHeuristic currentActionHeuristic = null;
 
@@ -263,7 +265,6 @@ public class ExpertIteration {
         // where X is a unique identifier for the agent (e.g. its rank in the final tournament)
         // and YY is the alpha rank of the agent in the final tournament.
 
-        // TODO: For the final set of agents, we really just want the Pareto front
         ParetoAnalysis paretoAnalysis = new ParetoAnalysis();
         Map<String, Pair<Double, Double>> paretoRankings = paretoAnalysis.getRanking(runningTournamentResults);
 
@@ -274,15 +275,20 @@ public class ExpertIteration {
 
         AlphaRankAnalysis alphaRankAnalysis = new AlphaRankAnalysis(false);
         Map<String, Pair<Double, Double>> alphaRankings = alphaRankAnalysis.getRanking(runningTournamentResults);
-        agents.sort(comparingDouble(a -> -alphaRankings.get(a.toString()).a)); // then sort by alpha rank
+        agents.sort(comparingDouble(a -> -alphaRankings.get(a.toString()).a)); // then sort by alpha rank00
         for (int i = 0; i < agents.size(); i++) {
             if (firstParetoFront.contains(agents.get(i).toString())) {
                 // only save those agents on the Pareto Front
                 AbstractPlayer agent = agents.get(i);
-                // format is XXX_03.json"
-                int originalIteration = Integer.parseInt(agent.toString().split("_")[1].replaceAll("\\D+", ""));
-                String originalFileName = String.format("%sNTBEA_%02d.json", config.get(RunArg.valueSS).equals("") ? "Action" : "Value", originalIteration);
                 String newFileName = String.format("FinalAgent_R%02d_A%2d.json", i + 1, Math.round(alphaRankings.get(agent.toString()).a * 100.0));
+                String originalFileName;
+                if (agents.get(i).toString().equals(originalOpponentName))
+                    originalFileName = player;
+                else {
+                    // format is XXX_03.json"
+                    int originalIteration = Integer.parseInt(agent.toString().split("_")[1].replaceAll("\\D+", ""));
+                    originalFileName = String.format("%sNTBEA_%02d.json", config.get(RunArg.valueSS).equals("") ? "Action" : "Value", originalIteration);
+                }
                 try {
                     // we now copy the file for the agent
                     File oldFile = new File(dataDir + File.separator + originalFileName);
@@ -528,7 +534,7 @@ public class ExpertIteration {
                         true);
                 case ActionTarget.MCTS -> {
                     MCTSPlayer oracle = (bestAgent instanceof MCTSPlayer) ? (MCTSPlayer) bestAgent.copy() : ((MCTSPlayer) agents.getLast()).copy();
-                    if (!(oracle instanceof MCTSPlayer)) {
+                    if (oracle == null) {
                         throw new IllegalArgumentException("Best agent must be an MCTSPlayer to use MCTS as action target");
                     }
                     // For the oracle we set a high budget, and tweak parameters to ensure some exploration
