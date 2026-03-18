@@ -18,7 +18,7 @@ public class BackupTests {
     MCTSParams params = new MCTSParams();
     TestMCTSPlayer player;
     Random rnd = new Random(303897);
-    STNWithTestInstrumentation root;
+    SingleTreeNode root;
 
     List<AbstractAction> baseActions = List.of(new LMRAction("Left"), new LMRAction("Middle"), new LMRAction("Right"));
     List<SingleTreeNode> nodeTrajectory001;
@@ -28,9 +28,9 @@ public class BackupTests {
 
     public void setupPlayer() {
         fm.setup(game);
-        player = new TestMCTSPlayer(params, STNWithTestInstrumentation::new);
+        player = new TestMCTSPlayer(params);
         player.setForwardModel(fm);
-        root = (STNWithTestInstrumentation) SingleTreeNode.createRootNode(player, game, rnd, STNWithTestInstrumentation::new);
+        root = SingleTreeNode.createRootNode(player, game, rnd, SingleTreeNode::new);
 
         // we construct a known tree on which we will then apply some backups
         // This assumes we will be back-propagating a trajectory of Middle, Left, Right, Middle

@@ -6,6 +6,7 @@ import core.actions.AbstractAction;
 import core.interfaces.IPlayerDecorator;
 import games.backgammon.actions.LoadDice;
 import games.backgammon.actions.LoadedDiceDecorator;
+import games.backgammon.actions.MovePiece;
 import games.backgammon.actions.RollDice;
 import org.junit.Before;
 import org.junit.Test;
@@ -103,6 +104,28 @@ public class CheatingAgentTests {
         assertEquals(1, actions.size());
     }
 
+    @Test
+    public void loadDiceNotAddedInMovePiecesPhase() {
+        IPlayerDecorator loadedDiceDecorator = decoratedMCTSPlayer.getDecorators().getFirst();
+        forwardModel = (new DecoratedForwardModel(forwardModel)).addDecorator(1, loadedDiceDecorator);
+
+        forwardModel.next(gameState, forwardModel.computeAvailableActions(gameState).getFirst());
+        forwardModel.next(gameState, forwardModel.computeAvailableActions(gameState).getFirst());
+
+        // player 1 just rolls the dice
+        assertEquals(1, gameState.getCurrentPlayer());
+        forwardModel.next(gameState, forwardModel.computeAvailableActions(gameState).getFirst());
+        assertEquals(BGGamePhase.MovePieces, gameState.getGamePhase());
+        assertEquals(1, gameState.getCurrentPlayer());
+
+
+        List<AbstractAction> actions = forwardModel.computeAvailableActions(gameState);
+        assertTrue(actions.stream().allMatch(a -> a instanceof MovePiece));
+
+        forwardModel.next(gameState, forwardModel.computeAvailableActions(gameState).getFirst());
+        actions = forwardModel.computeAvailableActions(gameState);
+        assertTrue(actions.stream().allMatch(a -> a instanceof MovePiece));
+    }
 
     @Test
     public void loadDiceActionChangesTheProbabilities() {
@@ -338,14 +361,14 @@ public class CheatingAgentTests {
     public void checkNoConsecutiveLoadOrRollDiceActions() {
         // on each MCTS rollout we should not have any consecutive actions from the RollDice/LoadDice family
 
-        for (int move = 0; move > 10; move++) {
+        for (int move = 0; move < 10; move++) {
             AbstractAction actionTaken = decoratedMCTSPlayer.getAction(gameState, forwardModel.computeAvailableActions(gameState));
             // now check the rollout
-            STNWithTestInstrumentation root = (STNWithTestInstrumentation) decoratedMCTSPlayer.getRoot(gameState.getCurrentPlayer());
-            List<Pair<Integer, AbstractAction>> rolloutActions = root.getActionsInRollout();
+            SingleTreeNode root = decoratedMCTSPlayer.getRoot();
+            List<Pair<Integer, AbstractAction>> rolloutActions =  root.getActionsInRollout();
             AbstractAction previousAction = null;
             for (Pair<Integer, AbstractAction> pair : rolloutActions) {
-                if (previousAction instanceof RollDice || previousAction instanceof LoadDice) {
+                if (pair.b instanceof RollDice || pair.b instanceof LoadDice) {
                     assertFalse(previousAction instanceof RollDice);
                     assertFalse(previousAction instanceof LoadDice);
                 }

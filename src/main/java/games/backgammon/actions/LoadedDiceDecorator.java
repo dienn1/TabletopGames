@@ -3,6 +3,7 @@ package games.backgammon.actions;
 import core.AbstractGameState;
 import core.actions.AbstractAction;
 import core.interfaces.IPlayerDecorator;
+import games.backgammon.BGGamePhase;
 import games.backgammon.BGGameState;
 import org.json.simple.JSONObject;
 
@@ -68,15 +69,18 @@ public class LoadedDiceDecorator implements IPlayerDecorator {
     @Override
     public List<AbstractAction> actionFilter(AbstractGameState state, List<AbstractAction> possibleActions) {
         // we add the LoadDice action to the list of possible actions for the decision player
-        List<AbstractAction> newPossibleActions = new ArrayList<>(possibleActions);
-        BGGameState bgs  = (BGGameState) state;
-        double[] currentPDF = bgs.getDicePdf(0);
-        for (double[] pdf : pdfs) {
-            if (pdfsAreRoughlyEqual(currentPDF, pdf))
-                continue; // skip the current pdf, as this is already in use
-            newPossibleActions.add(new LoadDice(0, pdf));
+        if (state.getGamePhase() == BGGamePhase.RollDice) {
+            List<AbstractAction> newPossibleActions = new ArrayList<>(possibleActions);
+            BGGameState bgs = (BGGameState) state;
+            double[] currentPDF = bgs.getDicePdf(0);
+            for (double[] pdf : pdfs) {
+                if (pdfsAreRoughlyEqual(currentPDF, pdf))
+                    continue; // skip the current pdf, as this is already in use
+                newPossibleActions.add(new LoadDice(0, pdf));
+            }
+            return newPossibleActions;
         }
-        return newPossibleActions;
+        return possibleActions;
     }
 
     @Override

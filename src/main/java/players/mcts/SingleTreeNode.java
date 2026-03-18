@@ -604,7 +604,7 @@ public class SingleTreeNode {
      *
      * @return - child node according to the tree policy
      */
-    protected AbstractAction treePolicyAction(boolean explore) {
+    public AbstractAction treePolicyAction(boolean explore) {
         if (params.opponentTreePolicy == SelfOnly && parent != null && openLoopState != null && openLoopState.getCurrentPlayer() != decisionPlayer)
             throw new AssertionError("An error has occurred. SelfOnly should only call uct when we are moving.");
 
@@ -704,10 +704,20 @@ public class SingleTreeNode {
         }
     }
 
+    public ActionStats getActionStats(AbstractAction action) {
+        return actionValues.get(action);
+    }
+
+    public List<Pair<Integer, AbstractAction>> getActionsInRollout() {
+        return actionsInRollout;
+    }
+    public List<Pair<Integer, AbstractAction>> getActionsInTree() {
+        return actionsInTree;
+    }
 
     // Returns the values according to the selection policy (UCB, EXP3, etc.)
     // This is stage 1 of processing, before we use these to pick an action to take
-    protected double[] actionValues(List<AbstractAction> actionsToConsider) {
+    public double[] actionValues(List<AbstractAction> actionsToConsider) {
         double[] retValue = new double[actionsToConsider.size()];
         for (int i = 0; i < actionsToConsider.size(); i++) {
             AbstractAction action = actionsToConsider.get(i);
