@@ -24,7 +24,7 @@ public class TestMCTSPlayer extends MCTSPlayer {
     public boolean rolloutTest = true;
 
     public TestMCTSPlayer(MCTSParams params) {
-        this(params, STNWithTestInstrumentation::new);
+        this(params, SingleTreeNode::new);
     }
 
     public TestMCTSPlayer(MCTSParams params, Supplier<? extends SingleTreeNode> factory) {
