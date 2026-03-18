@@ -73,13 +73,13 @@ public class LoadedDiceDecorator implements IPlayerDecorator {
     public List<AbstractAction> actionFilter(AbstractGameState state, List<AbstractAction> possibleActions) {
         // we add the LoadDice action to the list of possible actions for the decision player
         if (state.getGamePhase() == BGGamePhase.RollDice) {
-        List<AbstractAction> newPossibleActions = new ArrayList<>(possibleActions);
-        BGGameState bgs  = (BGGameState) state;
-        double[] currentPDF = bgs.getDicePdf(0);
-        for (double[] pdf : pdfs) {
-            if (pdfsAreRoughlyEqual(currentPDF, pdf))
-                continue; // skip the current pdf, as this is already in use
-            if (permanentChange) {
+            List<AbstractAction> newPossibleActions = new ArrayList<>(possibleActions);
+            BGGameState bgs = (BGGameState) state;
+            double[] currentPDF = bgs.getDicePdf(0);
+            for (double[] pdf : pdfs) {
+                if (pdfsAreRoughlyEqual(currentPDF, pdf))
+                    continue; // skip the current pdf, as this is already in use
+                if (permanentChange) {
                 newPossibleActions.add(LoadDice.getPermanentShift(0, pdf));
             } else {
                 newPossibleActions.add(LoadDice.getOneOffShift(0, pdf));
