@@ -26,7 +26,6 @@ public class RoundRobinTournament extends AbstractTournament {
     int gamesPerMatchup;
     protected List<IGameListener> listeners = new ArrayList<>();
     private boolean verbose;
-    public boolean alphaRankDetails = true;
     protected IResultsAnalysis winRateAnalysis = new WinRateAnalysis();
     protected IResultsAnalysis ordinalAnalysis = new OrdinalAnalysis();
     protected IResultsAnalysis alphaRankWinAnalysis = new AlphaRankAnalysis(false);
@@ -46,6 +45,7 @@ public class RoundRobinTournament extends AbstractTournament {
     int tournamentSeeds;
     String seedFile;
     Random seedRnd;
+    Map<RunArg, Object> config;
 
     /**
      * Create a round robin tournament, which plays all agents against all others.
@@ -61,6 +61,7 @@ public class RoundRobinTournament extends AbstractTournament {
             String name = agent.toString();
             agent.setName(name);
         }
+        this.config = config;
         int nTeams = game.getGameState().getNTeams();
         this.verbose = (boolean) config.getOrDefault(RunArg.verbose, false);
         this.tournamentMode = switch (config.get(RunArg.mode).toString().toUpperCase()) {
@@ -156,6 +157,7 @@ public class RoundRobinTournament extends AbstractTournament {
             gameTracker.init(game, nPlayers, agentNames);
             game.addListener(gameTracker);
         }
+        game.setActionValidation((boolean) config.getOrDefault(RunArg.validateActionInGame, true));
 
         LinkedList<Integer> matchUp = new LinkedList<>();
         // add outer loop if we have tournamentSeeds enabled; if not this will just run once

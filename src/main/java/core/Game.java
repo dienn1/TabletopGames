@@ -61,6 +61,7 @@ public class Game {
     private int nActionsPerTurn, nActionsPerTurnSum, nActionsPerTurnCount;
     private boolean pause, stop;
     private boolean debug = false;
+    private boolean actionValidation = true;
     // Video recording
     private Rectangle areaBounds;
     private boolean recordingVideo = false;
@@ -435,7 +436,7 @@ public class Game {
                 if (debug)
                     System.out.printf("About to get action for player %d%n", gameState.getCurrentPlayer());
                 action = currentPlayer.getAction(observation, observedActions);
-                if (!observedActions.contains(action)) {
+                if (actionValidation && !observedActions.contains(action)) {
                     throw new AssertionError("Action played that was not in the list of available actions: " + action);
                 }
 
@@ -662,6 +663,10 @@ public class Game {
 
     public void setStopped(boolean stopped) {
         this.stop = stopped;
+    }
+
+    public void setActionValidation(boolean actionValidation) {
+        this.actionValidation = actionValidation;
     }
 
     public CoreParameters getCoreParameters() {
