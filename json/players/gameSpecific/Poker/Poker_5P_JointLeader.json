@@ -2,7 +2,6 @@
   "budgetType" : "BUDGET_TIME",
   "rolloutLengthPerPlayer" : true,
   "rolloutTermination" : "END_TURN",
-  "pUCT" : true,
   "rolloutLength" : 0,
   "actionHeuristic" : {
     "coefficients" : {

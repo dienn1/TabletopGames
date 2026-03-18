@@ -19,7 +19,6 @@
         "reuseTree" : [false, true],
         "backupPolicy" : "MaxMC",
         "maxBackupThreshold" : [3, 10, 1000000],
-        "pUCT" : true,
         "budget" : -999,
         "epsilon" : 1e-6,
         "breakMS" : 0

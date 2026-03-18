@@ -12,7 +12,6 @@
         "budgetType" : "BUDGET_TIME",
         "FPU" : [0.5, 1.0, 100.0, 1000000.0],
         "backupPolicy" : "MaxMC",
-        "pUCT" : true,
         "pUCTTemperature" : [0.0, 0.01, 0.1, 1.0, 10.0, 1000.0],
         "progressiveWideningConstant" : [0.0, 2.0],
         "progressiveWideningExponent" : [0.1, 0.2, 0.3],

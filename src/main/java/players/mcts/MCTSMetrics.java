@@ -31,9 +31,10 @@ public class MCTSMetrics implements IMetricsCollection {
                 int visits = root.getVisits();
                 if (visits == 0) visits = 1;
                 Map<AbstractAction, ActionStats> actionValueEstimates = root.actionValues;
+                List<AbstractAction> actionsConsidered = root.actionsToConsider(root.actionsFromOpenLoopState);
                 List<AbstractAction> sortedActions = actionValueEstimates.keySet().stream()
                         .filter(a -> actionValueEstimates.get(a) != null) // exclude those never tried (through pruning)
-                        .filter( a -> mctsPlayer.root.actionsFromOpenLoopState.contains(a))  // exclude impossible actions (from reused parts of the tree)
+                        .filter(actionsConsidered::contains)  // exclude impossible actions (from reused parts of the tree)
                         .sorted(Comparator.comparingDouble(a -> -actionValueEstimates.get(a).valueOf(e.playerID)))
                         .toList(); // in descending order of value
 
@@ -63,6 +64,7 @@ public class MCTSMetrics implements IMetricsCollection {
                                 String.format(" (%.4f to %.4f)",
                                         actionValueEstimates.get(secondAction).valueOf(e.playerID),
                                         actionValueEstimates.get(e.action).valueOf(e.playerID)));
+                        throw new AssertionError("as above");
                     }
                     records.put("SecondActionValue", actionValueEstimates.get(secondAction).valueOf(e.playerID));
                     // this may just be the same as the best action
@@ -73,10 +75,12 @@ public class MCTSMetrics implements IMetricsCollection {
                     } else {
                    //     throw new AssertionError("WorstAction should have an estimate");
                         System.out.println("WorstAction should have an estimate");
+                        throw new AssertionError("as above");
                     }
                 } else {
 //                    throw new AssertionError("Action should really have an estimate");
                     System.out.println("Warning: action has no value");
+                    throw new AssertionError("as above");
                 }
                 records.put("ActionsAtRoot", root.actionValues.size());
                 records.put("fmCalls", mctsPlayer.root.fmCallsCount / visits);

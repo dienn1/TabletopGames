@@ -27,7 +27,6 @@
     }
   },
   "FPU" : 100,
-  "pUCT" : true,
   "pUCTTemperature" : 10.0,
   "actionHeuristic" : {
     "coefficients" : {

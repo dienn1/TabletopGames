@@ -1,7 +1,6 @@
 {
   "budgetType" : "BUDGET_TIME",
   "rolloutLengthPerPlayer" : true,
-  "pUCT" : true,
   "oppModelType" : "RANDOM",
   "rolloutLength" : 3,
   "actionHeuristic" : {
