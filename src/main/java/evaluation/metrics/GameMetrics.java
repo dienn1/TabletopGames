@@ -342,9 +342,8 @@ public class GameMetrics implements IMetricsCollection {
         @Override
         public boolean _run(MetricsGameListener listener, Event e, Map<String, Object> records) {
             Game g = listener.getGame();
-            AbstractForwardModel fm = g.getForwardModel();
             AbstractPlayer currentPlayer = g.getPlayers().get(e.playerID);
-            int size = fm.computeAvailableActions(e.state, currentPlayer.getParameters().actionSpace).size();
+            int size = e.actions.size();
 
             records.put("Player", e.playerID);
             records.put("PlayerType", currentPlayer.toString());

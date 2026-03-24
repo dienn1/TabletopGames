@@ -8,6 +8,7 @@ import games.backgammon.BGGameState;
 import org.json.simple.JSONObject;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class LoadedDiceDecorator implements IPlayerDecorator {
@@ -34,13 +35,24 @@ public class LoadedDiceDecorator implements IPlayerDecorator {
         pdfs = new ArrayList<>();
         int sides = json.get("sides") != null ? ((Long) json.get("sides")).intValue() : 6; // default to 6 sides if not specified
         List<Double> probabilities = (List<Double>) json.get("probabilities");
-        permanentChange = json.get("permanentChange") != null ? (Boolean) json.get("permanentChange") : false; // default to false if not specified
+        permanentChange = json.get("isPermanent") != null ? (Boolean) json.get("isPermanent") : false; // default to false if not specified
         double[] pdf = new double[sides];
         for (int i = 0; i < probabilities.size(); i++) {
             pdf[i % sides] += probabilities.get(i);
             if ((i + 1) % sides == 0) {
                 pdfs.add(pdf);
                 pdf = new double[sides];
+            }
+        }
+        // log any unexpected entries in the json file
+        String[] expected = new String[]{"sides", "probabilities", "isPermanent"};
+        for (Object key : json.keySet()) {
+            if (key instanceof String keyString) {
+                if (!Arrays.asList(expected).contains(keyString)) {
+                    System.out.println("Unexpected key in LoadedDiceDecorator JSON: " + key);
+                }
+            } else {
+                System.out.println("Unexpected key in LoadedDiceDecorator JSON: " + key);
             }
         }
     }
@@ -62,7 +74,7 @@ public class LoadedDiceDecorator implements IPlayerDecorator {
             return false;
         }
         for (int i = 0; i < pdf1.length; i++) {
-            if (Math.abs(pdf1[i] -  pdf2[i]) > 0.001) {
+            if (Math.abs(pdf1[i] - pdf2[i]) > 0.001) {
                 return false;
             }
         }
@@ -80,12 +92,12 @@ public class LoadedDiceDecorator implements IPlayerDecorator {
                 if (pdfsAreRoughlyEqual(currentPDF, pdf))
                     continue; // skip the current pdf, as this is already in use
                 if (permanentChange) {
-                newPossibleActions.add(LoadDice.getPermanentShift(0, pdf));
-            } else {
-                newPossibleActions.add(LoadDice.getOneOffShift(0, pdf));
+                    newPossibleActions.add(LoadDice.getPermanentShift(0, pdf));
+                } else {
+                    newPossibleActions.add(LoadDice.getOneOffShift(0, pdf));
+                }
             }
-        }
-        return newPossibleActions;
+            return newPossibleActions;
         }
         return possibleActions;
     }
