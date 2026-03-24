@@ -11,7 +11,7 @@
   "actionRestriction" : {
     "class" : "games.backgammon.actions.LoadedDiceDecorator",
     "sides" : 6,
-    "permanentChange" : true,
+    "isPermanent" : true,
     "probabilities" : [
       0.167, 0.167, 0.166, 0.166, 0.167, 0.167,
       0.1, 0.1, 0.1, 0.1, 0.1, 0.5,

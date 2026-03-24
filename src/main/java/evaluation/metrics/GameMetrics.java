@@ -278,10 +278,9 @@ public class GameMetrics implements IMetricsCollection {
         @Override
         public boolean _run(MetricsGameListener listener, Event e, Map<String, Object> records) {
             Game g = listener.getGame();
-            AbstractForwardModel fm = g.getForwardModel();
             AbstractAction a = e.action.copy();
             AbstractPlayer currentPlayer = g.getPlayers().get(e.playerID);
-            int size = fm.computeAvailableActions(e.state, currentPlayer.getParameters().actionSpace).size();
+            int size = e.actions.size();
 
             if (e.state.isActionInProgress()) {
                 e.action = null;
@@ -294,6 +293,7 @@ public class GameMetrics implements IMetricsCollection {
             records.put("Actions Played", e.action == null ? null : e.action.toString());
             records.put("Actions Played Description", e.action == null ? null : e.action.getString(e.state));
             records.put("Action Space Size", size);
+            records.put("Phase", e.state.getGamePhase().toString());
 
             e.action = a;
             return true;
@@ -318,6 +318,7 @@ public class GameMetrics implements IMetricsCollection {
             columns.put("Actions Played", String.class);
             columns.put("Actions Played Description", String.class);
             columns.put("Action Space Size", Integer.class);
+            columns.put("Phase", String.class);
             return columns;
         }
     }
@@ -352,6 +353,7 @@ public class GameMetrics implements IMetricsCollection {
             records.put("Action", e.action == null ? null : e.action.toString());
             records.put("ActionClass", e.action.getClass().getSimpleName());
             records.put("ActionDescription", e.action == null ? null : e.action.getString(e.state));
+            records.put("Phase", e.state.getGamePhase().toString());
             return true;
         }
 
@@ -369,6 +371,7 @@ public class GameMetrics implements IMetricsCollection {
             columns.put("Action", String.class);
             columns.put("ActionClass", String.class);
             columns.put("ActionDescription", String.class);
+            columns.put("Phase", String.class);
             return columns;
         }
     }

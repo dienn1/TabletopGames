@@ -19,19 +19,28 @@ public class MCTSMetrics implements IMetricsCollection {
         @Override
         protected boolean _run(MetricsGameListener listener, Event e, Map<String, Object> records) {
             AbstractPlayer player = listener.getGame().getPlayers().get(e.state.getCurrentPlayer());
-            if (e.actions != null && e.actions.size() > 1 && player instanceof MCTSPlayer mctsPlayer) {
-                SingleTreeNode root = mctsPlayer.root;
-                if (root instanceof MultiTreeNode) {
-                    root = Arrays.stream(((MultiTreeNode) root).roots).filter(Objects::nonNull)
-                            .filter(node -> node.decisionPlayer == e.state.getCurrentPlayer())
-                            .findFirst().orElse(null);
-                }
-                if (root == null) return false;
+            if (!(player instanceof MCTSPlayer)) return false;
+            MCTSPlayer mctsPlayer = (MCTSPlayer) player;
+            SingleTreeNode root = mctsPlayer.root;
+            if (root instanceof MultiTreeNode) {
+                root = Arrays.stream(((MultiTreeNode) root).roots).filter(Objects::nonNull)
+                        .filter(node -> node.decisionPlayer == e.state.getCurrentPlayer())
+                        .findFirst().orElse(null);
+            }
+            if (root == null) return false;
+            // if this is a single action, then we skip
+            boolean skipMCTSMetrics = e.actions != null && e.actions.size() == 1;
+            List<AbstractAction> actionsConsidered = root.actionsToConsider(root.actionsFromOpenLoopState);
+            if (skipMCTSMetrics) {
+                // to make sure, we also check the root stats, because there may have been actions added via a Decorator
+                if (e.state.getGameTick() == root.state.getGameTick() && actionsConsidered.size() > 1 && actionsConsidered.contains(e.action))
+                    skipMCTSMetrics = false;
+            }
+            if (!skipMCTSMetrics) {
                 TreeStatistics treeStats = new TreeStatistics(root);
                 int visits = root.getVisits();
                 if (visits == 0) visits = 1;
                 Map<AbstractAction, ActionStats> actionValueEstimates = root.actionValues;
-                List<AbstractAction> actionsConsidered = root.actionsToConsider(root.actionsFromOpenLoopState);
                 List<AbstractAction> sortedActions = actionValueEstimates.keySet().stream()
                         .filter(a -> actionValueEstimates.get(a) != null) // exclude those never tried (through pruning)
                         .filter(actionsConsidered::contains)  // exclude impossible actions (from reused parts of the tree)

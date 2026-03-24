@@ -45,7 +45,7 @@ public class LoadedDiceDecorator implements IPlayerDecorator {
             }
         }
         // log any unexpected entries in the json file
-        String[] expected = new String[]{"sides", "probabilities", "isPermanent"};
+        String[] expected = new String[]{"class", "sides", "probabilities", "isPermanent"};
         for (Object key : json.keySet()) {
             if (key instanceof String keyString) {
                 if (!Arrays.asList(expected).contains(keyString)) {

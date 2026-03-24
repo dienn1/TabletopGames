@@ -427,4 +427,29 @@ public class CheatingAgentTests {
         }
 
     }
+    @Test
+    public void cheatingDetectionEndsGame() {
+        parameters.setParameterValue("cheatingDetectionProbability", 0.1);
+        parameters.setParameterValue("cheatDetectionSeed", 42);
+        int detections = 0;
+        int trials = 100;
+
+        for (int i = 0; i < trials; i++) {
+            BGGameState state = (BGGameState) gameState.copy();
+            state.setGamePhase(BGGamePhase.RollDice);
+            // find a LoadDice action
+            IPlayerDecorator loadedDiceDecorator = decoratedMCTSPlayer.getDecorators().getFirst();
+            List<AbstractAction> actions = loadedDiceDecorator.actionFilter(state, forwardModel.computeAvailableActions(state));
+            LoadDice loadDice = (LoadDice) actions.stream().filter(a -> a instanceof LoadDice).findFirst().orElse(null);
+
+            forwardModel.next(state, loadDice);
+            if (state.isGameOver()) {
+                detections++;
+            }
+        }
+
+        // with 10% probability, we expect around 10 detections in 100 trials.
+        // using seed 42, we can be more precise if we want, but a range is safer if the seed implementation changes
+        assertTrue("Detections: " + detections, detections > 3 && detections < 20);
+    }
 }

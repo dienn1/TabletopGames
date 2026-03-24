@@ -3,14 +3,19 @@ package games.backgammon.actions;
 import core.AbstractGameState;
 import core.actions.AbstractAction;
 import core.components.Dice;
+import games.backgammon.BGGameEvents;
 import games.backgammon.BGGameState;
+import games.backgammon.BGParameters;
 
 import java.util.Arrays;
+import java.util.Random;
 
 /**
  * This modifies the pdf of one of the dice in the game
  */
 public class LoadDice extends AbstractAction {
+
+    private static Random rnd;
 
     protected final double[] newPDF;
     protected final int die;
@@ -32,12 +37,28 @@ public class LoadDice extends AbstractAction {
     @Override
     public boolean execute(AbstractGameState gs) {
         BGGameState state = (BGGameState) gs;
+        BGParameters params = (BGParameters) gs.getGameParameters();
+
+        if (rnd == null) {
+            // create from params seed
+            rnd = new Random(params.cheatDetectionSeed);
+        }
+
         double[] originalPDF = state.getDicePdf(die);
         state.setDicePdf(die, newPDF);
         state.rollDice();
         if (singleRoll) {
             // reset pdf
             state.setDicePdf(die, originalPDF);
+        }
+
+        // then check for cheating detection
+        if (rnd.nextDouble() < params.cheatingDetectionProbability) {
+            // we do not use the state rnd, as this event is player-focused (and this way the game rnd just controls the die rolls)
+            // cheating is detected and game ends
+            state.logEvent(BGGameEvents.CheatingDetected,
+                    () -> String.format("Cheating detected. Player %d rolled loaded dice. Player %d wins", state.getCurrentPlayer(), 1 - state.getCurrentPlayer()));
+            state.moveAllPiecesToEnd(1 - state.getCurrentPlayer());
         }
         return true;
     }

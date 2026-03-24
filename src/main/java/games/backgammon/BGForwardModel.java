@@ -211,16 +211,16 @@ public class BGForwardModel extends StandardForwardModel {
         BGGameState bgs = (BGGameState) currentState;
         BGParameters bgp = (BGParameters) currentState.getGameParameters();
 
-        if (bgs.getGamePhase() == RollDice) {
-            // after rolling dice, we just move to the next phase (where the player can move pieces)
-            bgs.setGamePhase(BGGamePhase.MovePieces);
-            return;
-        }
-
         // check for game end
         if (bgs.piecesBorneOff[0] == bgp.piecesPerPlayer || bgs.piecesBorneOff[1] == bgp.piecesPerPlayer) {
             endGame(bgs);
         } else {
+            if (bgs.getGamePhase() == RollDice) {
+                // after rolling dice, we just move to the next phase (where the player can move pieces)
+                bgs.setGamePhase(BGGamePhase.MovePieces);
+                return;
+            }
+
             int[] diceAvailable = bgs.getAvailableDiceValues();
             if (diceAvailable.length == 0 || computeAvailableActions(currentState).stream().noneMatch(c -> c instanceof MovePiece)) {
                 // end of turn: switch player

@@ -34,6 +34,8 @@ public class BGParameters extends TunableParameters<BGParameters> {
     public int entryBoardSize = 0; // Number of points in the entry board (0 if not used)
     public int diceNumber = 2; // Number of dice used in the game
     public int diceSides = 6; // Number of sides on each die
+    public double cheatingDetectionProbability = 0.0;
+    public int cheatDetectionSeed = (int) System.currentTimeMillis();
 
     public Dice customDie = null;
 
@@ -66,6 +68,8 @@ public class BGParameters extends TunableParameters<BGParameters> {
         addTunableParameter("doubleActions", true, List.of(false, true));
         addTunableParameter("route", Route.Counter);
         addTunableParameter("entryRule", EntryRule.Bar);
+        addTunableParameter("cheatingDetectionProbability", 0.0);
+        addTunableParameter("cheatDetectionSeed", (int) System.currentTimeMillis());
 
         _reset();
     }
@@ -116,5 +120,7 @@ public class BGParameters extends TunableParameters<BGParameters> {
         doubleActions = (boolean) getParameterValue("doubleActions");
         route = (Route) getParameterValue("route");
         entryRule = (EntryRule) getParameterValue("entryRule");
+        cheatingDetectionProbability = (double) getParameterValue("cheatingDetectionProbability");
+        cheatDetectionSeed = (int) getParameterValue("cheatDetectionSeed");
     }
 }
