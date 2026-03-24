@@ -10,7 +10,7 @@
   "information" : "Open_Loop",
   "actionRestriction" : {
     "class" : "games.backgammon.actions.LoadedDiceDecorator",
-    "chanceOfBeingCaught" : 0.10,
+    "detectionChance" : 0.10,
     "probabilities" : [
       0.167, 0.167, 0.166, 0.166, 0.167, 0.167,
       0.1, 0.1, 0.1, 0.1, 0.1, 0.5,
