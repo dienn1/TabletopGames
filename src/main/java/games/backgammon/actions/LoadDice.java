@@ -15,34 +15,31 @@ import java.util.Random;
  */
 public class LoadDice extends AbstractAction {
 
-    private static Random rnd;
+    private static Random rnd = new Random(System.currentTimeMillis());
 
     protected final double[] newPDF;
     protected final int die;
     protected final boolean singleRoll;
+    protected final double detectionChance;
 
-    static LoadDice getPermanentShift(int die, double[] newPDF) {
-        return new LoadDice(die, newPDF, false);
+    static LoadDice getPermanentShift(int die, double[] newPDF, double detectionChance) {
+        return new LoadDice(die, newPDF, false, detectionChance);
     }
-    static LoadDice getOneOffShift(int die,  double[] newPDF) {
-        return new LoadDice(die, newPDF, true);
+    static LoadDice getOneOffShift(int die,  double[] newPDF, double detectionChance) {
+        return new LoadDice(die, newPDF, true, detectionChance);
     }
 
-    private LoadDice(int die, double[] newPDF, boolean singleRoll) {
+    private LoadDice(int die, double[] newPDF, boolean singleRoll, double detectionChance) {
         this.newPDF = newPDF;
         this.die = die;
         this.singleRoll = singleRoll;
+        this.detectionChance = detectionChance;
     }
 
     @Override
     public boolean execute(AbstractGameState gs) {
         BGGameState state = (BGGameState) gs;
         BGParameters params = (BGParameters) gs.getGameParameters();
-
-        if (rnd == null) {
-            // create from params seed
-            rnd = new Random(params.cheatDetectionSeed);
-        }
 
         double[] originalPDF = state.getDicePdf(die);
         state.setDicePdf(die, newPDF);
@@ -53,7 +50,7 @@ public class LoadDice extends AbstractAction {
         }
 
         // then check for cheating detection
-        if (rnd.nextDouble() < params.cheatingDetectionProbability) {
+        if (rnd.nextDouble() < detectionChance) {
             // we do not use the state rnd, as this event is player-focused (and this way the game rnd just controls the die rolls)
             // cheating is detected and game ends
             state.logEvent(BGGameEvents.CheatingDetected,

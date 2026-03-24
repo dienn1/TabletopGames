@@ -52,7 +52,7 @@ public class CheatingAgentTests {
                         0.167, 0.167, 0.166, 0.166, 0.167, 0.167,
                         0.1, 0.1, 0.1, 0.1, 0.1, 0.5,
                         1.0, 0.0, 0.0, 0.0, 0.0, 0.0
-                }, true));
+                }, true, 0.00));
     }
 
     @Test
@@ -197,7 +197,7 @@ public class CheatingAgentTests {
                         0.167, 0.167, 0.166, 0.166, 0.167, 0.167,
                         0.1, 0.1, 0.1, 0.1, 0.1, 0.5,
                         1.0, 0.0, 0.0, 0.0, 0.0, 0.0
-                }, true);
+                }, true, 0.00);
         forwardModel = (new DecoratedForwardModel(forwardModel)).addDecorator(1, loadedDiceDecorator);
 
         forwardModel.next(gameState, forwardModel.computeAvailableActions(gameState).getFirst());
@@ -429,16 +429,16 @@ public class CheatingAgentTests {
     }
     @Test
     public void cheatingDetectionEndsGame() {
-        parameters.setParameterValue("cheatingDetectionProbability", 0.1);
-        parameters.setParameterValue("cheatDetectionSeed", 42);
         int detections = 0;
         int trials = 100;
+
+        TestMCTSPlayer caughtMCTSPlayer = (TestMCTSPlayer) PlayerFactory.createPlayer("src/test/java/games/backgammon/CheatingAgentGetsCaught.json");
+        IPlayerDecorator loadedDiceDecorator = caughtMCTSPlayer.getDecorators().getFirst();
 
         for (int i = 0; i < trials; i++) {
             BGGameState state = (BGGameState) gameState.copy();
             state.setGamePhase(BGGamePhase.RollDice);
             // find a LoadDice action
-            IPlayerDecorator loadedDiceDecorator = decoratedMCTSPlayer.getDecorators().getFirst();
             List<AbstractAction> actions = loadedDiceDecorator.actionFilter(state, forwardModel.computeAvailableActions(state));
             LoadDice loadDice = (LoadDice) actions.stream().filter(a -> a instanceof LoadDice).findFirst().orElse(null);
 
@@ -449,7 +449,6 @@ public class CheatingAgentTests {
         }
 
         // with 10% probability, we expect around 10 detections in 100 trials.
-        // using seed 42, we can be more precise if we want, but a range is safer if the seed implementation changes
         assertTrue("Detections: " + detections, detections > 3 && detections < 20);
     }
 }

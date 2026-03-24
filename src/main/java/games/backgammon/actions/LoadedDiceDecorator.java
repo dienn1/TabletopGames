@@ -15,11 +15,13 @@ public class LoadedDiceDecorator implements IPlayerDecorator {
 
     final List<double[]> pdfs;
     final boolean permanentChange;
+    final double chanceOfBeingCaught;
     // currently we only load the first die (the second/third will not be changed)
 
-    public LoadedDiceDecorator(int sides, double[] probabilities, boolean permanentChange) {
+    public LoadedDiceDecorator(int sides, double[] probabilities, boolean permanentChange, double chance) {
         pdfs = new ArrayList<>(probabilities.length / sides);
         this.permanentChange = permanentChange;
+        this.chanceOfBeingCaught = chance;
         int nDice = probabilities.length / sides;
         for (int i = 0; i < nDice; i++) {
             double[] pdf = new double[sides];
@@ -35,6 +37,7 @@ public class LoadedDiceDecorator implements IPlayerDecorator {
         pdfs = new ArrayList<>();
         int sides = json.get("sides") != null ? ((Long) json.get("sides")).intValue() : 6; // default to 6 sides if not specified
         List<Double> probabilities = (List<Double>) json.get("probabilities");
+        chanceOfBeingCaught = json.get("chanceOfBeingCaught") != null ? (Double) json.get("chanceOfBeingCaught") : 0.0;
         permanentChange = json.get("isPermanent") != null ? (Boolean) json.get("isPermanent") : false; // default to false if not specified
         double[] pdf = new double[sides];
         for (int i = 0; i < probabilities.size(); i++) {
@@ -45,7 +48,7 @@ public class LoadedDiceDecorator implements IPlayerDecorator {
             }
         }
         // log any unexpected entries in the json file
-        String[] expected = new String[]{"class", "sides", "probabilities", "isPermanent"};
+        String[] expected = new String[]{"class", "sides", "probabilities", "isPermanent", "chanceOfBeingCaught"};
         for (Object key : json.keySet()) {
             if (key instanceof String keyString) {
                 if (!Arrays.asList(expected).contains(keyString)) {
@@ -92,9 +95,9 @@ public class LoadedDiceDecorator implements IPlayerDecorator {
                 if (pdfsAreRoughlyEqual(currentPDF, pdf))
                     continue; // skip the current pdf, as this is already in use
                 if (permanentChange) {
-                    newPossibleActions.add(LoadDice.getPermanentShift(0, pdf));
+                    newPossibleActions.add(LoadDice.getPermanentShift(0, pdf, chanceOfBeingCaught));
                 } else {
-                    newPossibleActions.add(LoadDice.getOneOffShift(0, pdf));
+                    newPossibleActions.add(LoadDice.getOneOffShift(0, pdf, chanceOfBeingCaught));
                 }
             }
             return newPossibleActions;
