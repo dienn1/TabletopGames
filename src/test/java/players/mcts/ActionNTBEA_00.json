@@ -2,7 +2,6 @@
 	"budgetType" : "BUDGET_TIME",
 	"progressiveWideningExponent" : 0.3,
 	"rolloutTermination" : "END_ROUND",
-	"pUCT" : true,
 	"rolloutLength" : 3,
 	"actionHeuristic" : {
 		"features" : {

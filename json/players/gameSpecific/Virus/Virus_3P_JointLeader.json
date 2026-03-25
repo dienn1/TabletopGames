@@ -1,0 +1,95 @@
+{
+  "budgetType" : "BUDGET_TIME",
+  "rolloutLengthPerPlayer" : true,
+  "oppModelType" : "RANDOM",
+  "rolloutLength" : 3,
+  "actionHeuristic" : {
+    "coefficients" : {
+      "ReplaceCard" : -0.904,
+      "HealthyOrgans:AddOrgan" : 0.555,
+      "Organ:RequiredOrgansInHand" : -0.539,
+      "ApplyMedicine" : 0.553,
+      "ReplaceOneCard" : -0.594,
+      "DiseasedOrgans:ApplyMedicine" : 0.497,
+      "BIAS" : -1.52,
+      "DiseasedOrgans" : -0.275,
+      "AddOrgan_B0" : -0.722,
+      "ReplaceOneCard_B1" : -0.594,
+      "AddOrgan_B1" : 0.722,
+      "RequiredOrgansInHand" : -0.365,
+      "ReplaceOneCard_B0" : 0.594,
+      "HealthyOrgans" : -0.318,
+      "AddOrgan:Organ:RequiredOrgansInHand" : 0.447,
+      "TargetScore" : 0.520,
+      "AddOrgan" : 0.722,
+      "Organ" : 0.328
+    },
+    "actionFeatures" : {
+      "features" : [
+        {
+          "name" : "AddOrgan_B0",
+          "range" : "[-Infinity, 1.0]",
+          "index" : 15,
+          "type" : "RANGE"
+        },
+        {
+          "name" : "AddOrgan_B1",
+          "range" : "[1.0, Infinity]",
+          "index" : 15,
+          "type" : "RANGE"
+        },
+        {
+          "name" : "ReplaceOneCard_B0",
+          "range" : "[-Infinity, 1.0]",
+          "index" : 26,
+          "type" : "RANGE"
+        },
+        {
+          "name" : "ReplaceOneCard_B1",
+          "range" : "[1.0, Infinity]",
+          "index" : 26,
+          "type" : "RANGE"
+        }                       ],
+      "defaultBuckets" : 1,
+      "underlyingState" : {
+        "class" : "games.virus.metrics.VirusStateFeatures"
+      },
+      "class" : "evaluation.features.AutomatedFeatures",
+      "underlyingAction" : {
+        "class" : "games.virus.metrics.VirusActionFeatures"
+      }
+    },
+    "class" : "players.heuristics.LogisticActionHeuristic"
+  },
+  "MASTGamma" : 0.200,
+  "heuristic" : {
+    "features" : {
+      "features" : [
+      ],
+      "defaultBuckets" : 1,
+      "underlyingState" : {
+        "class" : "games.virus.metrics.VirusStateFeatures"
+      },
+      "class" : "evaluation.features.AutomatedFeatures"
+    },
+    "coefficients" : {
+      "HealthyOrgans:LeaderMargin" : 0.167,
+      "LeaderMargin" : 0.320,
+      "BIAS" : -0.770,
+      "HealthyOrgans" : 0.152
+    },
+    "class" : "players.heuristics.LinearStateHeuristic",
+    "defaultHeuristic" : {
+      "class" : "players.heuristics.LeaderHeuristic"
+    }
+  },
+  "FPU" : 100,
+  "K" : 0.0100,
+  "maxTreeDepth" : 1,
+  "reuseTree" : true,
+  "pUCTTemperature" : 1.00,
+  "MAST" : "Both",
+  "rolloutType" : "MAST",
+  "class" : "players.mcts.MCTSParams",
+  "budget" : -999
+}

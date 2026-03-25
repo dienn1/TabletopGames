@@ -35,7 +35,6 @@ public class MCTSParams extends PlayerParameters {
     public double MASTDefaultValue = 0.0;
     public double MASTBoltzmann = 0.1;
     public double exp3Boltzmann = 0.1;
-    public boolean useMASTAsActionHeuristic = false;
     public MCTSEnums.SelectionPolicy selectionPolicy = SIMPLE;  // In general better than ROBUST
     public MCTSEnums.TreePolicy treePolicy = UCB;
     public MCTSEnums.OpponentTreePolicy opponentTreePolicy = OneTree;
@@ -62,9 +61,10 @@ public class MCTSParams extends PlayerParameters {
     public boolean MCGSExpandAfterClash = true;
     public double firstPlayUrgency = 1e6;
     @NotNull public IActionHeuristic actionHeuristic = IActionHeuristic.nullReturn;
+    public boolean useActionHeuristicForMoveOrdering = true;
+    public boolean useMASTAsActionHeuristic = false;
     public int actionHeuristicRecalculationThreshold = 20;
-    public boolean pUCT = false;  // in this case we multiply the exploration value in UCB by the probability that the action heuristic would take the action
-    public double pUCTTemperature = 0.0;  // If greater than zero we construct a Boltzmann distribution over actions based on the action heuristic
+    public double pUCTTemperature = 10001.0;  // If greater than zero we construct a Boltzmann distribution over actions based on the action heuristic
     // if zero (or less) then we use the action heuristic values directly, setting any negative values to zero)
     public int initialiseVisits = 0;  // This is the number of visits to initialise the MCTS tree with (using the actionHeuristic)
     public double progressiveWideningConstant = 0.0; //  Zero indicates switched off (well, less than 1.0)
@@ -114,17 +114,17 @@ public class MCTSParams extends PlayerParameters {
         addTunableParameter("MASTDefaultValue", 0.0);
         addTunableParameter("MCGSStateKey", IStateKey.class);
         addTunableParameter("MCGSExpandAfterClash", true);
-        addTunableParameter("FPU", 1e6);
+        addTunableParameter("FPU", 1_000_000.0);
         addTunableParameter("actionHeuristic", IActionHeuristic.class,  IActionHeuristic.nullReturn);
         addTunableParameter("progressiveBias", 0.0);
-        addTunableParameter("pUCT", false);
-        addTunableParameter("pUCTTemperature", 0.0);
+        addTunableParameter("pUCTTemperature", 10001.0);
         addTunableParameter("initialiseVisits", 0);
         addTunableParameter("actionHeuristicRecalculation", 20);
+        addTunableParameter("useActionHeuristicForMoveOrdering", true);
         addTunableParameter("reuseTree", false);
         addTunableParameter("backupPolicy", MCTSEnums.BackupPolicy.MonteCarlo, Arrays.asList(MCTSEnums.BackupPolicy.values()));
         addTunableParameter("backupLambda", 1.0);
-        addTunableParameter("maxBackupThreshold", 1000000);
+        addTunableParameter("maxBackupThreshold", 1_000_000);
         addTunableParameter("instantiationClass", "players.mcts.MCTSPlayer");
         addTunableParameter("perfectInformationPolicy", AverageValue, Arrays.asList(MCTSEnums.PerfectInformationPolicy.values()));
         addTunableParameter("numDeterminizations", 1, Arrays.asList(1, 10, 30, 100, 300, 1000));
@@ -166,7 +166,6 @@ public class MCTSParams extends PlayerParameters {
         maintainMasterState = (boolean) getParameterValue("maintainMasterState");
         paranoid = (boolean) getParameterValue("paranoid");
         discardStateAfterEachIteration = (boolean) getParameterValue("discardStateAfterEachIteration");
-        pUCT = (boolean) getParameterValue("pUCT");
         pUCTTemperature = (double) getParameterValue("pUCTTemperature");
         if (information == Closed_Loop)
             discardStateAfterEachIteration = false;
@@ -175,6 +174,7 @@ public class MCTSParams extends PlayerParameters {
         MASTDefaultValue = (double) getParameterValue("MASTDefaultValue");
 
         actionHeuristic = (IActionHeuristic) getParameterValue("actionHeuristic");
+        useActionHeuristicForMoveOrdering = (boolean) getParameterValue("useActionHeuristicForMoveOrdering");
         heuristic = (IStateHeuristic) getParameterValue("heuristic");
         MCGSStateKey = (IStateKey) getParameterValue("MCGSStateKey");
         MCGSExpandAfterClash = (boolean) getParameterValue("MCGSExpandAfterClash");
@@ -205,6 +205,10 @@ public class MCTSParams extends PlayerParameters {
             useMAST = true;
             MAST = Both;
             }
+        useActionHeuristicForMoveOrdering = (boolean) getParameterValue("useActionHeuristicForMoveOrdering");
+        // We use the action heuristic anyway if FPU or pUCT or pruning is switched on
+        useActionHeuristicForMoveOrdering = useActionHeuristicForMoveOrdering || useMASTAsActionHeuristic ||
+                ((firstPlayUrgency < 1_000_000 || pUCTTemperature < 10000.0 || progressiveWideningConstant > 1.0) && actionHeuristic != IActionHeuristic.nullReturn);
         numDeterminizations = (int) getParameterValue("numDeterminizations");
         perfectInformationPolicy = (MCTSEnums.PerfectInformationPolicy) getParameterValue("perfectInformationPolicy");
         if (numDeterminizations > 1) {

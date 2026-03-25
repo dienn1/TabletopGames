@@ -203,8 +203,9 @@ public class SingleTreeNode {
             if (actionsFromOpenLoopState.size() != actionsFromOpenLoopState.stream().distinct().count())
                 throw new AssertionError("Duplicate actions found in action list: " +
                         actionsFromOpenLoopState.stream().map(a -> "\t" + a.toString() + "\n").collect(joining()));
-            if ((params.actionHeuristic != IActionHeuristic.nullReturn && nVisits < actionsFromOpenLoopState.size())
-                    || params.pUCT || params.progressiveBias > 0 || params.initialiseVisits > 0 || params.progressiveWideningConstant >= 1.0) {
+            if ((params.useActionHeuristicForMoveOrdering && nVisits < actionsFromOpenLoopState.size())
+                    || params.pUCTTemperature <= 10000.0  || params.progressiveWideningConstant > 1.0
+                    || params.progressiveBias > 0 || params.initialiseVisits > 0) {
                 // We only need to calculate actionValueEstimates if we are going to be using the data in one of these variants
                 // If not, then we can save processing time by not calculating them
                 // actionHeuristicRecalculationThreshold defines how often we recalculate the action values
@@ -215,9 +216,6 @@ public class SingleTreeNode {
                 if (params.actionHeuristic != IActionHeuristic.nullReturn) {
                     if (actionValueEstimates.isEmpty() || nVisits % params.actionHeuristicRecalculationThreshold == 0) {
                         // in this case we initialise all action values
-                        if (params.actionHeuristic == null) {
-                            throw new AssertionError("actionHeuristic is null");
-                        }
                         double[] actionValues = params.actionHeuristic.evaluateAllActions(actionsFromOpenLoopState, actionState);
                         for (int i = 0; i < actionsFromOpenLoopState.size(); i++) {
                             actionValueEstimates.put(actionsFromOpenLoopState.get(i), actionValues[i]);
@@ -231,10 +229,14 @@ public class SingleTreeNode {
                         }
                     }
                 } else {
-                    throw new AssertionError("We have no heuristic to evaluate actions, and have pUCT/PB/PW or visitInitialisation set");
+                    params.pUCTTemperature = 10001.0;
+                    params.progressiveBias = 0.0;
+                    params.initialiseVisits = 0;
+                    params.progressiveWideningConstant = 0.0;
+                    //System.out.println("Warning: actionHeuristic is nullReturn, so pUCT, initialiseVisits, progressive bias and pruning are disabled");
                 }
             }
-            if (params.pUCT) {
+            if (params.pUCTTemperature < 10000.0) {
                 // construct the pdf for the pUCT selection
                 // This ignores Progressive widening. This should not be a major issue, but means the pdf is calculated
                 // over all possible actions, rather than just the ones we are considering
@@ -327,6 +329,9 @@ public class SingleTreeNode {
         int numIters = 0;
         boolean stop = false;
         while (!stop) {
+            // before each search iteration, we reset the forward model (and its decorators)
+            forwardModel.reset();
+
             switch (params.information) {
                 case Closed_Loop:
                     setActionsFromOpenLoopState(state);
@@ -604,7 +609,7 @@ public class SingleTreeNode {
      *
      * @return - child node according to the tree policy
      */
-    protected AbstractAction treePolicyAction(boolean explore) {
+    public AbstractAction treePolicyAction(boolean explore) {
         if (params.opponentTreePolicy == SelfOnly && parent != null && openLoopState != null && openLoopState.getCurrentPlayer() != decisionPlayer)
             throw new AssertionError("An error has occurred. SelfOnly should only call uct when we are moving.");
 
@@ -704,10 +709,20 @@ public class SingleTreeNode {
         }
     }
 
+    public ActionStats getActionStats(AbstractAction action) {
+        return actionValues.get(action);
+    }
+
+    public List<Pair<Integer, AbstractAction>> getActionsInRollout() {
+        return actionsInRollout;
+    }
+    public List<Pair<Integer, AbstractAction>> getActionsInTree() {
+        return actionsInTree;
+    }
 
     // Returns the values according to the selection policy (UCB, EXP3, etc.)
     // This is stage 1 of processing, before we use these to pick an action to take
-    protected double[] actionValues(List<AbstractAction> actionsToConsider) {
+    public double[] actionValues(List<AbstractAction> actionsToConsider) {
         double[] retValue = new double[actionsToConsider.size()];
         for (int i = 0; i < actionsToConsider.size(); i++) {
             AbstractAction action = actionsToConsider.get(i);
@@ -806,11 +821,11 @@ public class SingleTreeNode {
                     double minTerm = Math.min(standardVar, variance + Math.sqrt(2 * Math.log(effectiveTotalVisits) / actionVisits));
                     yield params.K * Math.sqrt(Math.log(effectiveTotalVisits) / actionVisits * minTerm);
                 }
-                case AlphaGo -> params.K * Math.sqrt(effectiveTotalVisits) / (actionVisits + 1.0);
+                case AlphaGo -> params.K * Math.sqrt(effectiveTotalVisits) / actionVisits;
                 default -> Math.sqrt(Math.log(effectiveTotalVisits) / actionVisits);
             };
         }
-        if (params.pUCT) {
+        if (params.pUCTTemperature < 10000.0) {
             // in this case we multiply the exploration term by the pUCT factor (the probability that the action would be taken by
             // our actionHeuristic). These were calculated in setActionsFromOpenLoopState
             explorationTerm *= actionPDFEstimates.get(action);

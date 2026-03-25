@@ -14,6 +14,7 @@ public class HumanGUIPlayer extends AbstractPlayer {
     public HumanGUIPlayer(ActionController ac){
         super(null, "HumanGUIPlayer");
         this.ac = ac;
+        considerSingletonActions = true;
     }
 
     @Override

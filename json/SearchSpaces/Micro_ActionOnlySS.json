@@ -1,0 +1,27 @@
+{
+        "class":"players.mcts.MCTSParams",
+        "rolloutType" : "PARAMS",
+        "rolloutLengthPerPlayer" : true,
+        "rolloutLength" : [0, 1, 10, 1000],
+        "rolloutTermination" : ["END_TURN", "END_ROUND"],
+        "rolloutPolicyParams" : {
+                "class" : "players.simple.BoltzmannActionParams",
+                "temperature" : [0.1, 1.0, 10.0],
+                "epsilon" : [0.0, 0.3, 1.0]
+        },
+        "heuristic" : {
+                "class" : "players.heuristics.CoarseTunableHeuristic",
+                "heuristicType" : ["WIN_ONLY", "SCORE_PLUS", "LEADER", "WIN_PLUS"]
+        },
+        "MAST" : "None",
+        "budgetType" : "BUDGET_TIME",
+        "FPU" : [0.5, 1.0, 10.0, 100.0, 1000000.0],
+        "backupPolicy" : "MaxMC",
+        "maxBackupThreshold" : [3, 10, 1000000],
+        "treePolicy" : "AlphaGo",
+        "pUCTTemperature" : [0.0, 0.1, 1.0, 10.0, 10001.0],
+        "useActionHeuristicForMoveOrdering" : false,
+        "budget" : -999,
+        "epsilon" : 1e-6,
+        "breakMS" : 0
+}

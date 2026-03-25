@@ -11,7 +11,7 @@ import java.awt.*;
 import java.util.List;
 import java.util.Set;
 
-import games.backgammon.MovePiece;
+import games.backgammon.actions.MovePiece;
 
 public class XIIGUIManager extends AbstractGUIManager {
 

@@ -55,7 +55,7 @@ public class MCTSExpertIterationListener extends ActionFeatureListener {
     }
 
     @Override
-    public void setLogger(IStatisticLogger logger) {
+    public MCTSExpertIterationListener setLogger(IStatisticLogger logger) {
         super.setLogger(logger);
         // we also need to set the logger for the state recorder
         FileStatsLogger fileLogger = (FileStatsLogger) logger;
@@ -63,6 +63,7 @@ public class MCTSExpertIterationListener extends ActionFeatureListener {
         FileStatsLogger stateLogger = new FileStatsLogger(loggerName, fileLogger.getDelimiter(), fileLogger.isAppend());
         if (stateRecorder != null)
             stateRecorder.setLogger(stateLogger);
+        return this;
     }
 
     @Override
@@ -164,6 +165,8 @@ public class MCTSExpertIterationListener extends ActionFeatureListener {
                 if (stateRecorder != null) {
                     stateRecorder.processState(node.state, bestAction);
                     // and then add in the final score and win/loss information based on the state value estimate
+                    // we only have the values for the heuristic being used within MCTS search (WinOnly/Score/Leader etc.)
+                    // it is the responsibility of the user to ensure they know what has been used
                     stateRecorder.addValueToLastRecord("FinalScore", node.nodeValue(player));
                     stateRecorder.addValueToLastRecord("Win", node.nodeValue(player));
                     stateRecorder.addValueToLastRecord("FinalScoreAdv", node.nodeValue(player));

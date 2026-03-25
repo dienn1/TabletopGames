@@ -132,6 +132,9 @@ public enum RunArg {
             "\t If a focusPlayer is provided, then 'mode' is ignored.",
             "random",
             new Usage[]{Usage.RunGames}),
+    validateActionInGame("Default is true to check that the action the agent returns was on the list of available options",
+            true,
+            new Usage[]{Usage.RunGames, Usage.ParameterSearch, Usage.ExpertIteration}),
     multiplier("The multiplier for budget at each iteration of the SkillLadder process. \n",
             2,
             new Usage[]{Usage.SkillLadder}),
@@ -184,6 +187,12 @@ public enum RunArg {
     actionLearner("The JSON file that specifies an ILearner implementation for an IActionFeatureVector implementation.",
             "",
             new Usage[]{Usage.ExpertIteration}),
+    expertIterations("The number of iterations to run the expert iteration process for. Default is 10.",
+            10,
+            new Usage[]{Usage.ExpertIteration}),
+    expertConvergence("The number of iterations with no improvement after which to stop the expert iteration process. Default is 5.",
+            5,
+            new Usage[]{Usage.ExpertIteration}),
     useRounds("Whether to use rounds (true) or turns (false). Defaults to false.",
             false,
             new Usage[]{Usage.ExpertIteration}),
@@ -205,8 +214,14 @@ public enum RunArg {
     sampleRate("We only record data every with this sample rate to reduce correlation in training data generated.",
             0.02,
             new Usage[]{Usage.ExpertIteration}),
-    expert("An expert player to use for the ExpertIteration process. Either BASE, MCTS or MCTSAction.",
-            "BASE",
+    expertTrainingMode("Data management. Batch for just using current data. Exponential for gradual increase of common data.",
+            ExpertIteration.TrainingMode.Batch,
+            new Usage[]{Usage.ExpertIteration}),
+    valueTarget("Target for the state value expert to be trained on",
+            ExpertIteration.ValueTarget.None,
+            new Usage[]{Usage.ExpertIteration}),
+    actionTarget("Target for the action value expert to be trained on",
+            ExpertIteration.ActionTarget.None,
             new Usage[]{Usage.ExpertIteration}),
     expertTime("The multiplier to use for the expert's budget (if MCTS). Default is 10.",
             10,
@@ -306,7 +321,11 @@ public enum RunArg {
 
     @SuppressWarnings("unchecked")
     public Object parse(JSONObject json) {
+        Class<?> expectedClass = defaultValue.getClass();
         value = json.getOrDefault(name(), defaultValue);
+        if (expectedClass.isEnum()) {
+            return Enum.valueOf((Class<? extends Enum>) expectedClass, value.toString());
+        }
         if (value instanceof Long) {
             value = ((Long) value).intValue();
         } else if (this == listener) {

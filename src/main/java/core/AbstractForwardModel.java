@@ -17,22 +17,9 @@ public abstract class AbstractForwardModel {
     public ActionTreeNode root;
     public List<ActionTreeNode> leaves;
 
-    // Decorator modify (restrict) the actions available to the player.
-    // This enables the Forward Model to be passed to the decision algorithm (e.g. MCTS), and ensure that any
-    // restrictions are applied to the actions available to the player during search, and not just
-    // in the main game loop.
-    protected List<IPlayerDecorator> decorators;
-    protected int decisionPlayerID;
-
     /* Limited access/Final methods */
 
     public AbstractForwardModel() {
-        this(new ArrayList<>(), -1);
-    }
-
-    public AbstractForwardModel(List<IPlayerDecorator> decorators, int playerID) {
-        this.decorators = new ArrayList<>(decorators);
-        this.decisionPlayerID = playerID;
     }
 
     /**
@@ -108,7 +95,8 @@ public abstract class AbstractForwardModel {
 
     /**
      * Either disqualify (automatic loss and no more playing), or play a random action for the player instead.
-     * @param flag - boolean to check if player should be disqualified, or random action should be played
+     *
+     * @param flag      - boolean to check if player should be disqualified, or random action should be played
      * @param gameState - current game state
      */
     protected final AbstractAction disqualifyOrRandomAction(boolean flag, AbstractGameState gameState) {
@@ -176,13 +164,6 @@ public abstract class AbstractForwardModel {
         } else {
             retValue = _computeAvailableActions(gameState);
         }
-
-        // Then apply Decorators regardless of source of actions
-        for (IPlayerDecorator decorator : decorators) {
-            if (decorator.decisionPlayerOnly() && gameState.getCurrentPlayer() != decisionPlayerID)
-                continue;
-            retValue = decorator.actionFilter(gameState, retValue);
-        }
         return retValue;
     }
 
@@ -210,10 +191,9 @@ public abstract class AbstractForwardModel {
         }
     }
 
-    public void addPlayerDecorator(IPlayerDecorator decorator) {
-        decorators.add(decorator);
+    public void reset() {
+        // default is that no reset is required, as a forward model does not have state
+        // although it may have decoraters that do
     }
-    public void clearPlayerDecorators() {
-        decorators.clear();
-    }
+
 }

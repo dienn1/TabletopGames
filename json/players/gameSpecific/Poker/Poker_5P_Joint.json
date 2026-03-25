@@ -1,0 +1,37 @@
+{
+  "budgetType" : "BUDGET_TIME",
+  "rolloutLengthPerPlayer" : true,
+  "rolloutTermination" : "END_TURN",
+  "rolloutLength" : 1,
+  "opponentTreePolicy" : "SelfOnly",
+  "heuristic" : {
+    "features" : {
+      "features" : [
+      ],
+      "defaultBuckets" : 1,
+      "underlyingState" : {
+        "class" : "games.poker.metrics.PokerHandFeatures"
+      },
+      "class" : "evaluation.features.AutomatedFeatures"
+    },
+    "coefficients" : {
+      "OpponentBid" : -0.0406,
+      "OwnMoney" : 0.320,
+      "RoundF:OpponentBid:MoneyDiff" : 1.37,
+      "RoundF:BidDiff" : -8.40,
+      "BIAS" : -68.3,
+      "RoundF" : 4.09,
+      "BidDiff" : 89.8,
+      "MoneyDiff" : 42.6,
+      "OpponentBid:MoneyDiff" : -14.3
+    },
+    "class" : "players.heuristics.LinearStateHeuristic",
+    "defaultHeuristic" : {
+      "class" : "players.heuristics.LeaderHeuristic"
+    }
+  },
+  "maxTreeDepth" : 1,
+  "treePolicy" : "Uniform",
+  "class" : "players.mcts.MCTSParams",
+  "budget" : -999
+}

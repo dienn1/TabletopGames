@@ -8,7 +8,6 @@
   "heuristic" : {
     "class" : "players.heuristics.LeaderHeuristic"
   },
-  "FPU" : 1.00,
   "maxTreeDepth" : 3,
   "treePolicy" : "UCB_Tuned",
   "reuseTree" : true,

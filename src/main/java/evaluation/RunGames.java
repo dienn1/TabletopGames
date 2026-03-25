@@ -104,7 +104,8 @@ public class RunGames implements IGameRunner {
                 System.out.printf("Game: %s, Players: %d\n", gameName, playerCount);
                 String playersDir = playerCount + "-players";
 
-                AbstractParameters params = config.get(gameParams).equals("") ? null : AbstractParameters.createFromFile(gameType, (String) config.get(gameParams));
+                AbstractParameters params = config.get(gameParams).equals("") ? null :
+                        AbstractParameters.createFromFile(gameType, (String) config.get(gameParams));
 
                 RoundRobinTournament tournament = new RoundRobinTournament(agents, gameType, playerCount, params, config);
 

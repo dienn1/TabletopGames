@@ -17,6 +17,7 @@ public abstract class AbstractPlayer {
     private AbstractForwardModel forwardModel;
     public PlayerParameters parameters;
     protected List<IPlayerDecorator> decorators;
+    protected boolean considerSingletonActions = false;
 
     public AbstractPlayer(PlayerParameters parameters, String name) {
         this.parameters = parameters != null ? parameters : new PlayerParameters();
@@ -40,6 +41,10 @@ public abstract class AbstractPlayer {
      */
     public final int getPlayerID() {
         return playerID;
+    }
+
+    public void setPlayerID(int p) {
+        this.playerID = p;
     }
 
     public final void setName(String name) {
@@ -85,20 +90,25 @@ public abstract class AbstractPlayer {
      * @param model
      */
     public void setForwardModel(AbstractForwardModel model) {
-        // TODO: We currently have no way of specifying a Decorator to only apply
-        // TODO: to the 'top-level' of getAction(), without also being used in the search algorithm.
-        // This could be useful if we want to take random actions at the top level (but not in search)
         this.forwardModel = model;
-        for (IPlayerDecorator decorator : decorators) {
-            model.addPlayerDecorator(decorator);
-        }
     }
     /**
      * Retrieves the forward model for current game being played.
-     *
+     * This will add decorators (if any exist) to the underlying forward model
      * @return - ForwardModel
      */
     public final AbstractForwardModel getForwardModel() {
+        // TODO: We currently have no way of specifying a Decorator to only apply
+        // TODO: to the 'top-level' of getAction(), without also being used in the search algorithm.
+        // This could be useful if we want to take random actions at the top level (but not in search)
+        if (!decorators.isEmpty()) {
+            DecoratedForwardModel decoratedModel = new DecoratedForwardModel(forwardModel);
+            for (IPlayerDecorator decorator : decorators) {
+                boolean allPlayers = !decorator.decisionPlayerOnly();
+                decoratedModel.addDecorator(allPlayers ? -1 : playerID, decorator.copy());
+            }
+            return decoratedModel;
+        }
         return forwardModel;
     }
 
@@ -112,6 +122,10 @@ public abstract class AbstractPlayer {
 
     public final void removeDecorator(IPlayerDecorator decorator) {
         decorators.remove(decorator);
+    }
+
+    public final List<IPlayerDecorator> getDecorators() {
+        return new ArrayList<>(decorators);
     }
 
     @Override

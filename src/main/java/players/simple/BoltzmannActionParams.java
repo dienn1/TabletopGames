@@ -3,16 +3,19 @@ package players.simple;
 import core.AbstractParameters;
 import core.interfaces.IActionHeuristic;
 import evaluation.optimisation.TunableParameters;
+import players.mcts.MASTPlusActionHeuristic;
 
 public class BoltzmannActionParams extends TunableParameters {
 
     public double temperature;
     public double epsilon;
+    public double MASTBeta;
     public IActionHeuristic actionHeuristic;
 
     public BoltzmannActionParams() {
         addTunableParameter("temperature", 1.0);
         addTunableParameter("epsilon", 0.0);
+        addTunableParameter("MASTBeta", 0.0);
         addTunableParameter("actionHeuristic", IActionHeuristic.class, (IActionHeuristic) (gameState, action, actions) -> 0.0);
     }
 
@@ -20,12 +23,16 @@ public class BoltzmannActionParams extends TunableParameters {
     public void _reset() {
         temperature = (double) this.getParameterValue("temperature");
         epsilon = (double) this.getParameterValue("epsilon");
+        MASTBeta = (double) this.getParameterValue("MASTBeta");
         actionHeuristic = (IActionHeuristic) this.getParameterValue("actionHeuristic");
     }
 
     @Override
     public Object instantiate() {
-        return new BoltzmannActionPlayer(actionHeuristic, temperature, epsilon, System.currentTimeMillis());
+        IActionHeuristic actionHeuristicToUse = (MASTBeta > 0.0)
+                ? new MASTPlusActionHeuristic(actionHeuristic, null, 0.0, 1.0 - MASTBeta)
+                : actionHeuristic;
+        return new BoltzmannActionPlayer(actionHeuristicToUse, temperature, epsilon, System.currentTimeMillis());
     }
 
 

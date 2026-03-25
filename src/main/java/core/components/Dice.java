@@ -3,6 +3,7 @@ package core.components;
 import java.util.*;
 
 import core.CoreConstants;
+import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import utilities.JSONUtils;
 
@@ -31,7 +32,7 @@ public class Dice extends Component {
     public final Type diceType;
     public final int nSides; // Number of sides
     protected int value;  // Current value after last roll
-    private double[] pdf = null;
+    private double[] pdf;
 
     public Dice() {
         this(d6);  // By default d6
@@ -39,22 +40,32 @@ public class Dice extends Component {
 
     public Dice(Type diceType) {
         super(CoreConstants.ComponentType.DICE);
-        this.diceType = diceType;
-        this.nSides = diceType.nSides;
+        this.diceType = type;
+        this.nSides = type.nSides;
+        this.pdf = new double[nSides];
+        Arrays.fill(pdf, 1.0/nSides);
     }
     public Dice(int nSides) {
         super(CoreConstants.ComponentType.DICE);
         this.nSides = nSides;
-        this.diceType = Type.sidesToType(nSides);
+        this.diceType = sidesToType(nSides);
+        this.pdf = new double[nSides];
+        Arrays.fill(pdf, 1.0/nSides);
+    }
+    public Dice(double[] pdf) {
+        super(CoreConstants.ComponentType.DICE);
+        this.pdf = pdf.clone();
+        this.nSides = pdf.length;
+        this.diceType = sidesToType(nSides);
     }
     public Dice(String json) {
         super(CoreConstants.ComponentType.DICE);
         JSONObject data = JSONUtils.loadJSONFile(json);
         this.nSides = ((Long) data.get("nSides")).intValue();
-        this.diceType = Type.sidesToType(nSides);
+        this.diceType = sidesToType(nSides);
         Object pdfObj = data.get("pdf");
         if (pdfObj != null) {
-            org.json.simple.JSONArray arr = (org.json.simple.JSONArray) pdfObj;
+            JSONArray arr = (JSONArray) pdfObj;
             pdf = new double[arr.size()];
             for (int i = 0; i < arr.size(); i++) {
                 pdf[i] = ((Number) arr.get(i)).doubleValue();
@@ -70,6 +81,11 @@ public class Dice extends Component {
         this.diceType = diceType;
         this.nSides = nSides;
         this.value = value;
+        pdf = new double[0];
+    }
+
+    public double[] getPdf() {
+        return pdf.clone();
     }
 
     /**
@@ -118,7 +134,7 @@ public class Dice extends Component {
     @Override
     public Dice copy() {
         Dice copy = new Dice(diceType, nSides, value, componentID);
-        if (pdf != null) copy.pdf = Arrays.copyOf(pdf, pdf.length);
+        copy.pdf = Arrays.copyOf(pdf, pdf.length);
         copyComponentTo(copy);
         return copy;
     }

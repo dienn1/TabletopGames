@@ -6,6 +6,7 @@ import core.interfaces.IGameEvent;
 
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 public class Event
@@ -41,38 +42,41 @@ public class Event
     public IGameEvent type;
     public AbstractGameState state;
     public AbstractAction action;
+    public List<AbstractAction> actions;
     public int playerID;
 
     public static Event createEvent(IGameEvent type,
                                     AbstractGameState gameState,
                                     AbstractAction action,
+                                    List<AbstractAction> allActions,
                                     int playerID)
     {
         Event e = new Event();
         e.type = type;
         e.state = gameState;
         e.action = action;
+        e.actions = allActions;
         e.playerID = playerID;
         return e;
     }
 
     public static Event createEvent(IGameEvent type)
     {
-        return Event.createEvent(type, null, null, -1);
+        return Event.createEvent(type, null, null, null, -1);
     }
 
     public static Event createEvent(IGameEvent type, AbstractGameState state)
     {
-        return Event.createEvent(type, state, null, -1);
+        return Event.createEvent(type, state, null, null, -1);
     }
 
     public static Event createEvent(IGameEvent type, AbstractGameState state, LogEvent action)
     {
-        return Event.createEvent(type, state, action, -1);
+        return Event.createEvent(type, state, action, null, -1);
     }
 
     public static Event createEvent(IGameEvent type, AbstractGameState state, int playerID)
     {
-        return Event.createEvent(type, state, null, playerID);
+        return Event.createEvent(type, state, null, null, playerID);
     }
 }

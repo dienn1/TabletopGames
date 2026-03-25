@@ -1,0 +1,22 @@
+{
+  "game" : "Poker",
+  "nPlayers" :  2,
+  "playerDirectory" : "json/players/gameSpecific/Poker/Poker_2P.json",
+  "stateLearner" : "LogisticWinLearner.json",
+  "stateFeatures" : "games.poker.metrics.PokerHandFeatures",
+  "destDir" : "Poker_2P/BaseWin",
+  "matchups" : 5000,
+  "sampleRate" : 0.05,
+  "expert" : "Base",
+  "valueSS" : "json/SearchSpaces/BaseSearchSpace_MAST.json",
+  "budget" : 64,
+  "bicTimer" : 60,
+  "bicMultiplier" : 3,
+  "expertTime" : 10,
+  "useNTuples" : false,
+  "useThreeTuples" : true,
+  "maxRecords" : 30000,
+  "kExplore" : 0.3,
+  "iterations" : 500,
+  "verbose" :  true
+}

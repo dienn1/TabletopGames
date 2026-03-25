@@ -13,7 +13,7 @@ import static games.virus.components.VirusOrgan.VirusOrganState.Neutral;
 
 public class PlaySpreading extends PlayVirusCard implements IPrintable {
 
-    private int                 otherPlayerId;
+    public final int                 otherPlayerId;
     private int                 otherPlayerBodyId;
     private VirusCard.OrganType myOrganType;
     private VirusCard.OrganType otherOrganType;

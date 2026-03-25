@@ -17,16 +17,16 @@ public class MCTSTreeSelectionTests {
     MCTSParams params = new MCTSParams();
     TestMCTSPlayer player;
     Random rnd = new Random(303897);
-    STNWithTestInstrumentation node;
+    SingleTreeNode node;
 
 
     List<AbstractAction> baseActions = List.of(new LMRAction("Left"), new LMRAction("Middle"), new LMRAction("Right"));
 
     public void setupPlayer() {
         fm.setup(game);
-        player = new TestMCTSPlayer(params, STNWithTestInstrumentation::new);
+        player = new TestMCTSPlayer(params);
         player.setForwardModel(fm);
-        node = (STNWithTestInstrumentation) SingleTreeNode.createRootNode(player, game, rnd, STNWithTestInstrumentation::new);
+        node = SingleTreeNode.createRootNode(player, game, rnd, SingleTreeNode::new);
     }
 
     @Test
@@ -55,7 +55,7 @@ public class MCTSTreeSelectionTests {
     }
 
 
-    private void first10Visits(STNWithTestInstrumentation node) {
+    private void first10Visits(SingleTreeNode node) {
         tenVisits(node, new double[]{-1.0, 0.5, 0.4});
         assertEquals(10, node.nVisits);
         assertEquals(1, node.getActionStats(new LMRAction("Left")).nVisits);
@@ -63,7 +63,7 @@ public class MCTSTreeSelectionTests {
         assertEquals(4, node.getActionStats(new LMRAction("Right")).nVisits);
     }
 
-    private void tenVisits(STNWithTestInstrumentation node, double[] rewards) {
+    private void tenVisits(SingleTreeNode node, double[] rewards) {
         node.actionsInTree = List.of(new Pair<>(0, new LMRAction("Left")));
         node.currentNodeTrajectory = List.of(node);
         node.backUp(new double[]{rewards[0]});
@@ -420,7 +420,6 @@ public class MCTSTreeSelectionTests {
 
     @Test
     public void pUCT10VisitsNoTemperature() {
-        params.pUCT = true;
         params.pUCTTemperature = 0.0;
         params.actionHeuristic = (a, s, l) -> {
             if (a.equals(new LMRAction("Left"))) {
@@ -447,7 +446,6 @@ public class MCTSTreeSelectionTests {
 
     @Test
     public void pUCT10VisitsWithTemperature() {
-        params.pUCT = true;
         params.pUCTTemperature = 2.0;
         params.actionHeuristic = (a, s, l) -> {
             if (a.equals(new LMRAction("Left"))) {
@@ -641,7 +639,6 @@ public class MCTSTreeSelectionTests {
     public void fpuWithpUCT() {
         // Check that pUCT is applied after FPU, so that we get effective pruning of values
         params.firstPlayUrgency = 2.0;
-        params.pUCT = true;
         params.pUCTTemperature = 0.0;
         params.actionHeuristic = (a, s, l) -> {
             if (a.equals(new LMRAction("Left"))) {

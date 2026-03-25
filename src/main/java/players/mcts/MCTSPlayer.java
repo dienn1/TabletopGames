@@ -45,6 +45,7 @@ public class MCTSPlayer extends AbstractPlayer implements IAnyTimePlayer, IHasSt
     public MCTSPlayer(MCTSParams params, String name) {
         super(params, name);
         rnd = new Random(parameters.getRandomSeed());
+        considerSingletonActions = true;
     }
 
     @Override
@@ -58,7 +59,7 @@ public class MCTSPlayer extends AbstractPlayer implements IAnyTimePlayer, IHasSt
             rnd = new Random(parameters.getRandomSeed());
             getParameters().rolloutPolicy = null;
             getParameters().getRolloutStrategy();
-            getParameters().opponentModel = null;  // thi swill force reconstruction from random seed
+            getParameters().opponentModel = null;  // this will force reconstruction from random seed
             getParameters().getOpponentModel();
             //       System.out.println("Resetting seed for MCTS player to " + params.getRandomSeed());
         }
@@ -277,7 +278,10 @@ public class MCTSPlayer extends AbstractPlayer implements IAnyTimePlayer, IHasSt
     @Override
     public AbstractAction _getAction(AbstractGameState gameState, List<AbstractAction> actions) {
         // Search for best action from the root
+        if (actions.size() == 1)
+            return actions.getFirst();  // take the only action available
         long currentTimeNano = System.nanoTime();
+        // creating the root node also sets the Forward Model (and wraps it in any decorators)
         createRootNode(gameState);
         long timeTaken = System.nanoTime() - currentTimeNano;
 
@@ -366,6 +370,10 @@ public class MCTSPlayer extends AbstractPlayer implements IAnyTimePlayer, IHasSt
     @Override
     public Map<AbstractAction, Map<String, Object>> getDecisionStats() {
         Map<AbstractAction, Map<String, Object>> retValue = new LinkedHashMap<>();
+
+        // no decision statistics
+        if (root == null)
+            return retValue;
 
         int players = root.state.getNPlayers();
         if (root != null && root.getVisits() > 1) {

@@ -30,12 +30,22 @@ public interface IPlayerDecorator {
 
     /**
      * this is a marker to indicate if the Decorator only applies to the decision player.
-     * The default is to use the same decorator for all players (e.g. when constructing the MCTS Search tree)
+     * The default is to use the same decorator for all players (e.g., when constructing the MCTS Search tree)
      * But we may also want to see the impact of, "We cannot use X; but we will plan for other players to do so".
-     * @return
      */
     default boolean decisionPlayerOnly() {
         return false;
+    }
+
+    default void reset() {
+        // do nothing by default, but can be overridden if the decorator needs to reset internal state at the start of a new game/move
+    }
+
+    /**
+     * Override this method to return a copy of the Decorator *iff* it stores state
+     */
+    default IPlayerDecorator copy() {
+        return this;  // default assumption is stateless
     }
 
 }

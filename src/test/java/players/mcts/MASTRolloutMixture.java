@@ -18,7 +18,7 @@ public class MASTRolloutMixture {
     LMRForwardModel fm = new LMRForwardModel();
     LMRGame game = new LMRGame(new LMTParameters(302));
     Random rnd = new Random(303897);
-    STNWithTestInstrumentation node;
+    SingleTreeNode node;
 
     List<AbstractAction> baseActions = List.of(new LMRAction("Left"), new LMRAction("Middle"), new LMRAction("Right"));
 
@@ -31,9 +31,9 @@ public class MASTRolloutMixture {
     private void initialiseMCTSPlayer() {
         // after setting params up in test
         params._reset();
-        player = new TestMCTSPlayer(params, STNWithTestInstrumentation::new);
+        player = new TestMCTSPlayer(params);
         player.setForwardModel(fm);
-        node = (STNWithTestInstrumentation) SingleTreeNode.createRootNode(player, game, rnd, STNWithTestInstrumentation::new);
+        node = SingleTreeNode.createRootNode(player, game, rnd, SingleTreeNode::new);
     }
 
     @Test

@@ -12,7 +12,7 @@ import java.util.Objects;
 
 public class PlayTransplant extends PlayVirusCard implements IPrintable {
     private int                 playerId;
-    private int                 otherPlayerId;
+    public final int                 otherPlayerId;
     private int                 otherBodyId;
     private VirusCard.OrganType myOrganType;
     private VirusCard.OrganType otherOrganType;

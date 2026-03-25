@@ -1,8 +1,9 @@
-package games.backgammon;
+package games.backgammon.actions;
 
 import core.AbstractGameState;
 import core.actions.AbstractAction;
-import games.descent2e.actions.Move;
+import games.backgammon.BGGameState;
+import games.backgammon.BGParameters;
 
 public class MovePiece extends AbstractAction {
 
@@ -55,7 +56,7 @@ public class MovePiece extends AbstractAction {
             return bgp.getLogicalPosition(player, to);
         } else if (to == -1) {
             // in this case any die value will do...so we take the lowest available one
-            int minDieValue = bgp.playerTrackMapping[0].length - bgp.getLogicalPosition(player, from);
+            int minDieValue = bgp.getLengthOfTrack() - bgp.getLogicalPosition(player, from);
             int min = params.diceSides + 1;
             for (int d : bgp.getAvailableDiceValues()) {
                 if (d < min && d >= minDieValue) {
@@ -101,6 +102,9 @@ public class MovePiece extends AbstractAction {
         int player = bgp.getCurrentPlayer();
         int pieces = bgp.getPiecesOnPoint(player, from);
         sb.append("Move Piece from ").append(from).append(" to ").append(to).append(" (1 of ").append(pieces).append(" pieces)");
+        if (to > -1 && bgp.getPiecesOnPoint(1 - player, to) == 1) {
+            sb.append(" [BLOT]");
+        }
         return sb.toString();
     }
 }
