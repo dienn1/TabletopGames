@@ -40,8 +40,8 @@ public class Dice extends Component {
 
     public Dice(Type diceType) {
         super(CoreConstants.ComponentType.DICE);
-        this.diceType = type;
-        this.nSides = type.nSides;
+        this.diceType = diceType;
+        this.nSides = diceType.nSides;
         this.pdf = new double[nSides];
         Arrays.fill(pdf, 1.0/nSides);
     }
