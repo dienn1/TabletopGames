@@ -26,10 +26,10 @@ public class CantStopMetrics implements IMetricsCollection {
             return new CantStopGameStateContainer((CantStopGameState) gs);
         }
 
-        @Override
-        protected boolean isValidSave(Event e) {
-            return e.state.getTurnCounter() % e.state.getNPlayers() == 0;
-        }
+//        @Override
+//        protected boolean isValidSave(Event e) {
+//            return e.state.getTurnCounter() % e.state.getNPlayers() == 0;
+//        }
 
         @Override
         protected Set<IGameEvent> getSaveEventTypes() {

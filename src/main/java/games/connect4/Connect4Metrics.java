@@ -29,7 +29,7 @@ public class Connect4Metrics implements IMetricsCollection {
 
         @Override
         protected Set<IGameEvent> getSaveEventTypes() {
-            return Collections.singleton(Event.GameEvent.ROUND_OVER);
+            return Collections.singleton(Event.GameEvent.TURN_OVER);
         }
     }
 

@@ -24,10 +24,8 @@ public class DBMetrics implements IMetricsCollection {
             return new DBGameStateContainer((DBGameState) gs);
         }
 
-        @Override
-        protected boolean isValidSave(Event e) {
-            return e.state.getTurnCounter() % 2 == 0;
-        }
+//        @Override
+//        protected boolean isValidSave(Event e) {return e.state.getTurnCounter() % 2 == 0;}
 
         @Override
         protected Set<IGameEvent> getSaveEventTypes() {
