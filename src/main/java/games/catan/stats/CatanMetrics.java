@@ -468,10 +468,10 @@ public class CatanMetrics implements IMetricsCollection {
             return new CatanGameStateContainer((CatanGameState) gs);
         }
 
-        @Override
-        protected boolean isValidSave(Event e) {
-            return e.state.getRoundCounter() % e.state.getNPlayers() == 0;
-        }
+//        @Override
+//        protected boolean isValidSave(Event e) {
+//            return e.state.getRoundCounter() % e.state.getNPlayers() == 0;
+//        }
 
         @Override
         protected Set<IGameEvent> getSaveEventTypes() {
