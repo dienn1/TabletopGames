@@ -8,6 +8,7 @@ import core.rules.AbstractRuleBasedForwardModel;
 import games.XIIScripta.XIIGUIManager;
 import games.XIIScripta.XIIParameters;
 import games.backgammon.*;
+import games.backgammon.gui.BGGUIManager;
 import games.battlelore.BattleloreForwardModel;
 import games.battlelore.BattleloreGameParameters;
 import games.battlelore.BattleloreGameState;

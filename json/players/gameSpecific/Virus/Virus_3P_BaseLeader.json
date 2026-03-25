@@ -1,0 +1,36 @@
+{
+  "budgetType" : "BUDGET_TIME",
+  "rolloutLengthPerPlayer" : true,
+  "rolloutLength" : 1,
+  "MASTGamma" : 0.200,
+  "heuristic" : {
+    "features" : {
+      "features" : [
+      ],
+      "defaultBuckets" : 1,
+      "underlyingState" : {
+        "class" : "games.virus.metrics.VirusStateFeatures"
+      },
+      "class" : "evaluation.features.AutomatedFeatures"
+    },
+    "coefficients" : {
+      "HealthyOrgans:LeaderMargin" : 0.157,
+      "LeaderMargin" : 0.322,
+      "BIAS" : -0.980,
+      "RequiredOrgansInHand" : 0.171,
+      "HealthyOrgans" : 0.195,
+      "OrganThief" : 0.217
+    },
+    "class" : "players.heuristics.LinearStateHeuristic",
+    "defaultHeuristic" : {
+      "class" : "players.heuristics.LeaderHeuristic"
+    }
+  },
+  "K" : 100,
+  "maxTreeDepth" : 1,
+  "treePolicy" : "AlphaGo",
+  "MAST" : "Both",
+  "rolloutType" : "MAST",
+  "class" : "players.mcts.MCTSParams",
+  "budget" : -999
+}

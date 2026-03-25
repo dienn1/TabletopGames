@@ -1,6 +1,5 @@
 package players.heuristics;
 
-import com.ibm.icu.impl.number.parse.PaddingMatcher;
 import core.actions.AbstractAction;
 import evaluation.features.AutomatedFeatures;
 import games.backgammon.BGActionFeatures;
@@ -14,7 +13,6 @@ import games.dominion.cards.CardType;
 import games.dominion.cards.DominionCard;
 import games.dominion.metrics.DomActionFeatures;
 import games.dominion.metrics.DomStateFeaturesReduced;
-import org.apache.hadoop.shaded.org.eclipse.jetty.util.ajax.JSON;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.junit.Before;

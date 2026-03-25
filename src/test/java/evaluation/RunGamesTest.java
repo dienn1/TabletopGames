@@ -32,6 +32,8 @@ public class RunGamesTest {
         agents.add(new RandomPlayer());
         agents.add(new RandomPlayer());
         agents.add(new RandomPlayer());
+        for (int i = 0; i < agents.size(); i++)
+            agents.get(i).setName("Agent" + i);
 
         config = RunArg.parseConfig(new String[]{}, Collections.singletonList(RunArg.Usage.RunGames));  // empty config
         config.put(RunArg.matchups, 100);

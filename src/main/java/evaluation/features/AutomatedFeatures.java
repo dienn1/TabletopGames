@@ -457,7 +457,8 @@ public class AutomatedFeatures implements IStateFeatureVector, IActionFeatureVec
             dataColumns.add(new ArrayList<>());
         }
         int count = 0;
-        for (List<String> row : dataRows) {
+        // We want to go backwards so that we take the most recent data (if there is more than maxRecords)
+        for (List<String> row : dataRows.reversed()) {
             if (row.size() != headers.size()) {
                 System.err.println("Warning: Skipping row with inconsistent number of columns: " + row);
                 continue; // Skip rows with inconsistent number of columns
@@ -619,10 +620,9 @@ public class AutomatedFeatures implements IStateFeatureVector, IActionFeatureVec
                 } else {
                     // need to calculate this
                     List<Double> interactionData = new ArrayList<>();
-                    for (int j = 0; j < newDataColumns.get(0).size(); j++) {
+                    for (int j = 0; j < newDataColumns.getFirst().size(); j++) {
                         double interactionValue = 1.0;
-                        for (int k = 0; k < newIndices.size(); k++) {
-                            int index = newIndices.get(k);
+                        for (int index : newIndices) {
                             Object valueObj = newDataColumns.get(index).get(j);
                             double value = valueObj instanceof Number ? ((Number) valueObj).doubleValue() :
                                     valueObj instanceof String ? Double.parseDouble((String) valueObj) : 0;
@@ -705,8 +705,7 @@ public class AutomatedFeatures implements IStateFeatureVector, IActionFeatureVec
 
         // We now have all the column, to write to file we need to convert this into a set of rows
         List<List<Object>> newDataRows = new ArrayList<>();
-        for (int i = 0; i < newDataColumns.size(); i++) {
-            List<?> columnData = newDataColumns.get(i);
+        for (List<?> columnData : newDataColumns) {
             for (int j = 0; j < columnData.size(); j++) {
                 if (newDataRows.size() <= j) {
                     newDataRows.add(new ArrayList<>());

@@ -1,4 +1,7 @@
-package games.backgammon;
+package games.backgammon.gui;
+
+import games.backgammon.*;
+import games.backgammon.actions.MovePiece;
 
 import javax.swing.*;
 import java.awt.*;

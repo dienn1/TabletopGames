@@ -79,6 +79,10 @@ public class VirusGameState extends AbstractGameState implements IPrintable {
         return playerBodies.get(playerId).organs.values().stream().filter(VirusOrgan::isHealthy).count();
     }
 
+    public double getDiseasedOrgans(int playerId) {
+        return playerBodies.get(playerId).organs.values().stream().filter(organ -> !organ.isHealthy()).count();
+    }
+
     @Override
     protected boolean _equals(Object o) {
         if (this == o) return true;
@@ -105,6 +109,10 @@ public class VirusGameState extends AbstractGameState implements IPrintable {
 
     public List<Deck<VirusCard>> getPlayerDecks() {
         return playerDecks;
+    }
+
+    public VirusBody getPlayerBody(int playerId) {
+        return playerBodies.get(playerId);
     }
 
     public String toString() {

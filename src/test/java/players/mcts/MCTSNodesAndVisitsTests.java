@@ -118,10 +118,11 @@ public class MCTSNodesAndVisitsTests {
         AbstractGameState state = game.getGameState();
         AbstractForwardModel forwardModel = game.getForwardModel();
         do {
+            List<AbstractAction> availableActions = forwardModel.computeAvailableActions(state);
             AbstractAction actionChosen = game.getPlayers().get(state.getCurrentPlayer())
-                    ._getAction(state, forwardModel.computeAvailableActions(state));
+                    ._getAction(state, availableActions);
 
-            if (state.getCurrentPlayer() == 0) {
+            if (availableActions.size() > 1 && state.getCurrentPlayer() == 0) {
                 TreeStatistics stats = new TreeStatistics(mctsPlayer.getRoot(0));
                 assertEquals(200, mctsPlayer.getRoot(0).getVisits());
                 int childVisits = mctsPlayer.getRoot(0).actionValues.values().stream()

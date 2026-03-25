@@ -13,7 +13,7 @@ public class UnoGameParameters extends TunableParameters {
     public String dataPath = "data/uno/";
 
     // CLASSIC scoring only gives points to the winning player equal to the cards held by their opponents
-    // INCREMENTAL scores the points held in ones own hand, and the winner is the lowest score at the end
+    // INCREMENTAL scores the points held in one's own hand, and the winner is the lowest score at the end
     // CHALLENGE is the 'recommended' variant. It is as INCREMENTAL, but players are eliminated once
     // they reach 500 points
     public enum UnoScoring {
@@ -111,8 +111,7 @@ public class UnoGameParameters extends TunableParameters {
                 scoringMethod == that.scoringMethod &&
                 Objects.equals(dataPath, that.dataPath) &&
                 Arrays.equals(specialDrawCards, that.specialDrawCards) &&
-                Arrays.equals(specialWildDrawCards, that.specialWildDrawCards) &&
-                Arrays.equals(colors, that.colors);
+                Arrays.equals(specialWildDrawCards, that.specialWildDrawCards);
     }
 
     @Override
@@ -120,7 +119,6 @@ public class UnoGameParameters extends TunableParameters {
         int result = Objects.hash(super.hashCode(), dataPath, nCardsPerPlayer, nNumberCards, nWildCards, nSkipCards, nReverseCards, nDrawCards, nReversePoints, nDraw2Points, nSkipPoints, nWildPoints, nWildDrawPoints, nWinPoints, scoringMethod);
         result = 31 * result + Arrays.hashCode(specialDrawCards);
         result = 31 * result + Arrays.hashCode(specialWildDrawCards);
-        result = 31 * result + Arrays.hashCode(colors);
         return result;
     }
 

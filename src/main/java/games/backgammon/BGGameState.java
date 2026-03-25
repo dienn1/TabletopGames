@@ -94,6 +94,10 @@ public class BGGameState extends AbstractGameState {
         return playerTrackMapping[playerId][nthPoint];
     }
 
+    public int getLengthOfTrack() {
+        return playerTrackMapping[0].length;
+    }
+
     /*
     The reverse mapping from the physical space on the board to the logical position on the player's track.
      */
@@ -133,6 +137,21 @@ public class BGGameState extends AbstractGameState {
         blots[playerId]++;
     }
 
+
+    // generally used after the other player was detected cheating
+    public void moveAllPiecesToEnd(int i) {
+        for (int p = 0; p < getNPlayers(); p++) {
+            for (int point = 0; point < counters.size(); point++) {
+                List<Token> tokens = new ArrayList<>(counters.get(point));
+                for (Token t : tokens) {
+                    if (t.getOwnerId() == p) {
+                        movePiece(p, point, -1);
+                    }
+                }
+            }
+        }
+    }
+
     public void rollDice() {
         for (Dice die : dice) {
             die.roll(rnd);
@@ -168,6 +187,12 @@ public class BGGameState extends AbstractGameState {
         updateAvailableDiceValues();
     }
 
+    public void setDicePdf(int dieIndex, double[] newPDF) {
+        if (dice[dieIndex].nSides != newPDF.length)
+            throw new IllegalArgumentException("New PDF has wrong number of sides. Expecting " + dice[dieIndex].nSides + " but got " + newPDF.length);
+        dice[dieIndex] = new Dice(newPDF);
+    }
+
     public void useDiceValue(int dieValue) {
         for (int i = 0; i < availableDiceValues.length; i++) {
             if (!diceUsed[i] && availableDiceValues[i] == dieValue) {
@@ -196,6 +221,10 @@ public class BGGameState extends AbstractGameState {
             }
         }
         return Arrays.copyOf(values, count);
+    }
+
+    public double[] getDicePdf(int die) {
+        return dice[die].getPdf();
     }
 
     public int piecesOnHomeBoard(int playerId) {
@@ -235,8 +264,8 @@ public class BGGameState extends AbstractGameState {
         for (int i = 0; i < dice.length; i++) {
             copy.dice[i] = dice[i].copy();
         }
-        copy.diceUsed = Arrays.copyOf(diceUsed, diceUsed.length);
-        copy.availableDiceValues = Arrays.copyOf(availableDiceValues, availableDiceValues.length);
+        copy.diceUsed = diceUsed == null ? null : Arrays.copyOf(diceUsed, diceUsed.length);
+        copy.availableDiceValues = availableDiceValues == null ? null : Arrays.copyOf(availableDiceValues, availableDiceValues.length);
 
         copy.counters = new ArrayList<>();
         for (int i = 0; i < counters.size(); i++) {

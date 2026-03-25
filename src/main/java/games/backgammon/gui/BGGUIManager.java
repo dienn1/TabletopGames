@@ -1,7 +1,10 @@
-package games.backgammon;
+package games.backgammon.gui;
 
 import core.*;
 import core.actions.AbstractAction;
+import games.backgammon.BGForwardModel;
+import games.backgammon.BGGameState;
+import games.backgammon.actions.MovePiece;
 import gui.*;
 import players.human.ActionController;
 

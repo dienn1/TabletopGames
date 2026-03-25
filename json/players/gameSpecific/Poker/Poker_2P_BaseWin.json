@@ -1,0 +1,40 @@
+{
+  "budgetType" : "BUDGET_TIME",
+  "rolloutLengthPerPlayer" : true,
+  "rolloutLength" : 1,
+  "opponentTreePolicy" : "SelfOnly",
+  "MASTGamma" : 0.200,
+  "heuristic" : {
+    "features" : {
+      "features" : [
+      ],
+      "defaultBuckets" : 1,
+      "underlyingState" : {
+        "class" : "games.poker.metrics.PokerHandFeatures"
+      },
+      "class" : "evaluation.features.AutomatedFeatures"
+    },
+    "coefficients" : {
+      "AllIn" : -0.106,
+      "BIAS" : 0.287,
+      "HighCard:MoneyDiff" : 0.552,
+      "MoneyDiff:AllIn" : 0.530,
+      "BidDiff" : 0.467,
+      "HighCard" : -0.441,
+      "MoneyDiff" : 1.48
+    },
+    "class" : "players.heuristics.LogisticStateHeuristic",
+    "defaultHeuristic" : {
+      "class" : "players.heuristics.WinOnlyHeuristic"
+    }
+  },
+  "maxTreeDepth" : 1,
+  "treePolicy" : "AlphaGo",
+  "reuseTree" : true,
+  "backupPolicy" : "MaxMC",
+  "MAST" : "Both",
+  "rolloutType" : "MAST",
+  "maxBackupThreshold" : 10,
+  "class" : "players.mcts.MCTSParams",
+  "budget" : -999
+}

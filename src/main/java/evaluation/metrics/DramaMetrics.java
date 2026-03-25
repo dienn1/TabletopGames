@@ -49,13 +49,33 @@ public class DramaMetrics implements IMetricsCollection {
                     List<AbstractAction> actions = fm.computeAvailableActions(e.state);
                     if (actions.size() > 1 || !onlyProcessGenuineChoices) {
                         AbstractAction oracleAction = oracle._getAction(e.state, actions);
-                        records.put("OracleAction", oracleAction.toString());
-                        records.put("OracleActionDescription", oracleAction.getString(e.state));
+                        records.put("OracleAction", oracleAction.getString(e.state));
                         Map<AbstractAction, Map<String, Object>> stats = oracle.getDecisionStats();
-                        Map<String, Object> actionStats = stats.get(oracleAction);
-                        if (actionStats != null) {
-                            oracleActionValues = (double[]) actionStats.get("nodeValue");
-                            oracleHeuristicValues = (double[]) actionStats.get("heuristicValue");
+
+                        if (!stats.isEmpty()) {
+                            Map<String, Object> actionStats = stats.get(oracleAction);
+                            if (actionStats != null) {
+                                oracleActionValues = (double[]) actionStats.get("nodeValue");
+                                oracleHeuristicValues = (double[]) actionStats.get("heuristicValue");
+                            }
+
+                            List<AbstractAction> sortedActions = stats.keySet().stream()
+                                    .sorted(Comparator.comparingDouble(a -> -(double) ((double[]) stats.get(a).get("nodeValue"))[e.state.getCurrentPlayer()]))
+                                    .toList();
+                            if (sortedActions.size() > 1) {
+                                AbstractAction secondAction = sortedActions.get(1);
+                                records.put("SecondOracleAction", secondAction.getString(e.state));
+                                double[] secondActionValues = (double[]) stats.get(secondAction).get("nodeValue");
+                                for (int i = 0; i < e.state.getNPlayers(); i++) {
+                                    records.put("SecondOracleP" + i, secondActionValues[i]);
+                                }
+                            }
+                            AbstractAction worstAction = sortedActions.getLast();
+                            records.put("WorstOracleAction", worstAction.getString(e.state));
+                            double[] worstActionValues = (double[]) stats.get(worstAction).get("nodeValue");
+                            for (int i = 0; i < e.state.getNPlayers(); i++) {
+                                records.put("WorstOracleP" + i, worstActionValues[i]);
+                            }
                         }
                     } else {
                         return true; // no genuine choice to make, so skip recording
@@ -89,11 +109,14 @@ public class DramaMetrics implements IMetricsCollection {
                 if (oracle != null) {
                     columns.put("OracleP" + i, Double.class);
                     columns.put("OracleDiffP" + i, Double.class);
+                    columns.put("SecondOracleP" + i, Double.class);
+                    columns.put("WorstOracleP" + i, Double.class);
                 }
             }
             if (oracle != null) {
                 columns.put("OracleAction", String.class);
-                columns.put("OracleActionDescription", String.class);
+                columns.put("SecondOracleAction", String.class);
+                columns.put("WorstOracleAction", String.class);
             }
             return columns;
         }

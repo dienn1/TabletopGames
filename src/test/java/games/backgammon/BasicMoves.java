@@ -5,6 +5,8 @@ import core.CoreConstants;
 import core.actions.AbstractAction;
 import core.actions.DoNothing;
 import core.components.Token;
+import games.backgammon.actions.MovePiece;
+import games.backgammon.actions.RollDice;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -25,6 +27,8 @@ public class BasicMoves {
         gameState = new BGGameState(parameters, 2);
         forwardModel = new BGForwardModel();
         forwardModel.setup(gameState);
+        assertEquals(new RollDice(), forwardModel.computeAvailableActions(gameState).getFirst());
+        forwardModel.next(gameState, new RollDice());
     }
 
     @Test
@@ -181,11 +185,22 @@ public class BasicMoves {
     }
 
     @Test
+    public void testGamePhase() {
+        assertEquals(BGGamePhase.MovePieces, gameState.getGamePhase());
+        forwardModel.next(gameState, forwardModel.computeAvailableActions(gameState).getFirst());
+        assertEquals(BGGamePhase.MovePieces, gameState.getGamePhase());
+        forwardModel.next(gameState, forwardModel.computeAvailableActions(gameState).getFirst());
+        assertEquals(BGGamePhase.RollDice, gameState.getGamePhase());
+    }
+
+    @Test
     public void testHitOnOpponentPiece() {
         gameState.setDiceValues(new int[]{1, 4});
         forwardModel.next(gameState, new MovePiece(6, 5));
         assertEquals(0, gameState.getCurrentPlayer());
         forwardModel.next(gameState, new MovePiece(8, 4));
+
+        forwardModel.next(gameState, new RollDice());
         assertEquals(1, gameState.getCurrentPlayer());
         assertEquals(1, gameState.getTurnCounter());
         assertEquals(2, gameState.getAvailableDiceValues().length);
@@ -259,6 +274,7 @@ public class BasicMoves {
         assertEquals(1, gameState.getPiecesOnPoint(0, 23));
         assertEquals(1, gameState.getPiecesOnBar(0));
         assertEquals(1, gameState.getCurrentPlayer());
+        forwardModel.next(gameState, new RollDice());
         assertEquals(2, gameState.getAvailableDiceValues().length);
     }
 
@@ -276,6 +292,7 @@ public class BasicMoves {
         } while (gameState.getCurrentPlayer() == 0);
         gameState.movePiece(1, 21, 5);
 
+        forwardModel.next(gameState, new RollDice());
         gameState.setDiceValues(new int[]{5, 6});
         assertEquals(1, gameState.getCurrentPlayer());
         var availableActions = forwardModel.computeAvailableActions(gameState);
@@ -316,6 +333,7 @@ public class BasicMoves {
             forwardModel.next(gameState, forwardModel.computeAvailableActions(gameState).get(0));
         } while (gameState.getCurrentPlayer() == 0);
 
+        forwardModel.next(gameState, new RollDice());
         gameState.setDiceValues(new int[]{2, 4});
         assertEquals(1, gameState.getCurrentPlayer());
         var availableActions = forwardModel.computeAvailableActions(gameState);
@@ -394,6 +412,7 @@ public class BasicMoves {
             forwardModel.next(gameState, forwardModel.computeAvailableActions(gameState).get(0));
             assertEquals(1, gameState.getAvailableDiceValues().length);
             forwardModel.next(gameState, forwardModel.computeAvailableActions(gameState).get(0));
+            forwardModel.next(gameState, new RollDice());
             assertEquals(2, gameState.getAvailableDiceValues().length);
         }
     }
@@ -406,6 +425,7 @@ public class BasicMoves {
             forwardModel.next(gameState, forwardModel.computeAvailableActions(gameState).get(0));
             assertEquals(1, gameState.getAvailableDiceValues().length);
             forwardModel.next(gameState, forwardModel.computeAvailableActions(gameState).get(0));
+            forwardModel.next(gameState, new RollDice());
             assertEquals(2, gameState.getAvailableDiceValues().length);
         }
     }

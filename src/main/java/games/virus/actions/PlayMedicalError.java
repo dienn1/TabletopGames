@@ -13,7 +13,7 @@ import java.util.Objects;
 public class PlayMedicalError extends PlayVirusCard implements IPrintable {
     private int otherBodyId;
     private int playerId;
-    private int otherPlayerId;
+    public final int otherPlayerId;
 
     public PlayMedicalError(int deckFrom, int deckTo, int fromIndex, int bodyId, int otherBodyId, int playerId, int otherPlayerId) {
         super(deckFrom, deckTo, fromIndex, bodyId);

@@ -1,0 +1,65 @@
+{
+  "budgetType" : "BUDGET_TIME",
+  "rolloutLengthPerPlayer" : true,
+  "rolloutTermination" : "END_ROUND",
+  "oppModelType" : "RANDOM",
+  "rolloutLength" : 100,
+  "heuristic" : {
+    "features" : {
+      "features" : [
+      ],
+      "defaultBuckets" : 1,
+      "underlyingState" : {
+        "class" : "games.poker.metrics.PokerHandFeatures"
+      },
+      "class" : "evaluation.features.AutomatedFeatures"
+    },
+    "coefficients" : {
+      "OwnMoney" : 0.801,
+      "BIAS" : -51.5,
+      "BidDiff" : 10.1,
+      "HighCard" : -11.0,
+      "MoneyDiff" : 28.1
+    },
+    "class" : "players.heuristics.LinearStateHeuristic",
+    "defaultHeuristic" : {
+      "class" : "players.heuristics.LeaderHeuristic"
+    }
+  },
+  "FPU" : 100,
+  "pUCTTemperature" : 10.0,
+  "actionHeuristic" : {
+    "coefficients" : {
+      "OwnMoney" : -0.00489,
+      "HighCardValue:BidDiff:OwnMoney:IsAllIn" : -0.0104,
+      "BIAS" : -0.698,
+      "IsAllIn" : 0.136,
+      "IsRaise" : -0.627,
+      "OwnMoney:IsAllIn" : -0.0760,
+      "HighCardValue:IsFold" : -0.140,
+      "BidDiff" : -0.0891,
+      "IsFold" : 0.372,
+      "HighCardValue" : 0.0292
+    },
+    "actionFeatures" : {
+      "features" : [
+      ],
+      "defaultBuckets" : 1,
+      "underlyingState" : {
+        "class" : "games.poker.metrics.PokerHandFeatures"
+      },
+      "class" : "evaluation.features.AutomatedFeatures",
+      "underlyingAction" : {
+        "class" : "games.poker.metrics.PokerActionFeatures"
+      }
+    },
+    "class" : "players.heuristics.LogisticActionHeuristic"
+  },
+  "backupPolicy" : "MaxMC",
+  "MASTGamma" : 0.200,
+  "MAST" : "Both",
+  "rolloutType" : "MAST",
+  "maxBackupThreshold" : 10,
+  "class" : "players.mcts.MCTSParams",
+  "budget" : -999
+}

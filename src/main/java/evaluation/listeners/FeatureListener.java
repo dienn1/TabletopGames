@@ -26,22 +26,39 @@ public abstract class FeatureListener implements IGameListener {
     protected Game game;
     protected double sampleRate = 1.0; // what proportion of events to record
     protected Random rnd = new Random();
+    protected boolean recordEndGameState = true;
 
     protected FeatureListener(Event.GameEvent frequency, boolean currentPlayerOnly) {
         this.currentPlayerOnly = currentPlayerOnly;
         this.frequency = frequency;
     }
 
-    public void setLogger(IStatisticLogger logger) {
+    public FeatureListener setLogger(IStatisticLogger logger) {
         if (logger != null) {
             logger.processDataAndFinish();
         }
         this.logger = logger;
+        return this;
     }
 
-    public void setSampleRate(double rate) {
+    public FeatureListener setSampleRate(double rate) {
         if (rate <= 0 || rate > 1.0) throw new IllegalArgumentException("Sample rate must be in the range (0,1]");
         sampleRate = rate;
+        return this;
+    }
+
+
+    @Override
+    public boolean setOutputDirectory(String... nestedDirectories) {
+        if (logger instanceof FileStatsLogger fileLogger) {
+            fileLogger.setOutputDirectory(nestedDirectories);
+        }
+        return true;
+    }
+
+    public FeatureListener recordEndGameState(boolean recordEndGameState) {
+        this.recordEndGameState = recordEndGameState;
+        return this;
     }
 
     @Override
@@ -61,19 +78,12 @@ public abstract class FeatureListener implements IGameListener {
 
         if (event.type == Event.GameEvent.GAME_OVER) {
             // first we record a final state for each player
-            processState(event.state, null);
+            if (recordEndGameState)
+                processState(event.state, null);
 
             // now we can update the result
             writeDataWithStandardHeaders(event.state);
         }
-    }
-
-    @Override
-    public boolean setOutputDirectory(String... nestedDirectories) {
-        if (logger instanceof FileStatsLogger fileLogger) {
-            fileLogger.setOutPutDirectory(nestedDirectories);
-        }
-        return true;
     }
 
     public void writeDataWithStandardHeaders(AbstractGameState state) {
@@ -99,6 +109,7 @@ public abstract class FeatureListener implements IGameListener {
             for (String key : record.values.keySet()) {
                 data.put(key, record.values.get(key));
             }
+  //          System.out.printf("Recording data....Game: %d, Player: %d, Round: %d, Turn: %d%n",  state.getGameID(), record.player, record.gameRound, record.gameTurn);
             data.put("PlayerCount", getGame().getPlayers().size());
             data.put("TotalRounds", finalRound);
             data.put("TotalTurns", state.getTurnCounter());
@@ -160,9 +171,14 @@ public abstract class FeatureListener implements IGameListener {
 
     public abstract String[] names();
 
+
+    public void preProcessing(AbstractGameState state, AbstractAction action) {
+        // for extension in sub-classes
+    }
     public void processState(AbstractGameState state, AbstractAction action) {
         // we record one state for each player after each relevant event occurs
         // we first determine if the data is double[] or Object[]
+        preProcessing(state, action);
         boolean isDouble = true;
         int currentPlayer = state.getCurrentPlayer();
         double[] doubleData = new double[0];
@@ -171,7 +187,7 @@ public abstract class FeatureListener implements IGameListener {
         } catch (UnsupportedOperationException e) {
             isDouble = false;
         }
-        if (currentPlayerOnly && state.isNotTerminal()) {
+        if (currentPlayerOnly && state.isNotTerminalForPlayer(currentPlayer)) {
             if (isDouble) {
                 currentData.add(LocalDataWrapper.factory(currentPlayer, doubleData, names(), state, new HashMap<>()));
             } else {
@@ -180,12 +196,14 @@ public abstract class FeatureListener implements IGameListener {
             }
         } else {
             for (int p = 0; p < state.getNPlayers(); p++) {
-                if (isDouble) {
-                    double[] phi = p == currentPlayer ? doubleData : extractDoubleVector(action, state, p);
-                    currentData.add(LocalDataWrapper.factory(p, phi, names(), state, new HashMap<>()));
-                } else {
-                    Object[] phi = extractFeatureVector(action, state, p);
-                    currentData.add(LocalDataWrapper.factory(p, phi, names(), state, new HashMap<>()));
+                if (state.isNotTerminalForPlayer(p)) {
+                    if (isDouble) {
+                        double[] phi = p == currentPlayer ? doubleData : extractDoubleVector(action, state, p);
+                        currentData.add(LocalDataWrapper.factory(p, phi, names(), state, new HashMap<>()));
+                    } else {
+                        Object[] phi = extractFeatureVector(action, state, p);
+                        currentData.add(LocalDataWrapper.factory(p, phi, names(), state, new HashMap<>()));
+                    }
                 }
             }
         }

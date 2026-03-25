@@ -1,0 +1,37 @@
+{
+  "budgetType" : "BUDGET_TIME",
+  "rolloutLengthPerPlayer" : true,
+  "rolloutTermination" : "END_TURN",
+  "rolloutLength" : 3,
+  "opponentTreePolicy" : "SelfOnly",
+  "heuristic" : {
+    "features" : {
+      "features" : [
+      ],
+      "defaultBuckets" : 1,
+      "underlyingState" : {
+        "class" : "games.uno.metrics.UnoStateFeatures"
+      },
+      "class" : "evaluation.features.AutomatedFeatures"
+    },
+    "coefficients" : {
+      "diffColorsNumber" : -2.81,
+      "minOpponentCards" : 0.837,
+      "Reverse" : -4.03,
+      "BIAS" : 3.42,
+      "leaderMargin" : -102
+    },
+    "class" : "players.heuristics.LinearStateHeuristic",
+    "defaultHeuristic" : {
+      "class" : "players.heuristics.LeaderHeuristic"
+    }
+  },
+  "K" : 0.0100,
+  "maxTreeDepth" : 3,
+  "treePolicy" : "AlphaGo",
+  "reuseTree" : true,
+  "backupPolicy" : "MaxMC",
+  "maxBackupThreshold" : 3,
+  "class" : "players.mcts.MCTSParams",
+  "budget" : -999
+}

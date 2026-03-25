@@ -362,8 +362,6 @@ public class PandemicForwardModel extends AbstractRuleBasedForwardModel {
 
     public PandemicForwardModel copy() {
         PandemicForwardModel retValue = new PandemicForwardModel(copyRoot());
-        retValue.decisionPlayerID = decisionPlayerID;
-        retValue.decorators = new ArrayList<>(decorators);
         return retValue;
     }
 

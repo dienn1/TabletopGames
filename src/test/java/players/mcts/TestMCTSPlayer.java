@@ -2,6 +2,7 @@ package players.mcts;
 
 import core.AbstractGameState;
 import core.actions.AbstractAction;
+import org.junit.Test;
 import players.mcts.MCTSParams;
 import players.mcts.MCTSPlayer;
 import players.mcts.MultiTreeNode;
@@ -21,6 +22,10 @@ public class TestMCTSPlayer extends MCTSPlayer {
 
     protected Supplier<? extends SingleTreeNode> factory;
     public boolean rolloutTest = true;
+
+    public TestMCTSPlayer(MCTSParams params) {
+        this(params, SingleTreeNode::new);
+    }
 
     public TestMCTSPlayer(MCTSParams params, Supplier<? extends SingleTreeNode> factory) {
         super(params, "TestMCTSPlayer");

@@ -11,7 +11,7 @@ import games.virus.cards.VirusCard;
 import java.util.Objects;
 
 public class PlayLatexGlove extends PlayVirusCard implements IPrintable {
-    private int otherPlayerId;
+    public final int otherPlayerId;
     private int otherPlayerHandId;
 
     public PlayLatexGlove(int deckFrom, int deckTo, int fromIndex, int bodyId, int otherPlayerId, int otherPlayerHandId) {
