@@ -185,7 +185,8 @@ public class Wonders7GameState extends AbstractGameState {
         // where -1 is immediate loss, and +1 is immediate win
         // This is used by a number of agents as a default, including MCTS, to value the current state. If the game has a direct score, then the simplest approach here is just to scale this in line with some plausible maximum
         // see DominionGameState._getHeuristicScore() for an example of this; and contrast to DominionHeuristic for a more sophisticated approach
-        return new Wonders7Heuristic().evaluateState(this, playerId);
+//        return new Wonders7Heuristic().evaluateState(this, playerId); TODO CHANGE THIS BACK
+        return getGameScore(playerId);
     }
 
     protected void updateEndOfAgeMilitaryVPs() {

@@ -1,7 +1,6 @@
 package core;
 
 import core.actions.AbstractAction;
-import core.actions.DoNothing;
 import core.interfaces.IExtendedSequence;
 import core.interfaces.IPrintable;
 import core.turnorders.ReactiveTurnOrder;
@@ -9,40 +8,18 @@ import evaluation.listeners.IGameListener;
 import evaluation.metrics.Event;
 import evaluation.summarisers.TAGNumericStatSummary;
 import games.GameType;
-import games.seasaltpaper.heuristics.LeadHeuristic;
-import games.seasaltpaper.heuristics.ScoreAndHandHeuristic;
-import games.seasaltpaper.heuristics.ScoreHeuristic;
 import games.pandemic.PandemicForwardModel;
 import gui.AbstractGUIManager;
 import gui.GUI;
 import gui.GamePanel;
-import org.checkerframework.checker.units.qual.C;
-import players.ComparisonPlayer;
-import players.PlayerParameters;
-import players.basicMCTS.BasicMCTSPlayer;
 import players.human.ActionController;
-import players.human.HumanConsolePlayer;
 import players.human.HumanGUIPlayer;
 import players.jsonBagPlayers.JSONBagOSLAPlayer;
 import players.jsonBagPlayers.Tokenizer;
-import players.mcts.MCTSEnums;
-import players.mcts.MCTSParams;
-import players.mcts.MCTSPlayer;
-import players.rhea.RHEAPlayer;
-import players.rmhc.RMHCParams;
-import players.rmhc.RMHCPlayer;
-import players.simple.FirstActionPlayer;
 import players.simple.OSLAPlayer;
-import players.simple.RandomPlayer;
-import players.simple.SimultaneousOSLAPlayer;
 import utilities.Pair;
 import utilities.Utils;
 
-import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
-import java.io.FileReader;
-import java.io.IOException;
-import java.lang.reflect.Type;
 import javax.swing.Timer;
 import javax.swing.*;
 import java.awt.*;
@@ -282,9 +259,10 @@ public class Game {
      * @param seeds               - random seeds array, one for each repetition of a game.
      * @param ac                  - action controller for GUI interactions, null if playing without visuals.
      * @param randomizeParameters - if true, game parameters are randomized for each run of each game (if possible).
+     * @return
      */
-    public static void runMany(List<GameType> gamesToPlay, List<AbstractPlayer> players, int nRepetitions,
-                               long[] seeds, ActionController ac, boolean randomizeParameters, List<IGameListener> listeners, int turnPause) {
+    public static TAGNumericStatSummary[] runMany(List<GameType> gamesToPlay, List<AbstractPlayer> players, int nRepetitions,
+                                                  long[] seeds, ActionController ac, boolean randomizeParameters, List<IGameListener> listeners, int turnPause) {
         int nPlayers = players.size();
 
         // Save win rate statistics over all games
@@ -325,6 +303,7 @@ public class Game {
             // Print statistics for this game
             System.out.println(overall[i].toString());
         }
+        return overall;
     }
 
     /**
@@ -878,68 +857,83 @@ public class Game {
 
         /* Load prototypes */
         GameType gameTypeTest = GameType.SeaSaltPaper;
-        String prototypesPath = "Experiments/valueFuncTest/" + gameTypeTest.name();
+        int p_keep = 25;
+        int n_keep_interval = 0;
+        boolean featureSelectionAllSeg = true;
+        int seg_num = 4;
+        String seg_mode = "cum";
+        String seg_name;
+        if (featureSelectionAllSeg) {
+            seg_name = "_allSegFS_seg" + seg_num + "_" + seg_mode;
+        }
+        else {
+            seg_name = "_singleFS";
+        }
+        boolean useSeparateTopFeaturesFolder = true;
+        int topFeaturesPKeep = 100;
+        int topFeaturesNKeepInterval = 0;
+        boolean topFeaturesFeatureSelectionAllSeg = true;
+        int topFeaturesSegNum = 4;
+        String topFeaturesSegMode = "cum";
+        String topFeaturesSegName;
+        if (topFeaturesFeatureSelectionAllSeg) {
+            topFeaturesSegName = "_allSegFS_seg" + topFeaturesSegNum + "_" + topFeaturesSegMode;
+        }
+        else {
+            topFeaturesSegName = "_singleFS";
+        }
+
+        String experimentRootPath = "Experiments/valueFuncTest2/" + gameTypeTest.name();
+        String prototypeFolderName = "/prototype" + p_keep + "_" + n_keep_interval + seg_name + "/";
+        String separateTopFeaturesFolderName = "/prototype" + topFeaturesPKeep + "_" + topFeaturesNKeepInterval + topFeaturesSegName + "/";
+        String topFeaturesFolderName = useSeparateTopFeaturesFolder ? separateTopFeaturesFolderName : prototypeFolderName;
+    //        String prototypesPath = "Experiments/valueFuncTest/" + gameTypeTest.name() + "/";
+        String defaultPrototypesPath = experimentRootPath + prototypeFolderName;
+        String prototypesPath = defaultPrototypesPath;
+        String separateTopFeaturesFolderPath = experimentRootPath + separateTopFeaturesFolderName;
+        String topFeaturesFolderPath = useSeparateTopFeaturesFolder ? separateTopFeaturesFolderPath : prototypesPath;
+
+        if (!prototypesPath.endsWith("/") && !prototypesPath.endsWith("\\")) {
+            prototypesPath += "/";
+        }
+        if (!topFeaturesFolderPath.endsWith("/") && !topFeaturesFolderPath.endsWith("\\")) {
+            topFeaturesFolderPath += "/";
+        }
+
+        System.out.println("READING PROTOTYPES FROM " + prototypesPath);
         int n_prototypes = 4; // Set number of prototypes to load
-        List<Map<String, Integer>> prototypes = Tokenizer.loadPrototypes(prototypesPath, n_prototypes);
+        List<Map<String, Integer>> prototypes = Tokenizer.loadPrototypes(prototypesPath, n_prototypes, useSeparateTopFeaturesFolder);
         // Load top_features
         int topKFeatures = 500;
-        String filterListPath = prototypesPath + "/features-top" + topKFeatures + ".json";
+        String filterListPath = topFeaturesFolderPath + "features-top" + topKFeatures + ".json";
+        System.out.println("READING TOP FEATURES FROM " + filterListPath);
         List<String> topFeaturesFilterList = Tokenizer.loadStringList(filterListPath);
+
+        Set<String> topFeaturesFilterSet = new HashSet<>(topFeaturesFilterList);
+        for (Map<String, Integer> prototype : prototypes) {
+            Tokenizer.filter(prototype, topFeaturesFilterSet, true);
+        }
+
         JSONBagOSLAPlayer jsonBagOSLAPlayer = new JSONBagOSLAPlayer(prototypes, topFeaturesFilterList);
 
-//        players.add(new FirstActionPlayer());
-//        players.add(new OSLAPlayer());
-//        players.add(new OSLAPlayer());
+//      players.add(new FirstActionPlayer());
+        players.add(new OSLAPlayer());
+        players.add(new OSLAPlayer());
+        players.add(new OSLAPlayer());
 //        players.add(new OSLAPlayer());
 //        players.add(new SimultaneousOSLAPlayer());
 //        players.add(new SimultaneousOSLAPlayer());
 //        players.add(new SimultaneousOSLAPlayer());
-        players.add(new RandomPlayer());
-        players.add(new RandomPlayer());
-        players.add(new RandomPlayer());
+//        players.add(new RandomPlayer());
+//        players.add(new RandomPlayer());
+//        players.add(new RandomPlayer());
 
         int jsonBagOSLAPlayerIndex = 3;
         players.add(jsonBagOSLAPlayerIndex, jsonBagOSLAPlayer);
         for (AbstractPlayer p : players) {
             System.out.println(p);
         }
-
-//        List<String> gameNames = new ArrayList<>(){{
-//            add("Wonders7");
-////            add("Dominion");
-////            add("SeaSaltPaper");
-////            add("CantStop");
-////            add("Connect4");
-////            add("DotsAndBoxes");
-//        }};
-//        long t_init = System.currentTimeMillis();
-//        int n = 100;
-//        for (String name: gameNames) {
-//            System.out.println("POLICY JSD TEST " + name + " " + n + " GAMES");
-//            players.clear();
-//            String playersPath = "Experiments/" + name + "/agents/agreementTest";
-//            String csv_name = "PolicyJSDMatrix.csv";
-//            ComparisonPlayer comparisonPlayer = new ComparisonPlayer(playersPath, playersPath, csv_name);
-//            players.add(comparisonPlayer);
-//            int n_random = (name.equals("Connect4") || name.equals("DotsAndBoxes")) ? 1 : 3;
-//            for (int i = 0; i < n_random; i++)
-//            {
-//                players.add(new RandomPlayer());
-//            }
-//            long t = System.currentTimeMillis();
-//            ArrayList<GameType> games = new ArrayList<>();
-//            games.add(GameType.valueOf(name));
-//            long[] seeds = new long[n];
-//            Random rnd = new Random();
-//            for (int i = 0; i < n; i++) {
-//                seeds[i] = rnd.nextInt();
-//            }
-//            runMany(games, players, n, seeds, null, false, null, 0);
-//            System.out.println("FISNIHED RUNNING IN " + (System.currentTimeMillis() - t)/1000 + " SECONDS");
-//            System.out.println("---------------------------------------------------");
-//        }
-//        System.out.println("FISNIHED RUNNING EVERYTHING IN " + (System.currentTimeMillis() - t_init)/1000 + " SECONDS");
-
+        
         /* Game parameter configuration. Set to null to ignore and use default parameters */
         String gameParams = null;
 

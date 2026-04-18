@@ -336,9 +336,9 @@ public class DominionGameState extends AbstractGameState implements IPrintable {
         if (getPlayerResults()[playerId] == CoreConstants.GameResult.WIN_GAME)
             return 1.0;
 
-//        int score = getTotal(playerId, c -> c.victoryPoints(playerId, this));
-//        return score / 100.0;
-        return new DominionHeuristic().evaluateState(this, playerId);
+        int score = getTotal(playerId, c -> c.victoryPoints(playerId, this));
+        return score / 100.0;
+//        return new DominionHeuristic().evaluateState(this, playerId);
     }
 
     /**

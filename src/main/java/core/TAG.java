@@ -7,6 +7,7 @@ import evaluation.optimisation.OneStepDeviations;
 import evaluation.optimisation.ParameterSearch;
 import gui.Frontend;
 import gui.FrontendSimple;
+import core.JSONBagValueFunctionExperiments;
 
 import java.util.Arrays;
 
@@ -23,7 +24,8 @@ public class TAG {
         FrontEndSimple,
         ExpertIteration,
         OneStepDeviations,
-        SkillLadder;
+        SkillLadder,
+        JSONBagValueFunctionExperiments;
 
         public static Entry find(String name) {
             for (Entry e : Entry.values()) {
@@ -69,6 +71,9 @@ public class TAG {
                 break;
             case SkillLadder:
                 SkillLadder.main(remainingArgs);
+                break;
+            case JSONBagValueFunctionExperiments:
+                JSONBagValueFunctionExperiments.main(remainingArgs);
                 break;
             default:
                 throw new IllegalStateException("Unexpected value: " + entry);

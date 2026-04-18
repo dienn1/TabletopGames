@@ -10,6 +10,10 @@ import java.util.*;
 public class JSONBagOSLAPlayer extends AbstractPlayer {
 
     JSONBagHeuristic heuristic;
+    int currentTurnCount = 0;
+    int currentRoundCount = 0;
+
+    boolean simultaneousMode = false;
 
     public JSONBagOSLAPlayer(List<Map<String, Integer>> prototypes, Collection<String> filterList, Random random) {
         super(null, "JSONBagOSLAPlayer");
@@ -31,11 +35,22 @@ public class JSONBagOSLAPlayer extends AbstractPlayer {
         this.heuristic.setFilterSet(filterList);
     }
 
+    public void setSimultaneousMode(boolean mode) { simultaneousMode = mode; }
+
     @Override
     public AbstractAction _getAction(AbstractGameState gs, List<AbstractAction> actions) {
 
         // Update current JSON Bag
+        int newTurnCount = gs.getTurnCounter();
+        int newRoundCount = gs.getRoundCounter();
+        if (newTurnCount != currentTurnCount || newRoundCount != currentRoundCount)
+        {
+//            this.heuristic.updateJSONBag(gs);
+            currentRoundCount = newRoundCount;
+            currentTurnCount = newTurnCount;
+        }
         this.heuristic.updateJSONBag(gs);
+        Collections.shuffle(actions);   // making sure no artifacts causing certain action index always being picked
 
         double maxQ = Double.NEGATIVE_INFINITY;
         AbstractAction bestAction = null;
@@ -64,20 +79,23 @@ public class JSONBagOSLAPlayer extends AbstractPlayer {
 
     // Override this when need to roll toward endRound or endTurn (not just one step)
     protected void rollNextGameState(AbstractGameState gs, AbstractAction a) {
-        getForwardModel().next(gs, a);
-
-        // for simultaneous turn game
-//        int currentRound = gs.getRoundCounter();
-//        getForwardModel().next(gs, a);
-//        RandomPlayer randomPlayer = new RandomPlayer(new Random(rnd.nextInt()));
-//        List<AbstractAction> actions;
-//        while (gs.getRoundCounter() == currentRound && gs.isNotTerminal()) {
-//            actions = getForwardModel().computeAvailableActions(gs);
-//            if (actions.isEmpty()) {
-//                break;
-//            }
-//            getForwardModel().next(gs, randomPlayer.getAction(gs, actions));
-//        }
+        if (!simultaneousMode) {
+            getForwardModel().next(gs, a);
+        }
+        else {
+            // for simultaneous turn game (e.g., Wonders7)
+            int currentRound = gs.getRoundCounter();
+            getForwardModel().next(gs, a);
+            RandomPlayer randomPlayer = new RandomPlayer(new Random(rnd.nextInt()));
+            List<AbstractAction> actions;
+            while (gs.getRoundCounter() == currentRound && gs.isNotTerminal()) {
+                actions = getForwardModel().computeAvailableActions(gs);
+                if (actions.isEmpty()) {
+                    break;
+                }
+                getForwardModel().next(gs, randomPlayer.getAction(gs, actions));
+            }
+        }
     }
 
     @Override

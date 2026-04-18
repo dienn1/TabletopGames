@@ -71,7 +71,7 @@ public class JSONBagHeuristic implements IStateHeuristic {
         double[] values = subtractNormalized(distances);
 //        double[] values = negative(distances);
 
-//        values = softmax(values, 1.0);
+//        values = softmax(values, 0.5);
         return values[playerId];
 //        return 1.0 - distances[playerId];
     }

@@ -197,11 +197,12 @@ public class Tokenizer {
         }
     }
 
-    public static void filter(Map<String, Integer> freq, Set<String> filterList, boolean whitelist) {
+    public static void filter(Map<String, Integer> freq, Set<String> filterSet, boolean whitelist) {
+        if (filterSet == null || filterSet.isEmpty()) return;
         if (whitelist) {
-            freq.keySet().retainAll(filterList);
+            freq.keySet().retainAll(filterSet);
         } else {
-            filterList.forEach(freq.keySet()::remove);
+            filterSet.forEach(freq.keySet()::remove);
         }
     }
 
@@ -213,13 +214,13 @@ public class Tokenizer {
      * @param n_prototypes - the number of prototypes to load
      * @return a list of Map<String, Integer> loaded from the JSON files
      */
-    public static List<Map<String, Integer>> loadPrototypes(String path, int n_prototypes) {
+    public static List<Map<String, Integer>> loadPrototypes(String path, int n_prototypes, boolean full) {
         List<Map<String, Integer>> prototypes = new ArrayList<>();
         Gson gson = new Gson();
         Type mapType = new TypeToken<Map<String, Integer>>() {}.getType();
-
+        String fullString = full ? "full_" : "";
         for (int i = 0; i < n_prototypes; i++) {
-            String filePath = path + "/prototype" + i + ".json";
+            String filePath = path + "/" + fullString + "prototype" + i + ".json";
             try (FileReader reader = new FileReader(filePath)) {
                 Map<String, Integer> prototype = gson.fromJson(reader, mapType);
                 if (prototype != null) {

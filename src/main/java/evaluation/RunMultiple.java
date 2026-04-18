@@ -28,20 +28,20 @@ public class RunMultiple {
         List<String> gameNames = new ArrayList<>(){{
 //            add("Wonders7");
 //            add("Dominion");
-//            add("SeaSaltPaper");
+            add("SeaSaltPaper");
 //            add("CantStop");
 //            add("Connect4");
 //            add("DotsAndBoxes");
 //            add("Catan");
-            add("Uno");
+//            add("Uno");
         }};
         String[] agentTypes = new String[] {
 //                "MCTS1",
 //                "MCTS1Tuned",
-//                "MCTS2Tuned",
-                "OSLA",
-                "Random",
-                "MCTS"
+                "MCTS2Tuned",
+//                "OSLA",
+//                "Random",
+//                "MCTS"
         };
         int paramCount = 4;
         int seedCount = 4;
