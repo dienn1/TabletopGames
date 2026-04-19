@@ -12,6 +12,7 @@ public class TokenizerTest {
     public static void main(String[] args) throws IOException {
         String jsonString = new String(Files.readAllBytes(Paths.get("src/main/java/players/jsonBagPlayers/test.txt")));;
         Set<String> filterSet = new HashSet<>(Tokenizer.loadStringList("src/main/java/players/jsonBagPlayers/filterTest.json"));
+        filterSet = new HashSet<>();
         Map<String, Integer> jsonBag;
 
 //        jsonBag = Tokenizer.tokenize(jsonString);
