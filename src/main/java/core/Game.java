@@ -856,8 +856,8 @@ public class Game {
         ArrayList<AbstractPlayer> players = new ArrayList<>();
 
         /* Load prototypes */
-        GameType gameTypeTest = GameType.SeaSaltPaper;
-        int p_keep = 25;
+        GameType gameTypeTest = GameType.CantStop;
+        int p_keep = 100;
         int n_keep_interval = 0;
         boolean featureSelectionAllSeg = true;
         int seg_num = 4;
@@ -928,7 +928,7 @@ public class Game {
 //        players.add(new RandomPlayer());
 //        players.add(new RandomPlayer());
 
-        int jsonBagOSLAPlayerIndex = 3;
+        int jsonBagOSLAPlayerIndex = 1;
         players.add(jsonBagOSLAPlayerIndex, jsonBagOSLAPlayer);
         for (AbstractPlayer p : players) {
             System.out.println(p);

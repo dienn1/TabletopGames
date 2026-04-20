@@ -262,15 +262,20 @@ public class Tokenizer {
 
     private static void addNumericFrequencyToken(Map<String, Integer> map, String tokenPrefix, JsonElement item,
                                                  boolean numSuffixFrequency, Set<String> filterSet, boolean whitelist) {
-        if (!numSuffixFrequency || tokenPrefix == null || !isNumeric(item)) return;
-        int frequency = item.getAsNumber().intValue();
-        if (frequency <= 0) return;
+        if (!numSuffixFrequency || tokenPrefix == null || !isPositiveInteger(item)) return;
+        int frequency = item.getAsInt();
         if (!isValidToken(tokenPrefix, filterSet, whitelist)) return;
         map.merge(tokenPrefix, frequency, Integer::sum);
     }
 
-    private static boolean isNumeric(JsonElement el) {
-        return el != null && el.isJsonPrimitive() && el.getAsJsonPrimitive().isNumber();
+    private static boolean isPositiveInteger(JsonElement el) {
+        if (el == null || !el.isJsonPrimitive() || !el.getAsJsonPrimitive().isNumber()) return false;
+        Number number = el.getAsNumber();
+        if (number instanceof Integer || number instanceof Long || number instanceof Short || number instanceof Byte) {
+            return number.longValue() > 0;
+        }
+        double d = number.doubleValue();
+        return d > 0 && d == Math.rint(d);
     }
 
     public static void merge(Map<String, Integer> dest, Map<String, Integer> src) {
