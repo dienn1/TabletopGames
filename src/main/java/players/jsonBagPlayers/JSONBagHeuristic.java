@@ -6,74 +6,81 @@ import core.interfaces.IStateHeuristic;
 
 import java.util.*;
 
-import static players.jsonBagPlayers.JensenShannonDistance.jsd;
-import static players.jsonBagPlayers.JensenShannonDistance.normalize;
+import static players.jsonBagPlayers.JensenShannonDistance.distances;
 
+/**
+ * Value function built on JSON-Bag prototypes: a state is scored by the Jensen-Shannon distance between the token
+ * bag of the trajectory so far plus the state itself, and one prototype bag per player.
+ * <p>
+ * The bags are dense integer arrays indexed by interned token ids ({@link TokenBag}), the prototypes are compiled to
+ * one interleaved probability array ({@link PrototypeSet}), and the state being valued is merged into the trajectory
+ * bag and then rolled back, so scoring a state copies nothing; the only allocation left in the path is one
+ * scratch array of distances per prototype.
+ */
 public class JSONBagHeuristic implements IStateHeuristic {
 
+    /** Map view of {@link #current} - the trajectory bag so far. Kept as a Map for callers and experiments. */
     Map<String, Integer> currentJSONBag;
     Set<String> filterSet;
 
-    final List<Map<String, Double>> prototypes;
+    final List<Map<String, ? extends Number>> prototypes;
+
+    private final TokenDictionary dict;
+    private final PrototypeSet compiled;
+    private final TokenBag current;
+    private double[] distanceBuffer;
 
     public JSONBagHeuristic(List<? extends Map<String, ? extends Number>> prototypes_) {
         this(prototypes_, new ArrayList<>());
     }
 
     public JSONBagHeuristic(List<? extends Map<String, ? extends Number>> prototypes_, Collection<String> filterList_) {
-        prototypes = new ArrayList<>(prototypes_.size());
-        for (Map<String, ? extends Number> p : prototypes_) {
-            Map<String, Double> m = new HashMap<>();
-            for (Map.Entry<String, ? extends Number> e : p.entrySet()) {
-                m.put(e.getKey(), e.getValue().doubleValue());
-            }
-            prototypes.add(normalize(m));
-        }
+        dict = new TokenDictionary();
         filterSet = Set.copyOf(filterList_);
-        currentJSONBag = new HashMap<String, Integer>();
+        dict.setFilter(filterSet, true);
+        prototypes = new ArrayList<>(prototypes_.size());
+        prototypes.addAll(prototypes_);
+        compiled = PrototypeSet.compile(prototypes, dict);
+        current = new TokenBag(dict);
+        currentJSONBag = current;
+        distanceBuffer = new double[compiled.count];
     }
-
 
     public void setFilterSet(Collection<String> filterSet_) {
         filterSet = Set.copyOf(filterSet_);
+        dict.setFilter(filterSet, true);
     }
 
     public void updateJSONBag(AbstractGameState gs) {
-        Map<String, Integer> tokenizedGameState = Tokenizer.tokenize(gs, filterSet, true);
-//        Tokenizer.filter(tokenizedGameState, filterSet,true);
-        Tokenizer.merge(currentJSONBag, tokenizedGameState);
+        Tokenizer.tokenizeInto(gs, current);
     }
 
     public void resetCurrentBag(AbstractGameState gs) {
-        currentJSONBag = new HashMap<String, Integer>();
+        current.clear();
         updateJSONBag(gs);
     }
 
     @Override
     public double evaluateState(AbstractGameState gs, int playerId) {
-        if (gs.getNPlayers() != prototypes.size()) {
-            throw new RuntimeException("PLAYER COUNT AND PROTOTYPE COUNT MISMATCHED: " + gs.getNPlayers() + " vs. " + prototypes.size());
+        if (gs.getNPlayers() != compiled.count) {
+            throw new RuntimeException("PLAYER COUNT AND PROTOTYPE COUNT MISMATCHED: " + gs.getNPlayers() + " vs. " + compiled.count);
         }
         if (gs.getPlayerResults()[playerId] == CoreConstants.GameResult.LOSE_GAME)
             return 0;
         if (gs.getPlayerResults()[playerId] == CoreConstants.GameResult.WIN_GAME)
             return 1.0;
-        Map<String, Integer> newJSONBag = new HashMap<>(currentJSONBag);
-        Map<String, Integer> newGameStateTokenized = Tokenizer.tokenize(gs, filterSet, true);
-//        Tokenizer.filter(newGameStateTokenized, filterSet,true);
-        Tokenizer.merge(newJSONBag, newGameStateTokenized);
 
-        double[] distances = new double[prototypes.size()];
-        for (int i = 0; i < prototypes.size(); i++) {
-            distances[i] = jsd(prototypes.get(i), newJSONBag);
+        // value the trajectory so far plus this state, then undo the merge instead of copying the whole bag
+        if (distanceBuffer.length != compiled.count) distanceBuffer = new double[compiled.count];
+        current.startRecording();
+        try {
+            Tokenizer.tokenizeInto(gs, current);
+            distances(compiled, current, distanceBuffer);
+        } finally {
+            current.rollback();
         }
-//        double[] values = invertNormalized(distances);
-        double[] values = subtractNormalized(distances);
-//        double[] values = negative(distances);
-
-//        values = softmax(values, 0.5);
+        double[] values = subtractNormalized(distanceBuffer);
         return values[playerId];
-//        return 1.0 - distances[playerId];
     }
 
     private double[] invertNormalized(double[] distancesArray) {
@@ -96,10 +103,10 @@ public class JSONBagHeuristic implements IStateHeuristic {
             ret[i] = 1.0 - distancesArray[i];
             sum += ret[i];
         }
-        if (!(sum > 0.0)) {
+        if (!(sum > 1e-12)) {
             throw new IllegalStateException("JSON-Bag value function is degenerate: every prototype is at maximal "
                     + "Jensen-Shannon distance from the current bag (distances " + Arrays.toString(distancesArray)
-                    + "), so no player can be ranked. The trajectory shares no tokens with any prototype - "
+                    + "), so no player can be ranked. The trajectory shares none of its tokens with any prototype - "
                     + "check the prototypes and the token filter.");
         }
         for (int i = 0; i < ret.length; i++) {
@@ -135,7 +142,7 @@ public class JSONBagHeuristic implements IStateHeuristic {
 
     public JSONBagHeuristic copy() {
         JSONBagHeuristic copy = new JSONBagHeuristic(prototypes, new ArrayList<>(filterSet));
-        copy.currentJSONBag = new HashMap<>(currentJSONBag);
+        copy.current.copyTokensFrom(current);
         return copy;
     }
 

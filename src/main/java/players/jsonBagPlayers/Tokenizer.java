@@ -18,8 +18,27 @@ import java.io.IOException;
 import java.lang.reflect.Type;
 import java.util.*;
 
+/**
+ * Turns an object, a JSON string or a game state into a JSON-Bag: a bag of tokens, where a token is the path to an
+ * atomic value plus that value (for example {@code .playerHands[0].cards[3].cardType.COPPER}).
+ * <p>
+ * The tokeniser writes into a {@link TokenBag}: token names are built in a reusable char buffer, the running hash is
+ * carried along with the buffer, and tokens are interned to small integer ids - so a repeated token costs no
+ * allocation, no string building and no second pass to hash it. The {@code Map<String,Integer>} returned by the
+ * public entry points is a view over the same dense counts.
+ * <p>
+ * Two behaviours are worth knowing about:
+ * <ul>
+ *   <li>With {@code mode=both} each atomic value is emitted twice - once with array indices and once without.</li>
+ *   <li>With {@code numSuffixFrequency} a positive integer value also adds its bare key as a token, counted with the
+ *       value as its frequency.</li>
+ * </ul>
+ */
 public class Tokenizer {
     private static final Gson gson = new Gson();
+
+    /** Per-thread walker: the char buffer, its running hash and the recursion state are reused across calls. */
+    private static final ThreadLocal<Walk> WALK = ThreadLocal.withInitial(Walk::new);
 
     /**
      * Tokenizes a JSON string using the default configuration.
@@ -57,6 +76,7 @@ public class Tokenizer {
         AbstractGameStateContainer gsContainer = GameStateContainerFactory.createContainer(gs);
         return Tokenizer.tokenize(gsContainer);
     }
+
     public static Map<String, Integer> tokenize(AbstractGameState gs, Set<String> filterSet, boolean whitelist) {
         AbstractGameStateContainer gsContainer = GameStateContainerFactory.createContainer(gs);
         return Tokenizer.tokenize(gsContainer, filterSet, whitelist);
@@ -142,84 +162,316 @@ public class Tokenizer {
     public static Map<String, Integer> tokenize(JsonElement collection, String prefix, boolean ordered,
                                                 String mode, boolean numSuffixFrequency, boolean filterPlayer, boolean binning, boolean pairXY,
                                                 Set<String> filterSet, boolean whitelist) {
-        Map<String, Integer> freq = new HashMap<>();
         if ("char".equals(mode)) {
-//            addToken(freq, collection.toString());
-//            return freq;
             throw new NotImplementedException("Tokenize mode 'char' is not supported");
         }
+        TokenDictionary dict = new TokenDictionary();
+        dict.setFilter(filterSet, whitelist);
+        TokenBag bag = new TokenBag(dict);
+        tokenizeInto(collection, bag, prefix, ordered, mode, numSuffixFrequency, filterPlayer, binning, pairXY);
+        return bag;
+    }
 
-        if (collection == null || collection instanceof JsonNull) return freq;
+    // ------------------------------------------------------------------ fast entry points
 
-        if (collection.isJsonArray()) {
-            JsonArray arr = collection.getAsJsonArray();
-            for (int i = 0; i < arr.size(); i++) {
-                String orderedPrefix = prefix + "[" + i + "]";
+    /**
+     * Adds the tokens of a game state to {@code bag}, using the heuristic defaults: ordered array positions, both
+     * ordered and unordered tokens, numeric frequency tokens, and whatever filter the bag's dictionary carries.
+     */
+    public static void tokenizeInto(AbstractGameState gs, TokenBag bag) {
+        AbstractGameStateContainer container = GameStateContainerFactory.createContainer(gs);
+        tokenizeInto(container, bag, "", true, "both", true, false, false, false);
+    }
+
+    /** Adds the tokens of {@code obj} to {@code bag}; same options as the public {@code tokenize} overloads. */
+    public static void tokenizeInto(Object obj, TokenBag bag, String prefix, boolean ordered,
+                                    String mode, boolean numSuffixFrequency, boolean filterPlayer, boolean binning,
+                                    boolean pairXY) {
+        JsonElement el = gson.toJsonTree(obj);
+        tokenizeInto(el, bag, prefix, ordered, mode, numSuffixFrequency, filterPlayer, binning, pairXY);
+    }
+
+    /** Adds the tokens of a JSON element to {@code bag}. */
+    public static void tokenizeInto(JsonElement el, TokenBag bag, String prefix, boolean ordered, String mode,
+                                    boolean numSuffixFrequency, boolean filterPlayer, boolean binning, boolean pairXY) {
+        if ("char".equals(mode)) {
+            throw new NotImplementedException("Tokenize mode 'char' is not supported");
+        }
+        if (el == null || el instanceof JsonNull) return;
+        Walk walk = WALK.get();
+        walk.start(bag, numSuffixFrequency, filterPlayer, binning, pairXY, mode);
+        walk.len = 0;
+        walk.hash = 0xcbf29ce484222325L;
+        walk.hashAt[0] = walk.hash;
+        walk.append(prefix);
+        walk.tokenize(el, walk.len, ordered);
+    }
+
+    // ------------------------------------------------------------------ walker
+
+    /**
+     * Recursive walk over a Gson tree that writes straight into one {@link TokenBag}. The current path lives in
+     * {@code buf[0..len)} with its running hash in {@code hashAt[0..len]}; recursion saves and restores the length
+     * instead of building intermediate maps or strings.
+     */
+    private static final class Walk {
+        char[] buf = new char[512];
+        long[] hashAt = new long[513];
+        int len;
+        long hash;
+        TokenBag bag;
+        TokenDictionary dict;
+        boolean numSuffixFrequency;
+        boolean filterPlayer;
+        boolean binning;
+        boolean pairXY;
+        boolean modeOrdered;
+        boolean modeUnordered;
+
+        void start(TokenBag bag, boolean numSuffixFrequency, boolean filterPlayer, boolean binning, boolean pairXY,
+                   String mode) {
+            this.bag = bag;
+            this.dict = bag.dictionary();
+            this.numSuffixFrequency = numSuffixFrequency;
+            this.filterPlayer = filterPlayer;
+            this.binning = binning;
+            this.pairXY = pairXY;
+            this.modeOrdered = "ordered".equals(mode);
+            this.modeUnordered = "unordered".equals(mode);
+        }
+
+        /** Moves the cursor to {@code len} and restores the running hash at that position. */
+        private void seek(int prefixLen) {
+            len = prefixLen;
+            hash = hashAt[prefixLen];
+        }
+
+        void tokenize(JsonElement el, int prefixLen, boolean ordered) {
+            seek(prefixLen);
+            if (el == null || el.isJsonNull()) {
+                emitValue(prefixLen);
+                return;
+            }
+            if (el.isJsonArray()) {
+                tokenizeArray(el.getAsJsonArray(), prefixLen, ordered);
+            } else if (el.isJsonObject()) {
+                tokenizeObject(el.getAsJsonObject(), prefixLen, ordered);
+            } else {
+                emitPrimitiveValue(prefixLen, el.getAsJsonPrimitive());
+            }
+        }
+
+        private void tokenizeArray(JsonArray arr, int prefixLen, boolean ordered) {
+            int n = arr.size();
+            boolean emitOrdered = ordered && !modeUnordered;
+            boolean emitUnordered = !modeOrdered || !ordered;
+            for (int i = 0; i < n; i++) {
                 JsonElement item = arr.get(i);
                 if (isAtomic(item)) {
-                    String s = primitiveToString(item);
-                    if (ordered && !"unordered".equals(mode)) {
-                        addToken(freq, orderedPrefix + "." + s, filterSet, whitelist);
-                        addNumericFrequencyToken(freq, orderedPrefix, item, numSuffixFrequency, filterSet, whitelist);
+                    if (emitOrdered) {
+                        seek(prefixLen);
+                        append('[');
+                        appendInt(i);
+                        append(']');
+                        if (item == null || item.isJsonNull()) emitValue(len);
+                        else emitPrimitiveValue(len, item.getAsJsonPrimitive());
+                        numericFrequency(len, item);
                     }
-                    if (!"ordered".equals(mode) || !ordered) {
-                        addToken(freq, prefix + "." + s, filterSet, whitelist);
-                        addNumericFrequencyToken(freq, prefix, item, numSuffixFrequency, filterSet, whitelist);
+                    if (emitUnordered) {
+                        seek(prefixLen);
+                        if (item == null || item.isJsonNull()) emitValue(prefixLen);
+                        else emitPrimitiveValue(prefixLen, item.getAsJsonPrimitive());
+                        numericFrequency(prefixLen, item);
                     }
                 } else {
-                    if (ordered && !"unordered".equals(mode)) {
-                        merge(freq, tokenize(item, orderedPrefix, ordered, mode, numSuffixFrequency, filterPlayer, binning, pairXY, filterSet, whitelist));
+                    if (emitOrdered) {
+                        seek(prefixLen);
+                        append('[');
+                        appendInt(i);
+                        append(']');
+                        tokenize(item, len, ordered);
                     }
-                    if (!"ordered".equals(mode) || !ordered) {
-                        // Set subsequent call ordered = True if mode is not unordered
-                        merge(freq, tokenize(item, prefix, !"unordered".equals(mode), mode, numSuffixFrequency, filterPlayer, binning, pairXY, filterSet, whitelist));
+                    if (emitUnordered) {
+                        tokenize(item, prefixLen, !modeUnordered);
                     }
                 }
             }
-        } else if (collection.isJsonObject()) {
-            JsonObject obj = collection.getAsJsonObject();
-            // filter player (if present and > 0)
-            if (filterPlayer && obj.has("player") && obj.get("player").isJsonPrimitive()) {
-                int p = obj.get("player").getAsInt();
-                if (p > 0) return freq;
-            }
+            seek(prefixLen);
+        }
 
+        private void tokenizeObject(JsonObject obj, int prefixLen, boolean ordered) {
+            if (filterPlayer && obj.has("player")) {
+                JsonElement p = obj.get("player");
+                if (p.isJsonPrimitive() && p.getAsInt() > 0) {
+                    seek(prefixLen);
+                    return;
+                }
+            }
             int pairX = -99, pairY = -99;
             for (Map.Entry<String, JsonElement> e : obj.entrySet()) {
                 String key = e.getKey();
-                String keyPrefix = prefix + "." + key;
                 JsonElement value = e.getValue();
+                seek(prefixLen);
+                append('.');
+                append(key);
+                int keyLen = len;
                 if (isAtomic(value)) {
-                    // binning numerical value
+                    JsonElement v = value;
                     if (binning && ("x".equals(key) || "y".equals(key))) {
-                        int n = 2;
-                        double dv = value.getAsDouble();
-                        int b = ((int) Math.floor(dv / n)) * n;
-                        value = new JsonPrimitive(b);
+                        double dv = v.getAsDouble();
+                        v = new JsonPrimitive(((int) Math.floor(dv / 2)) * 2);
                     }
                     if ("x".equals(key)) {
-                        pairX = value.getAsInt();
+                        pairX = v.getAsInt();
                         if (pairXY) continue;
                     }
                     if ("y".equals(key)) {
-                        pairY = value.getAsInt();
+                        pairY = v.getAsInt();
                         if (pairXY) continue;
                     }
-                    addToken(freq, keyPrefix + "." + primitiveToString(value), filterSet, whitelist);
-                    addNumericFrequencyToken(freq, keyPrefix, value, numSuffixFrequency, filterSet, whitelist);
+                    if (v == null || v.isJsonNull()) emitValue(keyLen);
+                    else emitPrimitiveValue(keyLen, v.getAsJsonPrimitive());
+                    numericFrequency(keyLen, v);
                 } else {
-                    merge(freq, tokenize(value, keyPrefix, ordered, mode, numSuffixFrequency, filterPlayer, binning, pairXY, filterSet, whitelist));
+                    tokenize(value, keyLen, ordered);
                 }
             }
             if (pairXY && pairX >= 0) {
-                addToken(freq, prefix + ".x." + pairX + ".y." + pairY, filterSet, whitelist);
+                seek(prefixLen);
+                append(".x.");
+                appendInt(pairX);
+                append(".y.");
+                appendInt(pairY);
+                bag.add(dict.idOf(buf, len, hash), 1);
             }
-        } else { // primitive
-            addToken(freq, prefix + "." + primitiveToString(collection), filterSet, whitelist);
+            seek(prefixLen);
         }
 
-        return freq;
+        /** Adds {@code buf[0..prefixLen) + ".null"}. */
+        private void emitValue(int prefixLen) {
+            seek(prefixLen);
+            append('.');
+            append("null");
+            bag.add(dict.idOf(buf, len, hash), 1);
+            seek(prefixLen);
+        }
+
+        /** Adds {@code buf[0..prefixLen) + "." + value} for a string, number or boolean primitive. */
+        private void emitPrimitiveValue(int prefixLen, JsonPrimitive value) {
+            seek(prefixLen);
+            append('.');
+            if (value.isString()) {
+                append(value.getAsString());
+            } else if (value.isNumber()) {
+                Number number = value.getAsNumber();
+                if (number instanceof Integer || number instanceof Long || number instanceof Short || number instanceof Byte) {
+                    appendLong(number.longValue());
+                } else {
+                    append(number.toString());     // Double/Float/BigDecimal: keep their own textual form
+                }
+            } else if (value.isBoolean()) {
+                append(value.getAsBoolean() ? "true" : "false");
+            } else {
+                append(value.toString());
+            }
+            bag.add(dict.idOf(buf, len, hash), 1);
+            seek(prefixLen);
+        }
+
+        /** Adds the bare prefix as a token, counted with the numeric value, for positive integers. */
+        private void numericFrequency(int prefixLen, JsonElement item) {
+            if (!numSuffixFrequency || !isPositiveInteger(item)) return;
+            // A frequency is a count, so it must not be negative. Reading the number as an int truncates anything past
+            // the int range (2147483648 comes out as -2147483648), and a negative count poisons the bag's totals; such
+            // a token is dropped instead, which leaves every value that fits an int bit-identical to the old build.
+            int count = item.getAsInt();
+            if (count <= 0) return;
+            bag.add(dict.idOf(buf, prefixLen, hashAt[prefixLen]), count);
+        }
+
+        void append(char c) {
+            if (len == buf.length) grow(len + 1);
+            buf[len] = c;
+            hash = (hash ^ c) * 0x100000001b3L;
+            hashAt[len + 1] = hash;
+            len++;
+        }
+
+        void append(String s) {
+            int n = s.length();
+            if (len + n > buf.length) grow(len + n);
+            s.getChars(0, n, buf, len);
+            long h = hash;
+            for (int i = 0; i < n; i++) h = (h ^ buf[len + i]) * 0x100000001b3L;
+            hash = h;
+            hashAt[len + n] = h;
+            len += n;
+        }
+
+        void appendInt(int v) {
+            appendDigits(v);
+        }
+
+        void appendLong(long v) {
+            appendDigits(v);
+        }
+
+        /** Writes a whole number digit by digit; works in long so that MIN_VALUE cannot overflow on negation. */
+        private void appendDigits(long v) {
+            if (len + 20 > buf.length) grow(len + 20);
+            if (v == Long.MIN_VALUE) {          // the one value where -v overflows
+                append("-9223372036854775808");
+                return;
+            }
+            if (v < 0) {
+                append('-');
+                v = -v;
+            }
+            if (v < 10) {
+                append((char) ('0' + v));
+                return;
+            }
+            int start = len;
+            long h = hash;
+            int digits = 0;
+            while (v > 0) {
+                buf[len + digits] = (char) ('0' + (int) (v % 10));
+                digits++;
+                v /= 10;
+            }
+            for (int i = 0; i < digits / 2; i++) {
+                char tmp = buf[start + i];
+                buf[start + i] = buf[start + digits - 1 - i];
+                buf[start + digits - 1 - i] = tmp;
+            }
+            for (int i = 0; i < digits; i++) h = (h ^ buf[start + i]) * 0x100000001b3L;
+            hash = h;
+            hashAt[start + digits] = h;
+            len += digits;
+        }
+
+        private void grow(int min) {
+            int newLen = Math.max(min, buf.length * 2);
+            buf = Arrays.copyOf(buf, newLen);
+            hashAt = Arrays.copyOf(hashAt, newLen + 1);
+        }
     }
+
+    private static boolean isAtomic(JsonElement el) {
+        return el == null || el.isJsonNull() || el.isJsonPrimitive();
+    }
+
+    private static boolean isPositiveInteger(JsonElement el) {
+        if (el == null || !el.isJsonPrimitive() || !el.getAsJsonPrimitive().isNumber()) return false;
+        Number number = el.getAsNumber();
+        if (number instanceof Integer || number instanceof Long || number instanceof Short || number instanceof Byte) {
+            return number.longValue() > 0;
+        }
+        double d = number.doubleValue();
+        return d > 0 && d == Math.rint(d);
+    }
+
+    // ------------------------------------------------------------------ map utilities
 
     private static boolean isValidToken(String token, Set<String> filterSet, boolean whitelist) {
         if (token == null) return false;
@@ -231,20 +483,6 @@ public class Tokenizer {
         else {  // Whitelist filtering
             return filterSet.contains(token);
         }
-    }
-
-    private static boolean isAtomic(JsonElement el) {
-        return el == null || el.isJsonNull() || el.isJsonPrimitive();
-    }
-
-    private static String primitiveToString(JsonElement el) {
-        if (el == null || el instanceof JsonNull) return "null";
-        if (!el.isJsonPrimitive()) return el.toString();
-        JsonPrimitive p = el.getAsJsonPrimitive();
-        if (p.isString()) return p.getAsString();
-        if (p.isNumber()) return p.getAsNumber().toString();
-        if (p.isBoolean()) return Boolean.toString(p.getAsBoolean());
-        return p.toString();
     }
 
     public static void addToken(Map<String, Integer> map, String token) {
@@ -260,27 +498,12 @@ public class Tokenizer {
         map.put(token, v == null ? 1 : v + 1);
     }
 
-    private static void addNumericFrequencyToken(Map<String, Integer> map, String tokenPrefix, JsonElement item,
-                                                 boolean numSuffixFrequency, Set<String> filterSet, boolean whitelist) {
-        if (!numSuffixFrequency || tokenPrefix == null || !isPositiveInteger(item)) return;
-        int frequency = item.getAsInt();
-        if (!isValidToken(tokenPrefix, filterSet, whitelist)) return;
-        map.merge(tokenPrefix, frequency, Integer::sum);
-    }
-
-    private static boolean isPositiveInteger(JsonElement el) {
-        if (el == null || !el.isJsonPrimitive() || !el.getAsJsonPrimitive().isNumber()) return false;
-        Number number = el.getAsNumber();
-        if (number instanceof Integer || number instanceof Long || number instanceof Short || number instanceof Byte) {
-            return number.longValue() > 0;
-        }
-        double d = number.doubleValue();
-        return d > 0 && d == Math.rint(d);
-    }
-
     public static void merge(Map<String, Integer> dest, Map<String, Integer> src) {
+        if (dest instanceof TokenBag destBag && src instanceof TokenBag srcBag && destBag.dictionary() == srcBag.dictionary()) {
+            destBag.addAll(srcBag);
+            return;
+        }
         for (Map.Entry<String, Integer> e : src.entrySet()) {
-//            dest.put(e.getKey(), dest.getOrDefault(e.getKey(), 0) + e.getValue());
             dest.merge(e.getKey(), e.getValue(), Integer::sum);
         }
     }
@@ -342,5 +565,4 @@ public class Tokenizer {
             return new ArrayList<>();
         }
     }
-    
 }
