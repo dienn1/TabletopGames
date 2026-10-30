@@ -163,6 +163,32 @@ public class JSONBagTokenizerTest {
     }
 
     @Test
+    public void nestedArraysRepeatTokensAlongEveryRecursionPath() {
+        // Pins the multiplicities, not just the token set: emitUnordered ignores the `ordered` flag for mode=both, so
+        // every array level re-walks its subtree and the paths reconverge. `.a[0].1` is reached twice, which the bag
+        // counts, and the counts feed the Jensen-Shannon normalisation. Any rewrite of the traversal (a streaming
+        // writer, say) has to reproduce this multiset exactly.
+        Map<String, Integer> expected = new TreeMap<>();
+        expected.put(".a.1", 1);
+        expected.put(".a.2", 1);
+        expected.put(".a", 3);
+        expected.put(".a[0].1", 2);
+        expected.put(".a[0].2", 1);
+        expected.put(".a[0]", 4);
+        expected.put(".a[0][0].1", 1);
+        expected.put(".a[0][0]", 1);
+        expected.put(".a[0][1].2", 1);
+        expected.put(".a[0][1]", 2);
+        expected.put(".a[1].2", 1);
+        expected.put(".a[1]", 2);
+
+        Map<String, Integer> bag = Tokenizer.tokenize("{\"a\":[[1,2]]}", "", true, "both",
+                true, false, false, false, null, false);
+
+        assertEquals(expected, new TreeMap<>(bag));
+    }
+
+    @Test
     public void blacklistFilterRemovesListedTokens() {
         Set<String> blacklist = new HashSet<>(Arrays.asList(".a.1", ".a"));
         Map<String, Integer> bag = tokenize("{\"a\":1,\"b\":2}", false, true, false, blacklist, false);
