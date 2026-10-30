@@ -64,6 +64,7 @@ public final class JSONBagBench {
             case "prof" -> profile(args.length > 1 ? args[1] : null, args.length > 2 ? args[2] : "eval",
                     args.length > 3 ? Integer.parseInt(args[3]) : 20);
             case "wlstats" -> whitelistStats(args.length > 1 ? args[1] : null);
+            case "stream" -> streamCeiling(args.length > 1 ? args[1] : null);
             case "warm" -> warm(args.length > 1 ? args[1] : null);
             case "legacy" -> legacyTiming();
             case "legacy-filtered" -> legacyTimingFiltered(games > 0 ? games : 500);
@@ -680,6 +681,113 @@ public final class JSONBagBench {
             probe.setFilter(whitelist, true);
             System.out.printf("%-14s whitelist=%d prune=%s prefixes=%d bag-mismatched-states=%d%n", cfg.game.name(),
                     whitelist.size(), probe.pruning(), probe.prefixCount(), mismatched);
+        }
+    }
+
+    /**
+     * Ceiling test for removing the Gson tree: how much of the serialisation cost is building the {@code JsonElement}
+     * tree versus traversing the object graph at all? Times {@code gson.toJsonTree(container)} against
+     * {@code gson.toJson(container, noopWriter)}, which runs the same reflective traversal and fires the same events
+     * but allocates no tree. A real event-driven tokeniser still has to do the token work, so this only says whether
+     * the tree is where the money is.
+     */
+    static void streamCeiling(String only) {
+        com.google.gson.Gson gson = new com.google.gson.Gson();
+        System.out.printf("%-14s %10s %10s %8s%n", "game", "tree_us", "stream_us", "saving%");
+        for (Config cfg : CONFIGS) {
+            if (only != null && !only.isEmpty() && !java.util.Arrays.asList(only.split(",")).contains(cfg.game.name())) continue;
+            List<AbstractGameState> states = corpus(cfg, 220, 11L, 22L, 33L, 44L);
+            if (states.isEmpty()) continue;
+            List<core.AbstractGameStateContainer> containers = new ArrayList<>();
+            for (AbstractGameState gs : states) containers.add(GameStateContainerFactory.createContainer(gs));
+            NoopJsonWriter noop = new NoopJsonWriter();
+            double treeUs = microsPerOp(5, 15, () -> {
+                for (core.AbstractGameStateContainer c : containers) gson.toJsonTree(c);
+            }, containers.size());
+            double streamUs = microsPerOp(5, 15, () -> {
+                for (core.AbstractGameStateContainer c : containers) gson.toJson(c, c.getClass(), noop);
+            }, containers.size());
+            System.out.printf("%-14s %10.2f %10.2f %7.1f%%%n", cfg.game.name(), treeUs, streamUs,
+                    100.0 * (treeUs - streamUs) / treeUs);
+        }
+    }
+
+    /** A {@link com.google.gson.stream.JsonWriter} that swallows every event: the traversal cost with no output. */
+    static final class NoopJsonWriter extends com.google.gson.stream.JsonWriter {
+        NoopJsonWriter() {
+            super(new java.io.Writer() {
+                @Override
+                public void write(char[] cbuf, int off, int len) {
+                }
+
+                @Override
+                public void flush() {
+                }
+
+                @Override
+                public void close() {
+                }
+            });
+        }
+
+        @Override
+        public com.google.gson.stream.JsonWriter beginArray() {
+            return this;
+        }
+
+        @Override
+        public com.google.gson.stream.JsonWriter endArray() {
+            return this;
+        }
+
+        @Override
+        public com.google.gson.stream.JsonWriter beginObject() {
+            return this;
+        }
+
+        @Override
+        public com.google.gson.stream.JsonWriter endObject() {
+            return this;
+        }
+
+        @Override
+        public com.google.gson.stream.JsonWriter name(String name) {
+            return this;
+        }
+
+        @Override
+        public com.google.gson.stream.JsonWriter value(String value) {
+            return this;
+        }
+
+        @Override
+        public com.google.gson.stream.JsonWriter nullValue() {
+            return this;
+        }
+
+        @Override
+        public com.google.gson.stream.JsonWriter value(boolean value) {
+            return this;
+        }
+
+        @Override
+        public com.google.gson.stream.JsonWriter value(Boolean value) {
+            return this;
+        }
+
+        @Override
+        public com.google.gson.stream.JsonWriter value(double value) {
+            return this;
+        }
+
+        @Override
+        public com.google.gson.stream.JsonWriter value(long value) {
+            return this;
+        }
+
+        @Override
+        public com.google.gson.stream.JsonWriter value(Number value) {
+            return this;
         }
     }
 
