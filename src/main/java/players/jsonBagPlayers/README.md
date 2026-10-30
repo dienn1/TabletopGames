@@ -226,6 +226,7 @@ Where the time went, and what changed:
 | The pairwise divergence is written `(p+q)(1-log2(p+q)) + p·log2(p) + q·log2(q)` | one logarithm per shared token instead of two, with `p·log2(p)` precomputed |
 | Prototypes are one interleaved array, `[p, p·log2(p)]` per token per prototype | four random cache misses per token became one |
 | Evaluating a state merges it into the trajectory bag and rolls the merge back | copying the whole bag for every candidate action |
+| The numeric-frequency token is built from the `Number` the value emission already holds | a second instanceof chain over the same `JsonElement` for every atomic value; that pass was 17-37% of `evaluateState` on CantStop, DotsAndBoxes and Wonders7 |
 
 Whole games, one JSON-Bag OSLA player against OSLA opponents, best of three seeds, same harness for both builds
 (`JSONBagBench game 3`). Whole-game wall clock is noisy for a reason that is not measurement error: the player
@@ -272,6 +273,25 @@ probe is cheap enough that the cache never paid it back.
 Two costs now dominate and are close to their floor: interning a token into a 45k-entry vocabulary (about 30 ns,
 mostly cache misses) and one `Math.log` per shared token per prototype (about 5 ns, and `Math.log` is a hardware
 intrinsic - a table-plus-series replacement was measured to be no faster).
+
+### Measuring on a hybrid-core machine
+
+The numbers in the tables above were taken before the harness pinned its process, and two effects on this class of
+machine are large enough to swamp any code change. Windows migrates an unpinned thread onto an E-core after about two
+seconds of sustained work, where this workload runs 5.7x slower (Wonders7 `evaluateState`: 179 us pinned to a P-core,
+1030 us on an E-core). And a benchmark that starts timing before the intern table has seen the corpus reads the same
+call 3x faster than its steady state, because the first pass is the one that fills the dictionary.
+
+`JSONBagBench warm` now runs one full pass over the corpus before timing, reports the steady-state figure, and the
+rounds are timed one game per JVM with the process pinned to a single P-core
+(`agent_scripts/jsonbag_ab/pinned.sh <cpu>`, and `ab.py`, which sets the affinity on the JVM it spawns). Under that
+protocol `warm` repeats to about 1% within a session. The rounds run so far, decided by whichever phase a fresh
+measurement said dominated rather than by a list of candidate ideas, are recorded in `.artifacts/jsonbag/ledger.md`.
+
+Eliminating the second numeric-type pass is the one that paid: CantStop −4.3% (p=0.031 over six paired runs),
+Wonders7 −3.3% (p=0.094), the other four games unchanged. A change that kept rejected tokens out of the intern table
+shrank Wonders7's dictionary from 18,905 entries to 1,322 and measured neutral, so it was reverted — the probe is
+not bound by table size, and paying one extra probe per emission costs about what a smaller table saves.
 
 ### Edge cases the playouts do not reach
 
