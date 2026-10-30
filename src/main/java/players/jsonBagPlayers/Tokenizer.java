@@ -247,6 +247,15 @@ public class Tokenizer {
             return !prune || len == 0 || dict.live(hashAt[len]);
         }
 
+        /**
+         * True when the completed token may still be in the whitelist. The bitmap holds every whitelisted token's
+         * hash, so when it says no, interning the token would only insert it and return DROPPED - the probe, the
+         * String and the insert all buy nothing. A false positive costs exactly what the call cost before.
+         */
+        private boolean liveToken(long hash) {
+            return !prune || dict.live(hash);
+        }
+
         /** Moves the cursor to {@code len} and restores the running hash at that position. */
         private void seek(int prefixLen) {
             len = prefixLen;
@@ -360,7 +369,7 @@ public class Tokenizer {
                 appendInt(pairX);
                 append(".y.");
                 appendInt(pairY);
-                bag.add(dict.idOf(buf, len, hash), 1);
+                if (liveToken(hash)) bag.add(dict.idOf(buf, len, hash), 1);
             }
             seek(prefixLen);
         }
@@ -370,7 +379,7 @@ public class Tokenizer {
             seek(prefixLen);
             append('.');
             append("null");
-            bag.add(dict.idOf(buf, len, hash), 1);
+            if (liveToken(hash)) bag.add(dict.idOf(buf, len, hash), 1);
             seek(prefixLen);
         }
 
@@ -392,7 +401,7 @@ public class Tokenizer {
             } else {
                 append(value.toString());
             }
-            bag.add(dict.idOf(buf, len, hash), 1);
+            if (liveToken(hash)) bag.add(dict.idOf(buf, len, hash), 1);
             seek(prefixLen);
         }
 
@@ -426,7 +435,7 @@ public class Tokenizer {
             } else {
                 append(value.toString());
             }
-            bag.add(dict.idOf(buf, len, hash), 1);
+            if (liveToken(hash)) bag.add(dict.idOf(buf, len, hash), 1);
             seek(prefixLen);
             return frequency;
         }
