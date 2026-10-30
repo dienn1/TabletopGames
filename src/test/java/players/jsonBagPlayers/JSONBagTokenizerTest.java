@@ -125,6 +125,44 @@ public class JSONBagTokenizerTest {
     }
 
     @Test
+    public void whitelistPruningKeepsTokensUnderNestedArrays() {
+        // A prefix table built only from '.' boundaries prunes the inner array away, because the tokeniser extends
+        // the path at every "[" index as well. This is the case that caught it: CantStop's playerMarkerPositions is
+        // an int[][] and its whitelist holds 241 tokens below it.
+        String json = "{\"grid\":[[1,2],[3,4]],\"xs\":[{\"a\":5}]}";
+        Set<String> whitelist = new HashSet<>(Collections.singletonList(".grid[0][1].2"));
+
+        Map<String, Integer> bag = tokenize(json, true, true, false, whitelist, true);
+
+        assertEquals(Collections.singleton(".grid[0][1].2"), bag.keySet());
+        assertEquals(Integer.valueOf(1), bag.get(".grid[0][1].2"));
+    }
+
+    @Test
+    public void whitelistFilteringEqualsTheUnfilteredBagRestrictedToTheWhitelist() {
+        // The invariant every pruning rule has to keep: whatever the walk skips, the bag is the unfiltered bag with
+        // the whitelist applied. Checked on a real container - CantStop's int[][] is the nested-array case - for the
+        // whole token set (nothing is prunable in principle) and for a subset that forces pruning.
+        AbstractGameState gs = GameType.CantStop.createGameInstance(4, 1234L).getGameState();
+        Map<String, Integer> all = new HashMap<>(Tokenizer.tokenize(gs));
+        assertTrue("a fresh CantStop state must expose its nested marker array",
+                all.keySet().stream().anyMatch(k -> k.startsWith(".playerMarkerPositions[")));
+
+        Map<String, Integer> everything = new HashMap<>(Tokenizer.tokenize(gs, new HashSet<>(all.keySet()), true));
+        assertEquals(all, everything);
+
+        Set<String> subset = new HashSet<>();
+        for (String token : all.keySet()) {
+            if (token.startsWith(".playerMarkerPositions")) subset.add(token);
+        }
+        assertFalse("the subset must be smaller than the whole bag for pruning to be exercised",
+                subset.size() == all.size());
+        Map<String, Integer> expected = new HashMap<>(all);
+        expected.keySet().retainAll(subset);
+        assertEquals(expected, new HashMap<>(Tokenizer.tokenize(gs, subset, true)));
+    }
+
+    @Test
     public void blacklistFilterRemovesListedTokens() {
         Set<String> blacklist = new HashSet<>(Arrays.asList(".a.1", ".a"));
         Map<String, Integer> bag = tokenize("{\"a\":1,\"b\":2}", false, true, false, blacklist, false);

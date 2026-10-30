@@ -1,6 +1,7 @@
 package players.jsonBagPlayers;
 
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Set;
 
 /**
@@ -48,6 +49,28 @@ public final class TokenDictionary {
     private Set<String> filterSet;
     private boolean whitelist;
     private int generation = 1;
+
+    // ------------------------------------------------------------------ whitelist prefix table
+    // A token that no whitelisted token can reach is rejected however it is built, so the tokeniser may skip the
+    // subtree that leads to it. The test is a probe into this table, which holds the 32-bit hash of every whitelisted
+    // token and of every prefix of one that ends at a '.' - the positions a path is extended from. One int per slot
+    // keeps the whole structure at 64 kB, and a 32-bit hash makes a false "live" (the safe direction: the token is
+    // then built and rejected as usual) about a one-in-a-million event at this whitelist size.
+    private int[] prefixTable;
+    private int prefixMask;
+    private int prefixEntries;
+    private boolean pruning;
+
+    /** Largest prefix table that is still cheap to probe: 16_384 slots of 4 bytes. */
+    private static final int MAX_PREFIX_SLOTS = 16384;
+
+    /** {@code -Djsonbag.prune=false} disables path pruning, so its effect can be ablated. */
+    private static final boolean PRUNE = !"false".equals(System.getProperty("jsonbag.prune"));
+
+    /** Number of entries in the prefix table; 0 when pruning is off. Diagnostics only. */
+    public int prefixCount() {
+        return pruning ? prefixEntries : 0;
+    }
 
 
     public int size() {
@@ -112,7 +135,79 @@ public final class TokenDictionary {
         this.whitelist = whitelist;
         this.generation++;
         if (accepted.length > 0) Arrays.fill(accepted, (byte) 0);   // every verdict belongs to the old filter
+        rebuildPrefixTable();
     }
+
+    /** True when the tokeniser may skip anything that cannot reach a whitelisted token. */
+    public boolean pruning() {
+        return pruning;
+    }
+
+    /**
+     * True when {@code buf[0..len)} is either a whitelisted token or a prefix of one that ends at a '.', i.e. when
+     * some whitelisted token could still be produced below this path. False means every token that path can produce
+     * is rejected, so the subtree that leads to it cannot change the bag. Returns true (no pruning) whenever no
+     * whitelist is in force or its prefix table did not fit.
+     */
+    public boolean live(long hash) {
+        if (!pruning) return true;
+        int h = hash32(hash);
+        int i = start(h, prefixMask);
+        while (true) {
+            int entry = prefixTable[i];
+            if (entry == 0) return false;
+            if (entry == h) return true;
+            i = (i + 1) & prefixMask;
+        }
+    }
+
+    /** The 32 bits of a token hash the prefix table compares. Zero is reserved for an empty slot. */
+    private static int hash32(long hash) {
+        int h = (int) (hash ^ (hash >>> 32));
+        return h == 0 ? 1 : h;
+    }
+
+    /**
+     * Builds the prefix table from the current whitelist. Every whitelisted token is inserted, and so is every
+     * prefix of one that ends at a '.': the tokeniser extends a path at exactly those positions - by a key, an array
+     * index, or a value - so any token it could still accept passes through one of them. The table is capped: a
+     * whitelist whose prefixes need more than {@link #MAX_PREFIX_SLOTS} slots would cost more to probe than the
+     * intern lookup it saves, and pruning is switched off instead.
+     */
+    private void rebuildPrefixTable() {
+        pruning = false;
+        prefixTable = null;
+        prefixEntries = 0;
+        if (!PRUNE || !whitelist || filterSet == null || filterSet.isEmpty()) return;
+
+        Set<Integer> distinct = new HashSet<>();
+        for (String token : filterSet) {
+            if (token == null || token.length() < 2) continue;
+            distinct.add(hash32(hashOf(token)));
+            // The tokeniser can only extend a path by appending ".key" or "[index]", so the positions it can ask
+            // about are exactly the ones immediately before a '.' or a '[' - plus the token itself.
+            for (int i = 1; i < token.length(); i++) {
+                char c = token.charAt(i);
+                if (c == '.' || c == '[') distinct.add(hash32(hashOf(token, i)));
+            }
+        }
+        int n = distinct.size();
+        int slots = 128;
+        while (slots < n * 2) {
+            if (slots >= MAX_PREFIX_SLOTS) return;      // would not stay cheap to probe: leave pruning off
+            slots <<= 1;
+        }
+        prefixTable = new int[slots];
+        prefixMask = slots - 1;
+        prefixEntries = n;
+        for (int h : distinct) {
+            int i = start(h, prefixMask);
+            while (prefixTable[i] != 0) i = (i + 1) & prefixMask;
+            prefixTable[i] = h;
+        }
+        pruning = true;
+    }
+
 
     public boolean hasFilter() {
         return filterSet != null && !filterSet.isEmpty();
@@ -185,6 +280,16 @@ public final class TokenDictionary {
     static long hashOf(String s) {
         long h = FNV_OFFSET;
         for (int i = 0; i < s.length(); i++) {
+            h ^= s.charAt(i);
+            h *= FNV_PRIME;
+        }
+        return h;
+    }
+
+    /** FNV-1a over the first {@code len} characters of a String, i.e. the hash of a path prefix. */
+    static long hashOf(String s, int len) {
+        long h = FNV_OFFSET;
+        for (int i = 0; i < len; i++) {
             h ^= s.charAt(i);
             h *= FNV_PRIME;
         }

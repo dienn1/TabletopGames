@@ -227,6 +227,7 @@ public class Tokenizer {
         boolean pairXY;
         boolean modeOrdered;
         boolean modeUnordered;
+        boolean prune;
 
         void start(TokenBag bag, boolean numSuffixFrequency, boolean filterPlayer, boolean binning, boolean pairXY,
                    String mode) {
@@ -238,6 +239,12 @@ public class Tokenizer {
             this.pairXY = pairXY;
             this.modeOrdered = "ordered".equals(mode);
             this.modeUnordered = "unordered".equals(mode);
+            this.prune = dict.pruning();
+        }
+
+        /** True when some whitelisted token can still be produced from the path {@code buf[0..len)}. */
+        private boolean live(int len) {
+            return !prune || len == 0 || dict.live(hashAt[len]);
         }
 
         /** Moves the cursor to {@code len} and restores the running hash at that position. */
@@ -273,12 +280,14 @@ public class Tokenizer {
                         append('[');
                         appendInt(i);
                         append(']');
-                        int frequency = item == null || item.isJsonNull()
-                                ? emittedNull(len)
-                                : emitPrimitiveValueAndFrequency(len, item.getAsJsonPrimitive());
-                        if (numSuffixFrequency && frequency > 0) bag.add(dict.idOf(buf, len, hashAt[len]), frequency);
+                        if (live(len)) {
+                            int frequency = item == null || item.isJsonNull()
+                                    ? emittedNull(len)
+                                    : emitPrimitiveValueAndFrequency(len, item.getAsJsonPrimitive());
+                            if (numSuffixFrequency && frequency > 0) bag.add(dict.idOf(buf, len, hashAt[len]), frequency);
+                        }
                     }
-                    if (emitUnordered) {
+                    if (emitUnordered && live(prefixLen)) {
                         seek(prefixLen);
                         int frequency = item == null || item.isJsonNull()
                                 ? emittedNull(prefixLen)
@@ -291,9 +300,9 @@ public class Tokenizer {
                         append('[');
                         appendInt(i);
                         append(']');
-                        tokenize(item, len, ordered);
+                        if (live(len)) tokenize(item, len, ordered);
                     }
-                    if (emitUnordered) {
+                    if (emitUnordered && live(prefixLen)) {
                         tokenize(item, prefixLen, !modeUnordered);
                     }
                 }
@@ -331,6 +340,7 @@ public class Tokenizer {
                         pairY = v.getAsInt();
                         if (pairXY) continue;
                     }
+                    if (!live(keyLen)) continue;          // no whitelisted token can extend this path
                     if (v == null || v.isJsonNull()) {
                         emittedNull(keyLen);
                     } else {
@@ -338,7 +348,7 @@ public class Tokenizer {
                         if (numSuffixFrequency && frequency > 0) bag.add(dict.idOf(buf, keyLen, hashAt[keyLen]), frequency);
                     }
                 } else {
-                    tokenize(value, keyLen, ordered);
+                    if (live(keyLen)) tokenize(value, keyLen, ordered);
                 }
             }
             if (pairXY && pairX >= 0) {

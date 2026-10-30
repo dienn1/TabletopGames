@@ -226,7 +226,22 @@ Where the time went, and what changed:
 | The pairwise divergence is written `(p+q)(1-log2(p+q)) + p·log2(p) + q·log2(q)` | one logarithm per shared token instead of two, with `p·log2(p)` precomputed |
 | Prototypes are one interleaved array, `[p, p·log2(p)]` per token per prototype | four random cache misses per token became one |
 | Evaluating a state merges it into the trajectory bag and rolls the merge back | copying the whole bag for every candidate action |
+| The tokeniser skips any path no whitelisted token can reach | building and interning tokens the filter then rejects: 64.5% of Dominion's emissions, 46.4% of Wonders7's and 29.9% of SeaSaltPaper's, against 0.4-4.5% of CantStop, Connect4 and DotsAndBoxes, whose whitelists already cover almost everything |
 | The numeric-frequency token is built from the `Number` the value emission already holds | a second instanceof chain over the same `JsonElement` for every atomic value; that pass was 17-37% of `evaluateState` on CantStop, DotsAndBoxes and Wonders7 |
+
+Pruning is the one entry above that only applies when the configuration has a whitelist. A token no whitelisted token can
+reach is rejected however it is built, so the walk asks - at every point where it could extend the path - whether some
+whitelisted token has that path as a prefix, and skips the value, the intern probe, the bag add and the whole subtree
+when none does. The set is built once from the whitelist and holds every whitelisted token plus every prefix ending just
+before a `.` or a `[`, the only positions a path is extended from; it is a single `int[]` of 32-bit token hashes, 16 kB
+at the sizes these games use. A 32-bit collision can only make the test say "live" where it is not, which costs one
+token built and rejected as before - it can never drop a token the filter would have kept. With no whitelist, or one
+whose prefixes would not fit in 16k slots, nothing is built and the walk is unchanged.
+
+On the six paper games it measures Dominion −22.8% (p=0.031 over six paired runs, every rep faster), SeaSaltPaper
+−5.2%, CantStop −2.6%, Connect4 −2.2%, DotsAndBoxes −2.2% and Wonders7 −2.1%, COMBINED −4.2% (p=0.031), with no game
+slower. The size of the win tracks the "dead emissions" column below: Dominion's whitelist covers a fifth of what its
+states emit, the other five games' whitelists cover 70-99%.
 
 Whole games, one JSON-Bag OSLA player against OSLA opponents, best of three seeds, same harness for both builds
 (`JSONBagBench game 3`). Whole-game wall clock is noisy for a reason that is not measurement error: the player
@@ -327,6 +342,14 @@ python .artifacts/jsonbag/compare.py .artifacts/jsonbag/equiv-old .artifacts/jso
 `TokenizerGoldenTest` is the faster guard: 84 token digests (14 documents under 6 tokeniser configurations) captured
 from the build that predates the rewrite. It needs no prototype folders, so it runs anywhere, and it fails on any
 change to what a token is.
+
+Whitelist pruning has its own invariant, checked two ways. `JSONBagBench wlstats` compares
+`tokenize(gs, whitelist, true)` with the unfiltered bag restricted to the whitelist over 40 states per game and reports
+`bag-mismatched-states`; it also splits the emissions into accepted, rejected under a live path and rejected under a
+dead path, which is the measurement that decides whether pruning is worth anything on a given game.
+`JSONBagTokenizerTest.whitelistFilteringEqualsTheUnfilteredBagRestrictedToTheWhitelist` asserts the same invariant on a
+real CantStop container, for the whole token set and for a subset that forces pruning; the nested-array case it also
+covers is not reached by the 25-token whitelist the fingerprint harness builds.
 
 In the equivalence sweep, token digests must match exactly. Distances and values are compared numerically;
 the accepted difference is the summation order of the divergence, at the 1e-14 level. Add

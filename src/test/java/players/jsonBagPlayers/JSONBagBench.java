@@ -61,6 +61,9 @@ public final class JSONBagBench {
             case "bagstats" -> bagStats();
             case "evalparts" -> evalParts(args.length > 1 ? args[1] : null);
             case "levers" -> levers(500, args.length > 1 ? args[1] : null, args.length > 2 ? args[2] : null);
+            case "prof" -> profile(args.length > 1 ? args[1] : null, args.length > 2 ? args[2] : "eval",
+                    args.length > 3 ? Integer.parseInt(args[3]) : 20);
+            case "wlstats" -> whitelistStats(args.length > 1 ? args[1] : null);
             case "warm" -> warm(args.length > 1 ? args[1] : null);
             case "legacy" -> legacyTiming();
             case "legacy-filtered" -> legacyTimingFiltered(games > 0 ? games : 500);
@@ -550,6 +553,133 @@ public final class JSONBagBench {
                     allocPerState / 1024,
                     Runtime.getRuntime().maxMemory() / (1024 * 1024));
             System.out.printf("%-14s %10s %12.2f%n", cfg.game.name(), "eval_us", us);
+        }
+    }
+
+    /**
+     * Runs one pipeline phase in a loop for a fixed number of seconds, after the corpus, the dictionary and the JIT
+     * are warm, so a JFR recording taken over this run attributes its samples to that phase alone. This is how a
+     * round picks its target inside the phase the `levers` table says dominates: the corpus build and the warm-up
+     * passes sit outside the loop, so they do not dilute the samples.
+     *
+     * <pre>
+     * java -XX:StartFlightRecording=filename=w.jfr,settings=profile -cp ... JSONBagBench prof Wonders7 walk 20
+     * </pre>
+     */
+    static void profile(String only, String phase, int seconds) {
+        for (Config cfg : CONFIGS) {
+            if (only != null && !only.isEmpty() && !java.util.Arrays.asList(only.split(",")).contains(cfg.game.name())) continue;
+            var prototypes = Tokenizer.loadPrototypes(ROOT + "/" + cfg.folder, cfg.nPlayers, true);
+            Set<String> topFeatures = new HashSet<>(topFeatures(cfg, 500));
+            for (Map<String, Integer> prototype : prototypes) Tokenizer.filter(prototype, topFeatures, true);
+            List<AbstractGameState> states = corpus(cfg, 220, 11L, 22L, 33L, 44L);
+            if (states.isEmpty()) continue;
+            JSONBagHeuristic heuristic = new JSONBagHeuristic(prototypes);
+            heuristic.setFilterSet(topFeatures);
+            heuristic.resetCurrentBag(states.get(0));
+            for (int i = 1; i < Math.min(30, states.size()); i++) heuristic.updateJSONBag(states.get(i));
+            for (AbstractGameState gs : states) heuristic.evaluateState(gs, 0);     // steady dictionary
+            TokenBag bag = (TokenBag) heuristic.currentJSONBag;
+            PrototypeSet compiled = heuristic.compiledPrototypes();
+            double[] out = new double[prototypes.size()];
+            com.google.gson.Gson gson = new com.google.gson.Gson();
+            List<com.google.gson.JsonElement> trees = new ArrayList<>();
+            if ("walk".equals(phase)) {
+                for (AbstractGameState gs : states) {
+                    trees.add(gson.toJsonTree(GameStateContainerFactory.createContainer(gs)));
+                }
+            }
+            Runnable body = switch (phase) {
+                case "eval" -> () -> {
+                    for (AbstractGameState gs : states) heuristic.evaluateState(gs, 0);
+                };
+                case "walk" -> () -> {
+                    for (com.google.gson.JsonElement tree : trees) {
+                        bag.startRecording();
+                        Tokenizer.tokenizeInto(tree, bag, "", true, "both", true, false, false, false);
+                        bag.rollback();
+                    }
+                };
+                case "tok" -> () -> {
+                    for (AbstractGameState gs : states) {
+                        bag.startRecording();
+                        Tokenizer.tokenizeInto(gs, bag);
+                        bag.rollback();
+                    }
+                };
+                case "dist" -> () -> {
+                    for (AbstractGameState gs : states) JensenShannonDistance.distances(compiled, bag, out);
+                };
+                default -> throw new IllegalArgumentException("unknown profile phase " + phase);
+            };
+            for (int i = 0; i < 20; i++) body.run();                              // JIT settles before the timed loop
+            long t0 = System.nanoTime();
+            long end = t0 + seconds * 1_000_000_000L;
+            long passes = 0;
+            while (System.nanoTime() < end) {
+                body.run();
+                passes++;
+            }
+            double elapsedUs = (System.nanoTime() - t0) / 1000.0;
+            System.out.printf("%-14s %-5s passes=%d us_per_state=%.2f%n", cfg.game.name(), phase, passes,
+                    elapsedUs / (passes * (double) states.size()));
+        }
+    }
+
+    /**
+     * Classifies every token an evaluation emits under the top-500 whitelist, so a round can tell how much of the
+     * intern probe exists only because the dictionary interned tokens the filter then rejects.
+     * <p>
+     * Three outcomes per emission: accepted (it enters the bag); rejected under a live path (some whitelisted token
+     * extends the same parent path, so the value has to be built before it can be rejected); rejected under a dead
+     * path (no whitelisted token shares the parent path, so the whole subtree contributes nothing and could be
+     * skipped without building any value at all).
+     */
+    static void whitelistStats(String only) {
+        System.out.printf("%-14s %8s %8s %8s %8s %8s %8s%n", "game", "emits", "accept", "rejLive", "rejDead",
+                "dead%", "wlPaths");
+        for (Config cfg : CONFIGS) {
+            if (only != null && !only.isEmpty() && !java.util.Arrays.asList(only.split(",")).contains(cfg.game.name())) continue;
+            List<String> features = topFeatures(cfg, 500);
+            Set<String> whitelist = new HashSet<>(features);
+            Set<String> livePaths = new HashSet<>();          // every '.'-boundary prefix of a whitelisted token
+            for (String token : whitelist) {
+                for (int i = token.indexOf('.', 1); i > 0; i = token.indexOf('.', i + 1)) {
+                    livePaths.add(token.substring(0, i));
+                }
+            }
+            List<AbstractGameState> states = corpus(cfg, 40, 11L, 22L, 33L, 44L);
+            if (states.isEmpty()) continue;
+            long emits = 0, accept = 0, rejLive = 0, rejDead = 0, mismatched = 0;
+            for (AbstractGameState gs : states) {
+                Map<String, Integer> all = Tokenizer.tokenize(gs);          // no filter: every emission is counted
+                Map<String, Integer> expected = new HashMap<>(all);
+                expected.keySet().retainAll(whitelist);
+                Map<String, Integer> filtered = new HashMap<>(Tokenizer.tokenize(gs, whitelist, true));
+                if (!expected.equals(filtered)) mismatched++;
+                for (Map.Entry<String, Integer> e : all.entrySet()) {
+                    String token = e.getKey();
+                    int count = e.getValue();
+                    emits += count;
+                    if (whitelist.contains(token)) {
+                        accept += count;
+                        continue;
+                    }
+                    int dot = token.lastIndexOf('.');
+                    String parent = dot > 0 ? token.substring(0, dot) : token;
+                    if (livePaths.contains(parent)) {
+                        rejLive += count;
+                    } else {
+                        rejDead += count;
+                    }
+                }
+            }
+            System.out.printf("%-14s %8d %8d %8d %8d %7.1f%% %8d%n", cfg.game.name(), emits, accept, rejLive, rejDead,
+                    100.0 * rejDead / Math.max(1, emits), livePaths.size());
+            TokenDictionary probe = new TokenDictionary();
+            probe.setFilter(whitelist, true);
+            System.out.printf("%-14s whitelist=%d prune=%s prefixes=%d bag-mismatched-states=%d%n", cfg.game.name(),
+                    whitelist.size(), probe.pruning(), probe.prefixCount(), mismatched);
         }
     }
 
