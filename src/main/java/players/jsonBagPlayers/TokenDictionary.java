@@ -36,17 +36,19 @@ public final class TokenDictionary {
     private String[] tokens = new String[64];
     private long[] hashes = new long[64];
     private int[] lengths = new int[64];
-    private boolean[] accepted = new boolean[64];
-    private boolean[] trusted = new boolean[64];        // false while a raw (unfiltered) insert has no filter verdict
-    private int[] acceptedGeneration = new int[64];
+    /** Per-token filter verdict: 0 unknown, {@link #YES} allowed, {@link #NO} dropped. Cleared when the filter changes. */
+    private byte[] accepted = new byte[64];
+    private static final byte YES = 1, NO = 2;
     private int[] table = new int[128];                 // open addressing; stores id + 1, 0 means empty
     private int mask = 127;
     private int size;
 
 
+
     private Set<String> filterSet;
     private boolean whitelist;
     private int generation = 1;
+
 
     public int size() {
         return size;
@@ -98,7 +100,7 @@ public final class TokenDictionary {
         }
         String token = new String(buf, 0, len);
         int newId = insert(token, hash, isAllowed(token) ? 1 : 0);
-        return accepted[newId] ? newId : DROPPED;
+        return accepted[newId] == YES ? newId : DROPPED;
     }
 
     public void setFilter(Set<String> filterSet, boolean whitelist) {
@@ -109,6 +111,7 @@ public final class TokenDictionary {
         this.filterSet = filterSet;
         this.whitelist = whitelist;
         this.generation++;
+        if (accepted.length > 0) Arrays.fill(accepted, (byte) 0);   // every verdict belongs to the old filter
     }
 
     public boolean hasFilter() {
@@ -123,12 +126,12 @@ public final class TokenDictionary {
 
     private boolean accepted(int id) {
         if (!hasFilter()) return true;
-        if (!trusted[id] || acceptedGeneration[id] != generation) {
-            accepted[id] = isAllowed(tokens[id]);
-            trusted[id] = true;
-            acceptedGeneration[id] = generation;
+        byte verdict = accepted[id];
+        if (verdict == 0) {                       // not decided under the current filter
+            verdict = isAllowed(tokens[id]) ? YES : NO;
+            accepted[id] = verdict;
         }
-        return accepted[id];
+        return verdict == YES;
     }
 
     private boolean isAllowed(String token) {
@@ -142,9 +145,7 @@ public final class TokenDictionary {
         tokens[id] = token;
         hashes[id] = hash;
         lengths[id] = token.length();
-        accepted[id] = acceptedFlag != 0;
-        trusted[id] = acceptedFlag >= 0;      // raw inserts (-1) carry no filter verdict yet
-        acceptedGeneration[id] = generation;
+        accepted[id] = acceptedFlag > 0 ? YES : acceptedFlag == 0 ? NO : 0;   // raw inserts (-1) carry no verdict yet
         int i = start(hash, mask);
         while (table[i] != 0) i = (i + 1) & mask;
         table[i] = id + 1;
@@ -157,8 +158,6 @@ public final class TokenDictionary {
         hashes = Arrays.copyOf(hashes, newLen);
         lengths = Arrays.copyOf(lengths, newLen);
         accepted = Arrays.copyOf(accepted, newLen);
-        trusted = Arrays.copyOf(trusted, newLen);
-        acceptedGeneration = Arrays.copyOf(acceptedGeneration, newLen);
         if (size * 2 >= table.length) rehash();
     }
 

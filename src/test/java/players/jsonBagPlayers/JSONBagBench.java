@@ -55,6 +55,12 @@ public final class JSONBagBench {
             case "timing" -> timing();
             case "game" -> gameTiming(games);
             case "split" -> split();
+            case "build" -> heuristicBuild();
+            case "player" -> playerSplit();
+            case "evalsplit" -> evalSplit();
+            case "bagstats" -> bagStats();
+            case "levers" -> levers(500);
+            case "warm" -> warm();
             case "legacy" -> legacyTiming();
             case "legacy-filtered" -> legacyTimingFiltered(games > 0 ? games : 500);
             case "game-filtered" -> gameTimingFiltered(games > 0 ? games : 500, 3);
@@ -77,7 +83,8 @@ public final class JSONBagBench {
             AbstractGameState gs = game.getGameState();
             int guard = 0;
             while (gs.isNotTerminal() && states.size() < maxStates && guard++ < 5000) {
-                List<AbstractAction> actions = game.getForwardModel().computeAvailableActions(gs);
+                List<AbstractAction> actions = JSONBagEquivalence.deterministic(
+                        game.getForwardModel().computeAvailableActions(gs));
                 if (actions.isEmpty()) break;
                 states.add(gs.copy());
                 game.getForwardModel().next(gs, actions.get(rnd.nextInt(actions.size())).copy());
@@ -173,6 +180,212 @@ public final class JSONBagBench {
             }, states.size());
             System.out.printf("%-14s %8d %12.2f %12.2f %12d%n",
                     cfg.game.name(), states.size(), tokUs, evalUs, heuristic.currentJSONBag.size());
+        }
+    }
+
+    /**
+     * Where one JSON-Bag OSLA decision goes: the state copy per candidate action, the forward-model step, and the
+     * value-function evaluation. Measured over a real playout so the numbers include the growing trajectory bag.
+     */
+    static void playerSplit() {
+        System.out.printf("%-14s %10s %10s %10s %10s %8s%n", "game", "decisions", "copy_us", "step_us", "eval_us", "cands");
+        for (Config cfg : CONFIGS) {
+            var prototypes = Tokenizer.loadPrototypes(ROOT + "/" + cfg.folder, cfg.nPlayers, true);
+            JSONBagHeuristic heuristic = new JSONBagHeuristic(prototypes);
+            var game = cfg.game.createGameInstance(cfg.nPlayers, 7L);
+            Random rnd = new Random(7L);
+            List<core.AbstractPlayer> players = new ArrayList<>();
+            for (int i = 0; i < cfg.nPlayers; i++) players.add(new RandomPlayer(new Random(rnd.nextLong())));
+            game.reset(players);
+            AbstractGameState gs = game.getGameState();
+            heuristic.resetCurrentBag(gs);
+            long copyNs = 0, stepNs = 0, evalNs = 0, cands = 0, decisions = 0;
+            while (gs.isNotTerminal() && decisions < 120) {
+                List<AbstractAction> actions = JSONBagEquivalence.deterministic(
+                        game.getForwardModel().computeAvailableActions(gs));
+                if (actions.isEmpty()) break;
+                heuristic.updateJSONBag(gs);
+                for (int i = 0; i < Math.min(actions.size(), 12); i++) {
+                    long t0 = System.nanoTime();
+                    AbstractGameState copy = gs.copy();
+                    long t1 = System.nanoTime();
+                    game.getForwardModel().next(copy, actions.get(i).copy());
+                    long t2 = System.nanoTime();
+                    heuristic.evaluateState(copy, 0);
+                    long t3 = System.nanoTime();
+                    copyNs += t1 - t0; stepNs += t2 - t1; evalNs += t3 - t2; cands++;
+                }
+                decisions++;
+                game.getForwardModel().next(gs, actions.get(rnd.nextInt(actions.size())));
+            }
+            System.out.printf("%-14s %10d %10.1f %10.1f %10.1f %8.1f  bag=%d protos=%d%n", cfg.game.name(), decisions,
+                    copyNs / 1000.0 / Math.max(1, cands), stepNs / 1000.0 / Math.max(1, cands),
+                    evalNs / 1000.0 / Math.max(1, cands), cands / (double) Math.max(1, decisions),
+                    heuristic.currentJSONBag.size(), prototypes.size());
+        }
+    }
+
+    /**
+     * How the accumulated trajectory bag distributes over the prototype support: tokens no prototype has ever seen
+     * cost four dead loads each in the distance loop, and tokens every prototype has cost a logarithm each.
+     */
+    static void bagStats() {
+        System.out.printf("%-14s %10s %10s %10s %10s %10s%n", "game", "bagtok", "unsupported", "all", "partial", "massOutside");
+        for (Config cfg : CONFIGS) {
+            var prototypes = Tokenizer.loadPrototypes(ROOT + "/" + cfg.folder, cfg.nPlayers, true);
+            JSONBagHeuristic heuristic = new JSONBagHeuristic(prototypes);
+            var game = cfg.game.createGameInstance(cfg.nPlayers, 7L);
+            Random rnd = new Random(7L);
+            List<core.AbstractPlayer> players = new ArrayList<>();
+            for (int i = 0; i < cfg.nPlayers; i++) players.add(new RandomPlayer(new Random(rnd.nextLong())));
+            game.reset(players);
+            AbstractGameState gs = game.getGameState();
+            heuristic.resetCurrentBag(gs);
+            PrototypeSet compiled = heuristic.compiledPrototypes();
+            for (int step = 0; step < 120 && gs.isNotTerminal(); step++) {
+                List<AbstractAction> actions = JSONBagEquivalence.deterministic(
+                        game.getForwardModel().computeAvailableActions(gs));
+                if (actions.isEmpty()) break;
+                heuristic.updateJSONBag(gs);
+                game.getForwardModel().next(gs, actions.get(rnd.nextInt(actions.size())));
+            }
+            TokenBag bag = (TokenBag) heuristic.currentJSONBag;
+            int[] ids = bag.nonZeroIds();
+            int n = bag.nonZeroCount();
+            int unsupported = 0, all = 0, partial = 0;
+            long massOutside = 0, massTotal = 0;
+            int stride = compiled.stride;
+            double[] packed = compiled.packed;
+            for (int i = 0; i < n; i++) {
+                int id = ids[i];
+                int count = bag.count(id);
+                massTotal += count;
+                int base = id * stride;
+                if (base >= packed.length) { unsupported++; massOutside += count; continue; }
+                int positive = 0;
+                for (int p = 0; p < compiled.count; p++) if (packed[base + 2 * p] != 0.0) positive++;
+                if (positive == 0) { unsupported++; massOutside += count; }
+                else if (positive == compiled.count) all++;
+                else partial++;
+            }
+            System.out.printf("%-14s %10d %10d %10d %10d %10s%n", cfg.game.name(), n, unsupported, all, partial,
+                    String.format("%.1f%%", 100.0 * massOutside / Math.max(1, massTotal)));
+        }
+    }
+
+    /** Inside evaluateState: tokenising the candidate against the accumulated bag, versus the distance loop. */
+    static void evalSplit() {
+        System.out.printf("%-14s %10s %10s %10s %10s %10s%n", "game", "decisions", "tok_us", "dist_us", "bagtok", "shared");
+        for (Config cfg : CONFIGS) {
+            var prototypes = Tokenizer.loadPrototypes(ROOT + "/" + cfg.folder, cfg.nPlayers, true);
+            JSONBagHeuristic heuristic = new JSONBagHeuristic(prototypes);
+            var game = cfg.game.createGameInstance(cfg.nPlayers, 7L);
+            Random rnd = new Random(7L);
+            List<core.AbstractPlayer> players = new ArrayList<>();
+            for (int i = 0; i < cfg.nPlayers; i++) players.add(new RandomPlayer(new Random(rnd.nextLong())));
+            game.reset(players);
+            AbstractGameState gs = game.getGameState();
+            heuristic.resetCurrentBag(gs);
+            long tokNs = 0, distNs = 0, n = 0; int bagTokens = 0;
+            while (gs.isNotTerminal() && n < 120) {
+                List<AbstractAction> actions = JSONBagEquivalence.deterministic(
+                        game.getForwardModel().computeAvailableActions(gs));
+                if (actions.isEmpty()) break;
+                AbstractGameState copy = gs.copy();
+                game.getForwardModel().next(copy, actions.get(0).copy());
+                heuristic.currentJSONBag.getClass();                       // keep the field reachable
+                TokenBag bag = (TokenBag) heuristic.currentJSONBag;
+                bag.startRecording();
+                long t0 = System.nanoTime();
+                Tokenizer.tokenizeInto(copy, bag);
+                long t1 = System.nanoTime();
+                double[] out = new double[prototypes.size()];
+                core.AbstractGameState guard = copy;
+                heuristic.evaluateState(guard, 0);                          // warm the same path the player uses
+                long t2 = System.nanoTime();
+                bag.rollback();
+                tokNs += t1 - t0;
+                distNs += t2 - t1;
+                bagTokens = bag.size();
+                n++;
+                game.getForwardModel().next(gs, actions.get(rnd.nextInt(actions.size())));
+            }
+            System.out.printf("%-14s %10d %10.1f %10.1f %10d %10s%n", cfg.game.name(), n,
+                    tokNs / 1000.0 / Math.max(1, n), distNs / 1000.0 / Math.max(1, n), bagTokens, "-");
+        }
+    }
+
+    /**
+     * Phase split in the feature-selected configuration: tokenising a state, the distance loop over the accumulated
+     * bag, and the container extraction that feeds tokenising. Steers which phase the next round should attack.
+     */
+    static void levers(int topK) {
+        System.out.printf("%-14s %8s %12s %12s %12s %12s %8s%n", "game", "states", "tokenize_us", "dist_us", "tree_us", "container_us", "bag");
+        for (Config cfg : CONFIGS) {
+            var prototypes = Tokenizer.loadPrototypes(ROOT + "/" + cfg.folder, cfg.nPlayers, true);
+            Set<String> topFeatures = new HashSet<>(topFeatures(cfg, topK));
+            for (Map<String, Integer> prototype : prototypes) Tokenizer.filter(prototype, topFeatures, true);
+            List<AbstractGameState> states = corpus(cfg, 220, 11L, 22L, 33L, 44L);
+            if (states.isEmpty()) continue;
+            JSONBagHeuristic heuristic = new JSONBagHeuristic(prototypes);
+            heuristic.setFilterSet(topFeatures);
+            heuristic.resetCurrentBag(states.get(0));
+            for (int i = 1; i < Math.min(30, states.size()); i++) heuristic.updateJSONBag(states.get(i));
+            TokenBag bag = (TokenBag) heuristic.currentJSONBag;
+            PrototypeSet compiled = heuristic.compiledPrototypes();
+            int[] count = {0};
+            double tokUs = microsPerOp(10, 21, () -> {
+                for (AbstractGameState gs : states) Tokenizer.tokenize(gs, topFeatures, true);
+            }, states.size());
+            double distUs = microsPerOp(10, 21, () -> {
+                double[] out = new double[prototypes.size()];
+                for (AbstractGameState gs : states) JensenShannonDistance.distances(compiled, bag, out);
+                count[0] += out.length;
+            }, states.size());
+            double contUs = microsPerOp(10, 21, () -> {
+                for (AbstractGameState gs : states) GameStateContainerFactory.createContainer(gs);
+            }, states.size());
+            com.google.gson.Gson gson = new com.google.gson.Gson();
+            double treeUs = microsPerOp(10, 21, () -> {
+                for (AbstractGameState gs : states) gson.toJsonTree(GameStateContainerFactory.createContainer(gs));
+            }, states.size()) - contUs;
+            System.out.printf("%-14s %8d %12.2f %12.2f %12.2f %12.2f %8d%n",
+                    cfg.game.name(), states.size(), tokUs, distUs, treeUs, contUs, bag.size());
+        }
+    }
+
+    /**
+     * Average warm `evaluateState` over a fixed corpus (the trajectory bag is warmed first, as the player's would be).
+     * Averaging over 220 states makes this far less noisy than timing whole games, so it is the metric the iteration
+     * rounds use to decide keep-or-revert.
+     */
+    static void warm() {
+        for (Config cfg : CONFIGS) {
+            var prototypes = Tokenizer.loadPrototypes(ROOT + "/" + cfg.folder, cfg.nPlayers, true);
+            Set<String> topFeatures = new HashSet<>(topFeatures(cfg, 500));
+            for (Map<String, Integer> prototype : prototypes) Tokenizer.filter(prototype, topFeatures, true);
+            List<AbstractGameState> states = corpus(cfg, 220, 11L, 22L, 33L, 44L);
+            if (states.isEmpty()) continue;
+            JSONBagHeuristic heuristic = new JSONBagHeuristic(prototypes);
+            heuristic.setFilterSet(topFeatures);
+            heuristic.resetCurrentBag(states.get(0));
+            for (int i = 1; i < Math.min(30, states.size()); i++) heuristic.updateJSONBag(states.get(i));
+            double us = microsPerOp(15, 31, () -> {
+                for (AbstractGameState gs : states) heuristic.evaluateState(gs, 0);
+            }, states.size());
+            System.out.printf("%-14s %10s %12.2f%n", cfg.game.name(), "eval_us", us);
+        }
+    }
+
+    /** Cost of building a value function from loaded prototypes: dictionary growth and prototype compilation. */
+    static void heuristicBuild() {
+        System.out.printf("%-14s %10s %10s %10s%n", "game", "tokens", "build_us", "us_per_ktok");
+        for (Config cfg : CONFIGS) {
+            var prototypes = Tokenizer.loadPrototypes(ROOT + "/" + cfg.folder, cfg.nPlayers, true);
+            int tokens = 0;
+            for (Map<String, Integer> prototype : prototypes) tokens += prototype.size();
+            double us = microsPerOp(5, 9, () -> new JSONBagHeuristic(prototypes), 1);
+            System.out.printf("%-14s %10d %10.1f %10.1f%n", cfg.game.name(), tokens, us, us / Math.max(1, tokens / 1000.0));
         }
     }
 

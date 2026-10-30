@@ -51,6 +51,11 @@ public class JSONBagHeuristic implements IStateHeuristic {
         dict.setFilter(filterSet, true);
     }
 
+    /** The compiled prototypes, for tests and benchmarks that need to inspect them. */
+    PrototypeSet compiledPrototypes() {
+        return compiled;
+    }
+
     public void updateJSONBag(AbstractGameState gs) {
         Tokenizer.tokenizeInto(gs, current);
     }

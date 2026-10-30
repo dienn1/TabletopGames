@@ -112,6 +112,9 @@ public class JensenShannonDistance {
         }
         double[] jsDist = new double[nPrototypes];
         double[] sharedPrototypeMass = new double[nPrototypes];
+        long[] support = prototypes.support;
+        int supportLength = support.length;
+        double outsideMass = 0.0;                     // bag mass on tokens no prototype knows
         double inverseTotal = 1.0 / q.total();
         double[] packed = prototypes.packed;
         int stride = prototypes.stride;
@@ -124,13 +127,18 @@ public class JensenShannonDistance {
             if (rawCount <= 0) continue;        // a token held at zero contributes nothing, and 0 * log2(0) is NaN
             double qK = rawCount * inverseTotal;
             int base = id * stride;
-            if (base >= packedLength) {
+            long mask = id < supportLength ? support[id] : 0L;
+            if (mask == 0L) {
                 // a token no prototype has ever seen: contributes q * log2(q / (q/2)) == q to every prototype
-                for (int p = 0; p < nPrototypes; p++) jsDist[p] += qK;
+                outsideMass += qK;
                 continue;
             }
             double qLogQ = qK * log2(qK);
             for (int p = 0; p < nPrototypes; p++) {
+                if ((mask & (1L << p)) == 0L) {
+                    jsDist[p] += qK;                  // this prototype has no mass on the token
+                    continue;
+                }
                 double pK = packed[base + 2 * p];
                 if (pK == 0.0) {
                     jsDist[p] += qK;
@@ -141,6 +149,7 @@ public class JensenShannonDistance {
                 }
             }
         }
+        for (int p = 0; p < nPrototypes; p++) jsDist[p] += outsideMass;
         for (int p = 0; p < nPrototypes; p++) {
             if (prototypes.mapSize[p] == 0) {
                 out[p] = 1;                                // an empty distribution is at distance 1, by definition

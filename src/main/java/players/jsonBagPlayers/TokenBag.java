@@ -36,7 +36,10 @@ public final class TokenBag extends AbstractMap<String, Integer> {
 
     public TokenBag(TokenDictionary dict) {
         this.dict = dict;
-        int cap = Math.max(16, dict.size());
+        // A bag holds far fewer tokens than the dictionary has entries (a state visits ~50 of 45,000 in the
+        // feature-selected configuration), and sizing to the dictionary means zeroing a 180 kB array per bag.
+        // Start small and grow: a bag that really does touch most of the vocabulary converges to the same size.
+        int cap = Math.min(1024, Math.max(16, dict.size()));
         counts = new int[cap];
         nonZeroIds = new int[cap];
     }
@@ -67,15 +70,17 @@ public final class TokenBag extends AbstractMap<String, Integer> {
         counts[id] = newCount;
         total += count;
         if (newCount == 0) removeNonZero(id);
-        if (recording) {
-            if (recorded == recordedIds.length) {
-                recordedIds = Arrays.copyOf(recordedIds, recorded * 2);
-                recordedCounts = Arrays.copyOf(recordedCounts, recorded * 2);
-            }
-            recordedIds[recorded] = id;
-            recordedCounts[recorded] = count;
-            recorded++;
+        if (recording) log(id, count);
+    }
+
+    private void log(int id, int count) {
+        if (recorded == recordedIds.length) {
+            recordedIds = Arrays.copyOf(recordedIds, recorded * 2);
+            recordedCounts = Arrays.copyOf(recordedCounts, recorded * 2);
         }
+        recordedIds[recorded] = id;
+        recordedCounts[recorded] = count;
+        recorded++;
     }
 
     /**

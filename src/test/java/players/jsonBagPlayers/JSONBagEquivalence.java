@@ -18,9 +18,13 @@ import java.util.*;
  * digest is a behaviour change, a changed distance in the last digits is floating-point noise.
  * <p>
  * The playout tokenises the <em>live</em> game state rather than stored copies: some games' {@code copy()} produces
- * states whose JSON differs in list order, which would make the fingerprint itself irreproducible. For the same
- * reason decisions are not fingerprinted through {@link JSONBagOSLAPlayer}, which shuffles its action list with the
- * global {@link java.util.Collections#shuffle(List)}.
+ * states whose JSON differs in list order, which would make the fingerprint itself irreproducible. The available
+ * actions are sorted before the seeded pick, because several forward models build that list by iterating a hash-based
+ * collection and the order then follows the JVM's identity hashes. Decisions are deliberately not fingerprinted:
+ * looking one action ahead means copying the state, and {@code copy()} redeterminises hidden information from an
+ * unseeded {@code Random} (see {@code AbstractGameState.redeterminisationRnd}), so such a value depends on when the
+ * copy was taken rather than on the code under test. Chosen-action equivalence is therefore covered by the unit tests
+ * and, in the player, by {@code JSONBagOSLAPlayerTest}.
  *
  * <pre>
  * java -cp "target/classes;target/test-classes;target/dependency/*" players.jsonBagPlayers.JSONBagEquivalence &lt;outDir&gt; [quick] [game]
@@ -101,7 +105,7 @@ public final class JSONBagEquivalence {
         Set<String> blacklist = Collections.emptySet();
         int n = 0;
         while (gs.isNotTerminal() && n < maxStates) {
-            List<AbstractAction> actions = game.getForwardModel().computeAvailableActions(gs);
+            List<AbstractAction> actions = deterministic(game.getForwardModel().computeAvailableActions(gs));
             if (actions.isEmpty()) break;
             if (n == 0) {
                 List<String> keys = new ArrayList<>(Tokenizer.tokenize(gs).keySet());
@@ -142,6 +146,21 @@ public final class JSONBagEquivalence {
                 .append(' ').append(n).append('\n');
         out.append("JSDVALUE ").append(cfg.game.name()).append(' ').append(jsd).append('\n');
         out.append("EVALVALUE ").append(cfg.game.name()).append(' ').append(eval).append('\n');
+    }
+
+    /**
+     * The available actions in a fixed order. Several forward models build this list by iterating a hash-based
+     * collection, so its order follows the JVM's identity hashes: Dominion's playout diverged at state 2 between a
+     * run on its own and a run after the other five games, and again under {@code -XX:hashCode=2}. Picking an index
+     * from that order therefore made the fingerprint irreproducible. Sorting by class, text and content hash gives
+     * every run the same list, so the seeded pick lands on the same action and two dumps stay comparable. (A game
+     * whose actions override neither {@code toString} nor {@code hashCode} with their fields would still not be
+     * covered; none of the six paper games is in that position.)
+     */
+    static List<AbstractAction> deterministic(List<AbstractAction> actions) {
+        List<AbstractAction> ordered = new ArrayList<>(actions);
+        ordered.sort(Comparator.comparing((AbstractAction a) -> a.getClass().getName() + '|' + a + '|' + a.hashCode()));
+        return ordered;
     }
 
     static String sha(String s) {
