@@ -61,3 +61,6 @@ cp.txt
 
 # Experiment configs, seeds and prototype bags: data, kept local
 Experiments/
+
+# Agent task scripts (benchmark harness, quality gate): local tooling, not part of the repo
+agent_scripts/
