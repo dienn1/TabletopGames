@@ -52,22 +52,27 @@ public final class TokenDictionary {
 
     // ------------------------------------------------------------------ whitelist prefix table
     // A token that no whitelisted token can reach is rejected however it is built, so the tokeniser may skip the
-    // subtree that leads to it. The test is a probe into this table, which holds the 32-bit hash of every whitelisted
-    // token and of every prefix of one that ends at a '.' - the positions a path is extended from. One int per slot
-    // keeps the whole structure at 64 kB, and a 32-bit hash makes a false "live" (the safe direction: the token is
-    // then built and rejected as usual) about a one-in-a-million event at this whitelist size.
-    private int[] prefixTable;
-    private int prefixMask;
+    // subtree that leads to it. The test is one bit in this bitmap: every whitelisted token and every prefix of one
+    // that ends at a position the path can be extended from sets a bit derived from its 32-bit hash. Linear probing
+    // in a 16 kB slot table was the expensive part of pruning (39% of `evaluateState` on Dominion when measured), and
+    // a bit test is one load with no compare loop. A hash collision makes the test say "live" where it is not, which
+    // costs one token built and rejected as before - it can never drop a token the filter would have kept - and at
+    // these whitelist sizes that happens on about one dead probe in sixty.
+    private long[] prefixBits;
     private int prefixEntries;
     private boolean pruning;
 
-    /** Largest prefix table that is still cheap to probe: 16_384 slots of 4 bytes. */
-    private static final int MAX_PREFIX_SLOTS = 16384;
+    /** 2^17 bits = 16 kB, which holds these whitelists at a false-positive rate under 2%. */
+    private static final int PREFIX_BITS_LOG2 = 17;
+    private static final int PREFIX_BITS = 1 << PREFIX_BITS_LOG2;
+    private static final int PREFIX_INDEX_MASK = PREFIX_BITS - 1;
+    /** Above this many prefixes the bitmap saturates and pruning costs more than it saves. */
+    private static final int MAX_PREFIX_ENTRIES = 8192;
 
     /** {@code -Djsonbag.prune=false} disables path pruning, so its effect can be ablated. */
     private static final boolean PRUNE = !"false".equals(System.getProperty("jsonbag.prune"));
 
-    /** Number of entries in the prefix table; 0 when pruning is off. Diagnostics only. */
+    /** Number of distinct prefixes in the bitmap; 0 when pruning is off. Diagnostics only. */
     public int prefixCount() {
         return pruning ? prefixEntries : 0;
     }
@@ -144,67 +149,48 @@ public final class TokenDictionary {
     }
 
     /**
-     * True when {@code buf[0..len)} is either a whitelisted token or a prefix of one that ends at a '.', i.e. when
-     * some whitelisted token could still be produced below this path. False means every token that path can produce
-     * is rejected, so the subtree that leads to it cannot change the bag. Returns true (no pruning) whenever no
-     * whitelist is in force or its prefix table did not fit.
+     * True when the path with this running hash is either a whitelisted token or a prefix of one that ends where the
+     * tokeniser can extend it, i.e. when some whitelisted token could still be produced below this path. False means
+     * every token that path can produce is rejected, so the subtree that leads to it cannot change the bag. Returns
+     * true (no pruning) whenever no whitelist is in force or its prefix set saturated the bitmap.
      */
     public boolean live(long hash) {
         if (!pruning) return true;
-        int h = hash32(hash);
-        int i = start(h, prefixMask);
-        while (true) {
-            int entry = prefixTable[i];
-            if (entry == 0) return false;
-            if (entry == h) return true;
-            i = (i + 1) & prefixMask;
-        }
+        int bit = prefixBit(hash);
+        return (prefixBits[bit >>> 6] & (1L << bit)) != 0;
     }
 
-    /** The 32 bits of a token hash the prefix table compares. Zero is reserved for an empty slot. */
-    private static int hash32(long hash) {
+    /** The bit a 32-bit token hash selects. Mixing the high half in stops FNV's low bits clustering on short tokens. */
+    private static int prefixBit(long hash) {
         int h = (int) (hash ^ (hash >>> 32));
-        return h == 0 ? 1 : h;
+        return (h ^ (h >>> 16)) & PREFIX_INDEX_MASK;
     }
 
     /**
-     * Builds the prefix table from the current whitelist. Every whitelisted token is inserted, and so is every
-     * prefix of one that ends at a '.': the tokeniser extends a path at exactly those positions - by a key, an array
-     * index, or a value - so any token it could still accept passes through one of them. The table is capped: a
-     * whitelist whose prefixes need more than {@link #MAX_PREFIX_SLOTS} slots would cost more to probe than the
-     * intern lookup it saves, and pruning is switched off instead.
+     * Builds the prefix bitmap from the current whitelist. Every whitelisted token sets a bit, and so does every
+     * prefix of one that ends where the tokeniser can extend a path: immediately before a `.` or a `[`, and (so that
+     * one probe can answer "can any indexed token live under this array?") immediately after a `[`. A whitelist whose
+     * prefix set would saturate the bitmap switches pruning off instead.
      */
     private void rebuildPrefixTable() {
         pruning = false;
-        prefixTable = null;
+        prefixBits = null;
         prefixEntries = 0;
         if (!PRUNE || !whitelist || filterSet == null || filterSet.isEmpty()) return;
 
         Set<Integer> distinct = new HashSet<>();
         for (String token : filterSet) {
             if (token == null || token.length() < 2) continue;
-            distinct.add(hash32(hashOf(token)));
-            // The tokeniser can only extend a path by appending ".key" or "[index]", so the positions it can ask
-            // about are exactly the ones immediately before a '.' or a '[' - plus the token itself.
+            distinct.add(prefixBit(hashOf(token)));
             for (int i = 1; i < token.length(); i++) {
                 char c = token.charAt(i);
-                if (c == '.' || c == '[') distinct.add(hash32(hashOf(token, i)));
+                if (c == '.' || c == '[') distinct.add(prefixBit(hashOf(token, i)));
             }
         }
-        int n = distinct.size();
-        int slots = 128;
-        while (slots < n * 2) {
-            if (slots >= MAX_PREFIX_SLOTS) return;      // would not stay cheap to probe: leave pruning off
-            slots <<= 1;
-        }
-        prefixTable = new int[slots];
-        prefixMask = slots - 1;
-        prefixEntries = n;
-        for (int h : distinct) {
-            int i = start(h, prefixMask);
-            while (prefixTable[i] != 0) i = (i + 1) & prefixMask;
-            prefixTable[i] = h;
-        }
+        if (distinct.size() > MAX_PREFIX_ENTRIES) return;      // too saturated to pay for itself
+        prefixBits = new long[PREFIX_BITS >>> 6];
+        for (int bit : distinct) prefixBits[bit >>> 6] |= 1L << bit;
+        prefixEntries = distinct.size();
         pruning = true;
     }
 

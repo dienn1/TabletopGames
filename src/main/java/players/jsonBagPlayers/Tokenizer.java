@@ -272,6 +272,9 @@ public class Tokenizer {
             int n = arr.size();
             boolean emitOrdered = ordered && !modeUnordered;
             boolean emitUnordered = !modeOrdered || !ordered;
+            // The unordered emission depends only on the array's own path, so it is tested once for the whole array
+            // instead of once per element.
+            boolean unorderedLive = emitUnordered && live(prefixLen);
             for (int i = 0; i < n; i++) {
                 JsonElement item = arr.get(i);
                 if (isAtomic(item)) {
@@ -287,7 +290,7 @@ public class Tokenizer {
                             if (numSuffixFrequency && frequency > 0) bag.add(dict.idOf(buf, len, hashAt[len]), frequency);
                         }
                     }
-                    if (emitUnordered && live(prefixLen)) {
+                    if (unorderedLive) {
                         seek(prefixLen);
                         int frequency = item == null || item.isJsonNull()
                                 ? emittedNull(prefixLen)
@@ -302,7 +305,7 @@ public class Tokenizer {
                         append(']');
                         if (live(len)) tokenize(item, len, ordered);
                     }
-                    if (emitUnordered && live(prefixLen)) {
+                    if (unorderedLive) {
                         tokenize(item, prefixLen, !modeUnordered);
                     }
                 }

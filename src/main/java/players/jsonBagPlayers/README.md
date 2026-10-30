@@ -233,15 +233,19 @@ Pruning is the one entry above that only applies when the configuration has a wh
 reach is rejected however it is built, so the walk asks - at every point where it could extend the path - whether some
 whitelisted token has that path as a prefix, and skips the value, the intern probe, the bag add and the whole subtree
 when none does. The set is built once from the whitelist and holds every whitelisted token plus every prefix ending just
-before a `.` or a `[`, the only positions a path is extended from; it is a single `int[]` of 32-bit token hashes, 16 kB
-at the sizes these games use. A 32-bit collision can only make the test say "live" where it is not, which costs one
-token built and rejected as before - it can never drop a token the filter would have kept. With no whitelist, or one
-whose prefixes would not fit in 16k slots, nothing is built and the walk is unchanged.
+before a `.` or a `[`, the only positions a path is extended from; the test is one bit in a 16 kB bitmap keyed by the
+path's 32-bit hash, so it is a single load with no compare loop. A hash collision can only make the test say "live"
+where it is not, which costs one token built and rejected as before - it can never drop a token the filter would have
+kept - and at these whitelist sizes that is about one dead probe in sixty. With no whitelist, or one whose prefixes
+would saturate the bitmap, nothing is built and the walk is unchanged.
 
 On the six paper games it measures Dominion −22.8% (p=0.031 over six paired runs, every rep faster), SeaSaltPaper
 −5.2%, CantStop −2.6%, Connect4 −2.2%, DotsAndBoxes −2.2% and Wonders7 −2.1%, COMBINED −4.2% (p=0.031), with no game
 slower. The size of the win tracks the "dead emissions" column below: Dominion's whitelist covers a fifth of what its
-states emit, the other five games' whitelists cover 70-99%.
+states emit, the other five games' whitelists cover 70-99%. The test itself was then the cost (39% of `evaluateState`
+on Dominion when it was an open-addressed table), so it became the bitmap described above and the per-array invariant
+test was hoisted out of the element loop: a further Dominion −5.4% (p=0.031) and Wonders7 −5.9% (p=0.13), no game
+slower.
 
 Whole games, one JSON-Bag OSLA player against OSLA opponents, best of three seeds, same harness for both builds
 (`JSONBagBench game 3`). Whole-game wall clock is noisy for a reason that is not measurement error: the player
