@@ -5,6 +5,7 @@ import core.actions.AbstractAction;
 import games.GameType;
 import players.simple.RandomPlayer;
 
+import utilities.Utils;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -131,7 +132,7 @@ public final class JSONBagEquivalence {
             }
             Map<String, Integer> trajectory = heuristic.currentJSONBag;
             for (int p = 0; p < prototypes.size(); p++)
-                jsd.append(Double.toString(JensenShannonDistance.jsd(prototypes.get(p), trajectory))).append(',');
+                jsd.append(Double.toString(Utils.jensenShannonDistance(prototypes.get(p), trajectory))).append(',');
             for (int player = 0; player < cfg.nPlayers; player++)
                 eval.append(Double.toString(heuristic.evaluateState(gs, player))).append(',');
 

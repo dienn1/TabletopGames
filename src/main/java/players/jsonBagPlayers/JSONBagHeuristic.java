@@ -6,8 +6,6 @@ import core.interfaces.IStateHeuristic;
 
 import java.util.*;
 
-import static players.jsonBagPlayers.JensenShannonDistance.distances;
-
 /**
  * Value function built on JSON-Bag prototypes: a state is scored by the Jensen-Shannon distance between the token
  * bag of the trajectory so far plus the state itself, and one prototype bag per player.
@@ -80,7 +78,7 @@ public class JSONBagHeuristic implements IStateHeuristic {
         current.startRecording();
         try {
             Tokenizer.tokenizeInto(gs, current);
-            distances(compiled, current, distanceBuffer);
+            compiled.distances(current, distanceBuffer);
         } finally {
             current.rollback();
         }

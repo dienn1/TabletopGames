@@ -6,13 +6,14 @@ import games.GameType;
 import org.junit.Test;
 import players.simple.RandomPlayer;
 
+import utilities.Utils;
 import java.util.*;
 
 import static org.junit.Assert.*;
 
 /**
  * Tests for the dense fast path: interned {@link TokenBag}s and {@link PrototypeSet} distances must agree with the
- * plain {@code Map<String,Integer>} + {@link JensenShannonDistance#jsd(Map, Map)} definitions, which are the
+ * plain {@code Map<String,Integer>} + {@link utilities.Utils#jensenShannonDistance(Map, Map)} definitions, which are the
  * reference behaviour of the JSON-Bag representation.
  */
 public class JSONBagFastPathTest {
@@ -45,7 +46,7 @@ public class JSONBagFastPathTest {
         Tokenizer.merge(bag, new LinkedHashMap<>(Tokenizer.tokenize(gs)));
         double[] distances = new double[prototypes.size()];
         for (int i = 0; i < prototypes.size(); i++)
-            distances[i] = JensenShannonDistance.jsd(prototypes.get(i), bag);
+            distances[i] = Utils.jensenShannonDistance(prototypes.get(i), bag);
         double sum = 0;
         double[] values = new double[distances.length];
         for (int i = 0; i < distances.length; i++) {
@@ -170,7 +171,7 @@ public class JSONBagFastPathTest {
         JSONBagHeuristic heuristic = new JSONBagHeuristic(prototypes);
         heuristic.resetCurrentBag(gs);
 
-        assertEquals(1.0, JensenShannonDistance.jsd(empty, heuristic.currentJSONBag), 0.0);
+        assertEquals(1.0, Utils.jensenShannonDistance(empty, heuristic.currentJSONBag), 0.0);
         Map<String, Integer> trajectory = new HashMap<>(new LinkedHashMap<>(Tokenizer.tokenize(gs)));
         for (int player = 0; player < 2; player++) {
             assertEquals("player " + player, referenceValue(prototypes, trajectory, gs, player),
@@ -193,7 +194,7 @@ public class JSONBagFastPathTest {
         assertEquals("the value token counts occurrences", Integer.valueOf(2), bag.get(".k.2147483648"));
         assertNull("a wrapped-negative frequency is dropped rather than poisoning the bag", bag.get(".k"));
 
-        double selfDistance = JensenShannonDistance.jsd(bag, bag);
+        double selfDistance = Utils.jensenShannonDistance(bag, bag);
         assertTrue("self distance is not finite: " + selfDistance, !Double.isNaN(selfDistance));
         assertEquals(0.0, selfDistance, 0.0);
 
@@ -202,7 +203,7 @@ public class JSONBagFastPathTest {
                 "both", true, false, false, false, null, false);
         PrototypeSet prototypes = PrototypeSet.compile(List.of(dense, dense), dense.dictionary());
         double[] out = new double[2];
-        JensenShannonDistance.distances(prototypes, dense, out);
+        prototypes.distances(dense, out);
         // finite, and zero up to the cancellation left by a 2^31:1 probability ratio (it used to be NaN)
         for (double d : out) {
             assertTrue("distance is not finite: " + d, !Double.isNaN(d));

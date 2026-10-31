@@ -19,11 +19,11 @@ The container is the piece you write per game. Everything downstream is game-agn
 | `Tokenizer` | Turns an object, a JSON string, or a game state into a token frequency map. Loads prototypes and filter lists from disk. |
 | `TokenDictionary` | Interns token names to small integer ids; the tokeniser hands it a running hash. |
 | `TokenBag` | The bag: counts in a dense `int[]` indexed by token id, with a `Map<String,Integer>` view. |
-| `PrototypeSet` | The prototypes compiled into one interleaved probability array for the distance loop. |
-| `JensenShannonDistance` | `normalize` and `jsd` over two frequency maps, plus a fast path over a compiled prototype set. JSD is symmetric and bounded by 1. |
+| `PrototypeSet` | The prototypes compiled into one interleaved probability array, plus the dense distance loop (`PrototypeSet.distances(TokenBag, double[])`) the heuristic calls. |
+| `JensenShannonDistance` | Removed. The keyed helpers live in `utilities.Utils`: `jensenShannonDistance(Map, Map)` for two bags, `normaliseDistribution` for counts, and `double[]` overloads for plain probability vectors. The dense fast path is `PrototypeSet.distances`. JSD is symmetric and bounded by 1. |
 | `JSONBagHeuristic` | `IStateHeuristic` that scores a state by JSD to one prototype bag per player. |
 | `JSONBagOSLAPlayer` | One-step look-ahead: rolls each legal action forward, scores the result with `JSONBagHeuristic`, plays the best. |
-| `GameStateContainerFactory` | Maps a `GameType` to the container class that snapshots it. Throws if the game has no container. |
+| `GameStateContainerFactory` | In `evaluation.containers`. Maps a `GameType` to the container class that snapshots it. Throws if the game has no container. |
 | `TokenizerTest` | Scratch harness, not a JUnit test. It lives in `src/main/java`, reads `test.txt` and `filterTest.json`, and does not run under surefire. |
 
 ## Quick start
@@ -183,7 +183,7 @@ The convenience overloads use `mode=both`, `numSuffixFrequency=true`, no binning
 
 ## Running the experiments
 
-`core.TAG` dispatches to the driver:
+`core.TAG` dispatches to the driver, which lives in `evaluation/jsonBag/`:
 
 ```bash
 java -jar target/TAG.jar JSONBagValueFunctionExperiments game=DotsAndBoxes n=1 nPlayers=2 \

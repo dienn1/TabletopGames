@@ -392,7 +392,7 @@ public final class JSONBagBench {
             }, states.size());
             double[] out = new double[prototypes.size()];
             double distUs = measure(phase, "dist", 5, 9, () -> {
-                for (AbstractGameState gs : states) JensenShannonDistance.distances(compiled, bag, out);
+                for (AbstractGameState gs : states) compiled.distances(bag, out);
             }, states.size());
             // measured again at the end of the run, when every other phase's working set is live
             double evalAfterUs = phase == null ? microsPerOp(25, 15, () -> {
@@ -417,7 +417,7 @@ public final class JSONBagBench {
         current.startRecording();
         try {
             Tokenizer.tokenizeInto(gs, current);
-            JensenShannonDistance.distances(compiled, current, buf);
+            compiled.distances(current, buf);
         } finally {
             current.rollback();
         }
@@ -453,7 +453,7 @@ public final class JSONBagBench {
                     bag.startRecording();
                     Tokenizer.tokenizeInto(gs, bag);
                     long t1 = System.nanoTime();
-                    JensenShannonDistance.distances(compiled, bag, out);
+                    compiled.distances(bag, out);
                     long t2 = System.nanoTime();
                     bag.rollback();
                     long t3 = System.nanoTime();
@@ -609,7 +609,7 @@ public final class JSONBagBench {
                     }
                 };
                 case "dist" -> () -> {
-                    for (AbstractGameState gs : states) JensenShannonDistance.distances(compiled, bag, out);
+                    for (AbstractGameState gs : states) compiled.distances(bag, out);
                 };
                 default -> throw new IllegalArgumentException("unknown profile phase " + phase);
             };
