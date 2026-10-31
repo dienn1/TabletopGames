@@ -19,7 +19,8 @@ import static org.junit.Assert.*;
 public class JSONBagFastPathTest {
 
     private static final GameType[] GAMES = {
-            GameType.CantStop, GameType.Connect4, GameType.DotsAndBoxes, GameType.Wonders7
+            GameType.CantStop, GameType.Connect4, GameType.DotsAndBoxes, GameType.Dominion,
+            GameType.SeaSaltPaper, GameType.Wonders7
     };
 
     private static List<AbstractGameState> states(GameType gameType, int nPlayers, int wanted) {
