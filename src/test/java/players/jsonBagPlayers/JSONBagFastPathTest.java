@@ -212,6 +212,20 @@ public class JSONBagFastPathTest {
     }
 
     @Test
+    public void densePathRejectsWhatTheKeyedApiRejects() {
+        TokenBag bag = (TokenBag) Tokenizer.tokenize("{\"a\":1,\"b\":1}", "", false, "both", true,
+                false, false, false, null, false);
+        PrototypeSet prototypes = PrototypeSet.compile(List.of(bag), bag.dictionary());
+
+        // a buffer that cannot hold one distance per prototype
+        assertThrows(IllegalArgumentException.class, () -> prototypes.distances(bag, new double[0]));
+
+        // negative mass cannot reach the dense loop at all: the bag refuses to hold it, so the loop's own
+        // guard only catches a future change to TokenBag
+        assertThrows(IllegalArgumentException.class, () -> bag.add(bag.dictionary().idOfRaw(".a"), -3));
+    }
+
+    @Test
     public void recordingNestsAndUnwindsInOrder() {
         AbstractGameState gs = GameType.DotsAndBoxes.createGameInstance(2, 5L).getGameState();
         TokenBag bag = (TokenBag) Tokenizer.tokenize(gs);
