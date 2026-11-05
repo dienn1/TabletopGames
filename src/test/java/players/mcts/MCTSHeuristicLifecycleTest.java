@@ -121,6 +121,24 @@ public class MCTSHeuristicLifecycleTest {
     }
 
     @Test
+    public void theMultiTreeSearchUsesEvaluateAll() {
+        CountingHeuristic heuristic = new CountingHeuristic();
+        MCTSParams params = new MCTSParams();
+        params.setParameterValue("rolloutLength", 0);
+        params.setParameterValue("information", "Information_Set");
+        params.setParameterValue("opponentTreePolicy", "MultiTree");
+        params.setParameterValue("budgetType", PlayerConstants.BUDGET_ITERATIONS);
+        params.setParameterValue("budget", 30);
+        params.setParameterValue("heuristic", heuristic);
+
+        play(new MCTSPlayer(params), 4321L);
+
+        assertTrue("MultiTree must value leaves through evaluateAll, was " + heuristic.evaluateAllCalls,
+                heuristic.evaluateAllCalls > 0);
+        assertEquals("evaluateState must not be used per player in a MultiTree search", 0, heuristic.evaluateStateCalls);
+    }
+
+    @Test
     public void theSearchUsesEvaluateAll() {
         CountingHeuristic heuristic = new CountingHeuristic();
 

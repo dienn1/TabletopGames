@@ -144,6 +144,9 @@ public class MultiTreeNode extends SingleTreeNode {
         // Evaluate final state and return normalised score. One pass, like SingleTreeNode.rollout: the
         // interface default is the per-player loop this replaced.
         double[] finalValues = params.heuristic.evaluateAll(currentState);
+        if (finalValues == null || finalValues.length != currentState.getNPlayers())
+            throw new AssertionError("Heuristic returned " + (finalValues == null ? "null" : finalValues.length + " values")
+                    + " for " + currentState.getNPlayers() + " players: " + params.heuristic);
         for (int p = 0; p < roots.length; p++) {
             if (currentLocation[p] != null) { // the currentLocation will be null if the player has not acted at all (if, say they have been eliminated)
                 // the full actions in tree and rollout are stored on the overall root

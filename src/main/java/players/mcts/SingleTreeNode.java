@@ -1173,6 +1173,9 @@ public class SingleTreeNode {
         // player from one pass (JSON-Bag tokenises the leaf once) avoid repeating that work per player; the
         // interface default is the loop this replaced.
         double[] retValue = params.heuristic.evaluateAll(rolloutState);
+        if (retValue == null || retValue.length != rolloutState.getNPlayers())
+            throw new AssertionError("Heuristic returned " + (retValue == null ? "null" : retValue.length + " values")
+                    + " for " + rolloutState.getNPlayers() + " players: " + params.heuristic);
 
         for (double value : retValue) {
             if (Double.isNaN(value) || Double.isInfinite(value))
