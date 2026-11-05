@@ -119,4 +119,15 @@ public class MCTSHeuristicLifecycleTest {
 
         assertEquals(params.budget, params.copy().budget);
     }
+
+    @Test
+    public void theSearchUsesEvaluateAll() {
+        CountingHeuristic heuristic = new CountingHeuristic();
+
+        play(player(heuristic, 30), 4321L);
+
+        assertTrue("the search must value leaves through evaluateAll, was " + heuristic.evaluateAllCalls,
+                heuristic.evaluateAllCalls > 0);
+        assertEquals("evaluateState must not be used once per player in the search", 0, heuristic.evaluateStateCalls);
+    }
 }

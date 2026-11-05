@@ -1169,12 +1169,13 @@ public class SingleTreeNode {
                 advanceState(rolloutState, next, true);
             }
         }
-        // Evaluate final state and return normalised score
-        double[] retValue = new double[rolloutState.getNPlayers()];
+        // Evaluate final state and return normalised score. evaluateAll lets a heuristic that can value every
+        // player from one pass (JSON-Bag tokenises the leaf once) avoid repeating that work per player; the
+        // interface default is the loop this replaced.
+        double[] retValue = params.heuristic.evaluateAll(rolloutState);
 
-        for (int i = 0; i < retValue.length; i++) {
-            retValue[i] = params.heuristic.evaluateState(rolloutState, i);
-            if (Double.isNaN(retValue[i]) || Double.isInfinite(retValue[i]))
+        for (double value : retValue) {
+            if (Double.isNaN(value) || Double.isInfinite(value))
                 throw new AssertionError("Illegal heuristic value - should be a number - " + params.heuristic.toString());
         }
         return retValue;
