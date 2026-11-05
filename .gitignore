@@ -64,3 +64,4 @@ Experiments/
 
 # Agent task scripts (benchmark harness, quality gate): local tooling, not part of the repo
 agent_scripts/
+/.hermes
