@@ -54,6 +54,7 @@ public class MCTSPlayer extends AbstractPlayer implements IAnyTimePlayer, IHasSt
 
     @Override
     public void initializePlayer(AbstractGameState state) {
+        getParameters().heuristic.reset(state);
         if (getParameters().resetSeedEachGame) {
             rnd = new Random(parameters.getRandomSeed());
             getParameters().rolloutPolicy = null;
@@ -285,6 +286,7 @@ public class MCTSPlayer extends AbstractPlayer implements IAnyTimePlayer, IHasSt
 
     @Override
     public AbstractAction _getAction(AbstractGameState gameState, List<AbstractAction> actions) {
+        getParameters().heuristic.observe(gameState);
         // Search for best action from the root
         if (actions.size() == 1)
             return actions.getFirst();  // take the only action available

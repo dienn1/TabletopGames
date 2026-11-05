@@ -240,6 +240,18 @@ public class MCTSParams extends PlayerParameters {
         return new MCTSParams();
     }
 
+    /**
+     * A copy owns its own heuristic instance. {@code heuristic} can carry state (the JSON-Bag value function
+     * keeps the trajectory bag), and {@link TunableParameters#copy()} copies parameter values by reference,
+     * so without this override two players built from one params object would share one bag.
+     */
+    @Override
+    public MCTSParams copy() {
+        MCTSParams copy = (MCTSParams) super.copy();
+        copy.setParameterValue("heuristic", heuristic.copyHeuristic());
+        return copy;
+    }
+
     public AbstractPlayer getOpponentModel() {
         if (opponentModel == null) {
             if (oppModelType == PARAMS)
