@@ -157,7 +157,8 @@ The pom sets `maven.test.skip=true`, so the flag is required.
 MCTS with the rollout replaced by the value function: set `rolloutLength` to 0 and give MCTS a
 `JSONBagHeuristic` as its `heuristic` parameter. No player class is involved. `MCTSPlayer` drives the
 heuristic's lifecycle (`reset` at the start of a game, `observe` at every decision), so information mode, tree
-policy, opponent tree policy, determinisations and every other MCTS option work unchanged.
+policy, opponent tree policy, determinisations and the rest of the MCTS options work unchanged. (MCGS is the
+exception among the tree policies: it needs a non-null `MCGSStateKey` whatever heuristic it runs.)
 
 ```json
 {
@@ -173,6 +174,9 @@ policy, opponent tree policy, determinisations and every other MCTS option work 
   }
 }
 ```
+
+`prototypeDir` is required; `nPrototypes` defaults to 2, `fullPrototypes` to true, and an absent or empty
+`filterFile` keeps every token.
 
 or the same thing in code:
 

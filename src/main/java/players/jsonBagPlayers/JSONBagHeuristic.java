@@ -264,6 +264,7 @@ public class JSONBagHeuristic implements IStateHeuristic {
         return ret;
     }
 
+    @Override
     public JSONBagHeuristic copyHeuristic() {
         JSONBagHeuristic copy = new JSONBagHeuristic(prototypes, new ArrayList<>(filterSet));
         copy.current.copyTokensFrom(current);
