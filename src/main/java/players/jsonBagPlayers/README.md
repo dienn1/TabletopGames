@@ -21,7 +21,7 @@ The container is the piece you write per game. Everything downstream is game-agn
 | `TokenBag` | The bag: counts in a dense `int[]` indexed by token id, with a `Map<String,Integer>` view. |
 | `PrototypeSet` | The prototypes compiled into one interleaved probability array, plus the dense distance loop (`PrototypeSet.distances(TokenBag, double[])`) the heuristic calls. |
 | `JensenShannonDistance` | Removed. The keyed helpers live in `utilities.Utils`: `jensenShannonDistance(Map, Map)` for two bags, `normaliseDistribution` for counts, and `double[]` overloads for plain probability vectors. The dense fast path is `PrototypeSet.distances`. JSD is symmetric and bounded by 1. |
-| `JSONBagHeuristic` | `IStateHeuristic` that scores a state by JSD to one prototype bag per player. |
+| `JSONBagHeuristic` | `IStateHeuristic` that scores a state by JSD to one prototype bag per player. Its `reset`/`observe`/`copyHeuristic`/`evaluateAll` come from `IStateHeuristic` and are driven by `MCTSPlayer`, which is what makes JSON-Bag MCTS possible without a player class. |
 | `JSONBagOSLAPlayer` | One-step look-ahead: rolls each legal action forward, scores the result with `JSONBagHeuristic`, plays the best. |
 | `GameStateContainerFactory` | In `evaluation.containers`. Maps a `GameType` to the container class that snapshots it. Throws if the game has no container. |
 | `TokenizerTest` | Scratch harness, not a JUnit test. It lives in `src/main/java`, reads `test.txt` and `filterTest.json`, and does not run under surefire. |
@@ -151,6 +151,48 @@ mvn test -Dmaven.test.skip=false -Dtest=JSONBagTokenizerTest
 ```
 
 The pom sets `maven.test.skip=true`, so the flag is required.
+
+## JSON-Bag MCTS
+
+MCTS with the rollout replaced by the value function: set `rolloutLength` to 0 and give MCTS a
+`JSONBagHeuristic` as its `heuristic` parameter. No player class is involved. `MCTSPlayer` drives the
+heuristic's lifecycle (`reset` at the start of a game, `observe` at every decision), so information mode, tree
+policy, opponent tree policy, determinisations and every other MCTS option work unchanged.
+
+```json
+{
+  "class": "players.mcts.MCTSParams",
+  "rolloutLength": 0,
+  "information": "Information_Set",
+  "budgetType": "BUDGET_TIME", "budget": 40,
+  "heuristic": {
+    "class": "players.jsonBagPlayers.JSONBagHeuristic",
+    "prototypeDir": "Experiments/valueFuncTest2/Connect4/prototype100_0_allSegFS_seg4_cum",
+    "nPrototypes": 2, "fullPrototypes": true,
+    "filterFile": "Experiments/valueFuncTest2/Connect4/prototype100_0_allSegFS_seg4_cum/features-top100.json"
+  }
+}
+```
+
+or the same thing in code:
+
+```java
+MCTSParams params = new MCTSParams();
+params.setParameterValue("rolloutLength", 0);
+params.setParameterValue("information", "Information_Set");
+params.setParameterValue("heuristic", new JSONBagHeuristic(descriptor));
+MCTSPlayer player = new MCTSPlayer(params);
+```
+
+`nPrototypes` must equal the number of players; `evaluateState` throws on a mismatch. Two settings matter for
+experiments: `Information_Set`, so each leaf is redeterminised from the acting player's view (the paper's rule
+for imperfect information), and `reuseTree` off, because with reuse the stored statistics come from an older
+trajectory bag. Each leaf is valued as the real trajectory so far plus the single simulated leaf state; the
+intermediate states of the search path are not in the bag, and a decision with a single legal action never
+reaches the player's decision method, so that state is not observed either.
+
+`json/players/jsonbag-mcts.json` is the Connect4 example. Its prototypes live under `Experiments/`, which is
+not checked in.
 
 ## Prototypes and filters
 
