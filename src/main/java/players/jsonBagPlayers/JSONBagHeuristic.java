@@ -76,9 +76,13 @@ public class JSONBagHeuristic implements IStateHeuristic {
         if (dir.isBlank())
             throw new IllegalArgumentException("JSONBagHeuristic needs a prototypeDir in its JSON descriptor: " + json.toJSONString());
         int nPrototypes = intValue(json, "nPrototypes", 2);
+        if (nPrototypes < 1)
+            throw new IllegalArgumentException("JSON-Bag nPrototypes must be at least 1, got " + nPrototypes);
         boolean full = booleanValue(json, "fullPrototypes", true);
         String filterFile = stringValue(json, "filterFile", "");
         List<String> filter = filterFile.isBlank() ? List.of() : Tokenizer.loadStringList(filterFile);
+        if (!filterFile.isBlank() && filter.isEmpty())
+            throw new IllegalArgumentException("JSON-Bag filter file " + filterFile + " is missing or empty");
         List<Map<String, Integer>> prototypes = Tokenizer.loadPrototypes(dir, nPrototypes, full);
         for (int i = 0; i < prototypes.size(); i++) {
             if (prototypes.get(i).isEmpty())

@@ -78,6 +78,16 @@ public class JSONBagHeuristicJsonTest {
 
         for (String token : heuristic.currentJSONBag.keySet())
             assertTrue("unexpected token " + token, whitelist.contains(token));
+        // the prototypes must be filtered before they are compiled: prototype0 keeps both whitelisted tokens,
+        // prototype1 only .gameType.DotsAndBoxes, so an unfiltered compile would report {3, 3} here
+        assertArrayEquals(new int[]{2, 1}, heuristic.compiledPrototypes().mapSize);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void aMissingFilterFileFailsLoudly() throws IOException {
+        File dir = writePrototypes(2, true);
+
+        new JSONBagHeuristic(descriptor(dir, 2, true, new File(dir, "no-such-filter.json").getAbsolutePath()));
     }
 
     @Test(expected = IllegalArgumentException.class)
