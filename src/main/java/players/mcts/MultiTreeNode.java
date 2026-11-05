@@ -141,12 +141,9 @@ public class MultiTreeNode extends SingleTreeNode {
             // could end the iteration while we are still descending our own tree.)
         } while (currentState.isNotTerminal() && !(checkRolloutStart(currentState) && finishRollout(currentState)));
 
-        // Evaluate final state and return normalised score
-        double[] finalValues = new double[state.getNPlayers()];
-
-        for (int i = 0; i < finalValues.length; i++) {
-            finalValues[i] = params.heuristic.evaluateState(currentState, i);
-        }
+        // Evaluate final state and return normalised score. One pass, like SingleTreeNode.rollout: the
+        // interface default is the per-player loop this replaced.
+        double[] finalValues = params.heuristic.evaluateAll(currentState);
         for (int p = 0; p < roots.length; p++) {
             if (currentLocation[p] != null) { // the currentLocation will be null if the player has not acted at all (if, say they have been eliminated)
                 // the full actions in tree and rollout are stored on the overall root
