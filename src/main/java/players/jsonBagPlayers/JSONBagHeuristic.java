@@ -80,12 +80,20 @@ public class JSONBagHeuristic implements IStateHeuristic {
         if (gs.getNPlayers() != compiled.count) {
             throw new RuntimeException("PLAYER COUNT AND PROTOTYPE COUNT MISMATCHED: " + gs.getNPlayers() + " vs. " + compiled.count);
         }
-        if (gs.getPlayerResults()[playerId] == CoreConstants.GameResult.LOSE_GAME)
+        CoreConstants.GameResult result = gs.getPlayerResults()[playerId];
+        if (result == CoreConstants.GameResult.LOSE_GAME)
             return 0;
-        if (gs.getPlayerResults()[playerId] == CoreConstants.GameResult.WIN_GAME)
+        if (result == CoreConstants.GameResult.WIN_GAME)
             return 1.0;
+        return valuesFromBag(gs)[playerId];
+    }
 
-        // value the trajectory so far plus this state, then undo the merge instead of copying the whole bag
+    /**
+     * The value of a state for every player, before any terminal result is applied: values the trajectory so far
+     * plus {@code gs}, then undoes the merge instead of copying the whole bag. The single place the hot path
+     * lives, so {@link #evaluateState} and {@link #evaluateAll} cannot drift apart.
+     */
+    private double[] valuesFromBag(AbstractGameState gs) {
         if (distanceBuffer.length != compiled.count) distanceBuffer = new double[compiled.count];
         current.startRecording();
         try {
@@ -94,8 +102,7 @@ public class JSONBagHeuristic implements IStateHeuristic {
         } finally {
             current.rollback();
         }
-        double[] values = subtractNormalized(distanceBuffer);
-        return values[playerId];
+        return subtractNormalized(distanceBuffer);
     }
 
     /**
@@ -123,15 +130,7 @@ public class JSONBagHeuristic implements IStateHeuristic {
         if (!needsDistances)
             return values;
 
-        if (distanceBuffer.length != compiled.count) distanceBuffer = new double[compiled.count];
-        current.startRecording();
-        try {
-            Tokenizer.tokenizeInto(gs, current);
-            compiled.distances(current, distanceBuffer);
-        } finally {
-            current.rollback();
-        }
-        double[] normalised = subtractNormalized(distanceBuffer);
+        double[] normalised = valuesFromBag(gs);
         for (int i = 0; i < values.length; i++) {
             if (results[i] != CoreConstants.GameResult.LOSE_GAME && results[i] != CoreConstants.GameResult.WIN_GAME)
                 values[i] = normalised[i];
