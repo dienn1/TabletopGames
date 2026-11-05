@@ -52,7 +52,8 @@ public class SimultaneousOSLAPlayer extends OSLAPlayer{
 
     @Override
     public SimultaneousOSLAPlayer copy() {
-        SimultaneousOSLAPlayer retValue = new SimultaneousOSLAPlayer(heuristic, new Random(rnd.nextInt()));
+        SimultaneousOSLAPlayer retValue = new SimultaneousOSLAPlayer(
+                heuristic == null ? null : heuristic.copyHeuristic(), new Random(rnd.nextInt()));
         retValue.setForwardModel(getForwardModel());
         return retValue;
     }

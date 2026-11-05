@@ -35,7 +35,16 @@ public class OSLAPlayer extends AbstractPlayer {
     }
 
     @Override
+    public void initializePlayer(AbstractGameState state) {
+        if (heuristic != null)
+            heuristic.reset(state);
+        super.initializePlayer(state);
+    }
+
+    @Override
     public AbstractAction _getAction(AbstractGameState gs, List<AbstractAction> actions) {
+        if (heuristic != null)
+            heuristic.observe(gs);
         double maxQ = Double.NEGATIVE_INFINITY;
         AbstractAction bestAction = null;
         double[] valState = new double[actions.size()];
@@ -70,7 +79,8 @@ public class OSLAPlayer extends AbstractPlayer {
 
     @Override
     public OSLAPlayer copy() {
-        OSLAPlayer retValue = new OSLAPlayer(heuristic, new Random(rnd.nextInt()));
+        OSLAPlayer retValue = new OSLAPlayer(heuristic == null ? null : heuristic.copyHeuristic(),
+                new Random(rnd.nextInt()));
         retValue.setForwardModel(getForwardModel());
         retValue.setName(toString());
         return retValue;
