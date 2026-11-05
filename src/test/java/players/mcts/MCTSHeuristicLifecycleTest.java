@@ -6,6 +6,7 @@ import core.CoreConstants;
 import core.Game;
 import core.interfaces.IStateHeuristic;
 import games.GameType;
+import games.connect4.Connect4Heuristic;
 import org.junit.Test;
 import players.PlayerConstants;
 import players.simple.RandomPlayer;
@@ -97,6 +98,17 @@ public class MCTSHeuristicLifecycleTest {
 
         assertNotSame(first.getStateHeuristic(), second.getStateHeuristic());
         assertNotSame(first.getStateHeuristic(), heuristic);
+    }
+
+    @Test
+    public void aTunableHeuristicIsStillCopiedIndependently() {
+        MCTSParams params = new MCTSParams();
+        params.setParameterValue("heuristic", new Connect4Heuristic());
+
+        MCTSParams copy = params.copy();
+
+        assertNotSame("TunableParameters.copy() already deep-copies a tunable heuristic; the override must not undo it",
+                params.heuristic, copy.heuristic);
     }
 
     @Test

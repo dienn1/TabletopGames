@@ -22,8 +22,11 @@ public interface IStateHeuristic {
     }
 
     /**
-     * Called once per decision, with the state the player is about to act on.
+     * Called before each decision in which the player has a choice, with the state they are about to act on.
      * A stateful heuristic uses this to add the observation to its running trajectory. The default does nothing.
+     * <p>
+     * A decision with a single legal action does not reach the player's decision method
+     * ({@link core.AbstractPlayer#getAction} returns that action directly), so it is not observed.
      * @param gs - the observed state for this decision.
      */
     default void observe(AbstractGameState gs) {

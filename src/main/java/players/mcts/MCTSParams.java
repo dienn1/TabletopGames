@@ -241,14 +241,19 @@ public class MCTSParams extends PlayerParameters {
     }
 
     /**
-     * A copy owns its own heuristic instance. {@code heuristic} can carry state (the JSON-Bag value function
-     * keeps the trajectory bag), and {@link TunableParameters#copy()} copies parameter values by reference,
-     * so without this override two players built from one params object would share one bag.
+     * A copy owns its own heuristic where the heuristic can produce one. {@code heuristic} may carry state
+     * (the JSON-Bag value function keeps the trajectory bag), and {@link TunableParameters#copy()} copies
+     * parameter values by reference unless they are themselves {@code TunableParameters}. So: a heuristic that
+     * overrides {@link IStateHeuristic#copyHeuristic()} is replaced with its own copy here; one that returns
+     * itself is left exactly as {@code super.copy()} made it - a deep copy for a tunable heuristic, a shared
+     * reference for a stateless one.
      */
     @Override
     public MCTSParams copy() {
         MCTSParams copy = (MCTSParams) super.copy();
-        copy.setParameterValue("heuristic", heuristic.copyHeuristic());
+        IStateHeuristic ownHeuristic = heuristic.copyHeuristic();
+        if (ownHeuristic != heuristic)
+            copy.setParameterValue("heuristic", ownHeuristic);
         return copy;
     }
 
