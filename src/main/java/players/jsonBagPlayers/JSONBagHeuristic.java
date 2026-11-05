@@ -3,6 +3,7 @@ package players.jsonBagPlayers;
 import core.AbstractGameState;
 import core.CoreConstants;
 import core.interfaces.IStateHeuristic;
+import org.json.simple.JSONObject;
 
 import java.util.*;
 
@@ -42,6 +43,70 @@ public class JSONBagHeuristic implements IStateHeuristic {
         current = new TokenBag(dict);
         currentJSONBag = current;
         distanceBuffer = new double[compiled.count];
+    }
+
+    /**
+     * Builds the value function from the JSON object a player descriptor nests under "heuristic":
+     * <pre>
+     * "heuristic": { "class": "players.jsonBagPlayers.JSONBagHeuristic",
+     *                "prototypeDir": "Experiments/valueFuncTest2/Connect4/prototype100_0_allSegFS_seg4_cum",
+     *                "nPrototypes": 2,
+     *                "fullPrototypes": true,
+     *                "filterFile": ".../features-top100.json" }
+     * </pre>
+     * prototypeDir is required; nPrototypes defaults to 2, fullPrototypes to true, and an absent or empty
+     * filterFile keeps every token. The prototypes are filtered before they are compiled: {@link PrototypeSet}
+     * interns every key it is given, so an unfiltered prototype would carry tokens the bag can never produce.
+     *
+     * @param json the descriptor.
+     */
+    public JSONBagHeuristic(JSONObject json) {
+        this(load(json));
+    }
+
+    private JSONBagHeuristic(Loaded loaded) {
+        this(loaded.prototypes(), loaded.filter());
+    }
+
+    private record Loaded(List<Map<String, Integer>> prototypes, List<String> filter) {
+    }
+
+    private static Loaded load(JSONObject json) {
+        String dir = stringValue(json, "prototypeDir", "");
+        if (dir.isBlank())
+            throw new IllegalArgumentException("JSONBagHeuristic needs a prototypeDir in its JSON descriptor: " + json.toJSONString());
+        int nPrototypes = intValue(json, "nPrototypes", 2);
+        boolean full = booleanValue(json, "fullPrototypes", true);
+        String filterFile = stringValue(json, "filterFile", "");
+        List<String> filter = filterFile.isBlank() ? List.of() : Tokenizer.loadStringList(filterFile);
+        List<Map<String, Integer>> prototypes = Tokenizer.loadPrototypes(dir, nPrototypes, full);
+        for (int i = 0; i < prototypes.size(); i++) {
+            if (prototypes.get(i).isEmpty())
+                throw new IllegalArgumentException("JSON-Bag prototype " + i + " is empty: expected "
+                        + (full ? "full_prototype" : "prototype") + i + ".json under " + dir);
+        }
+        if (!filter.isEmpty()) {
+            Set<String> keep = Set.copyOf(filter);
+            for (Map<String, Integer> prototype : prototypes)
+                Tokenizer.filter(prototype, keep, true);
+        }
+        return new Loaded(prototypes, filter);
+    }
+
+    private static String stringValue(JSONObject json, String key, String defaultValue) {
+        Object value = json.get(key);
+        return value == null ? defaultValue : value.toString().trim();
+    }
+
+    private static int intValue(JSONObject json, String key, int defaultValue) {
+        Object value = json.get(key);
+        return value instanceof Number number ? number.intValue() : defaultValue;
+    }
+
+    private static boolean booleanValue(JSONObject json, String key, boolean defaultValue) {
+        Object value = json.get(key);
+        if (value instanceof Boolean flag) return flag;
+        return value == null ? defaultValue : Boolean.parseBoolean(value.toString());
     }
 
     public void setFilterSet(Collection<String> filterSet_) {
