@@ -106,7 +106,7 @@ public class JSONBagOSLAPlayer extends AbstractPlayer {
     @Override
     public JSONBagOSLAPlayer copy() {
         JSONBagOSLAPlayer retValue = new JSONBagOSLAPlayer(new Random(rnd.nextInt()));
-        retValue.heuristic = this.heuristic.copy();
+        retValue.heuristic = this.heuristic.copyHeuristic();
         retValue.setForwardModel(getForwardModel());
         retValue.simultaneousMode = this.simultaneousMode;
         retValue.currentTurnCount = this.currentTurnCount;

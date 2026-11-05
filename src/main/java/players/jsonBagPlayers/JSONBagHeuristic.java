@@ -63,6 +63,18 @@ public class JSONBagHeuristic implements IStateHeuristic {
         updateJSONBag(gs);
     }
 
+    /** Starts the trajectory bag at the given observation. Called by MCTSPlayer at the start of a game. */
+    @Override
+    public void reset(AbstractGameState gs) {
+        resetCurrentBag(gs);
+    }
+
+    /** Adds the observed state to the trajectory bag. Called by MCTSPlayer once per decision. */
+    @Override
+    public void observe(AbstractGameState gs) {
+        updateJSONBag(gs);
+    }
+
     @Override
     public double evaluateState(AbstractGameState gs, int playerId) {
         if (gs.getNPlayers() != compiled.count) {
@@ -84,6 +96,47 @@ public class JSONBagHeuristic implements IStateHeuristic {
         }
         double[] values = subtractNormalized(distanceBuffer);
         return values[playerId];
+    }
+
+    /**
+     * The value of {@code gs} for every player, from one tokenisation and one distance pass. Identical to
+     * calling {@link #evaluateState(AbstractGameState, int)} for each player, including the terminal
+     * short-circuit: a player who has lost scores 0 and a player who has won scores 1 without any bag work.
+     */
+    @Override
+    public double[] evaluateAll(AbstractGameState gs) {
+        if (gs.getNPlayers() != compiled.count) {
+            throw new RuntimeException("PLAYER COUNT AND PROTOTYPE COUNT MISMATCHED: " + gs.getNPlayers() + " vs. " + compiled.count);
+        }
+        double[] values = new double[compiled.count];
+        CoreConstants.GameResult[] results = gs.getPlayerResults();
+        boolean needsDistances = false;
+        for (int i = 0; i < values.length; i++) {
+            if (results[i] == CoreConstants.GameResult.LOSE_GAME) {
+                values[i] = 0;
+            } else if (results[i] == CoreConstants.GameResult.WIN_GAME) {
+                values[i] = 1.0;
+            } else {
+                needsDistances = true;
+            }
+        }
+        if (!needsDistances)
+            return values;
+
+        if (distanceBuffer.length != compiled.count) distanceBuffer = new double[compiled.count];
+        current.startRecording();
+        try {
+            Tokenizer.tokenizeInto(gs, current);
+            compiled.distances(current, distanceBuffer);
+        } finally {
+            current.rollback();
+        }
+        double[] normalised = subtractNormalized(distanceBuffer);
+        for (int i = 0; i < values.length; i++) {
+            if (results[i] != CoreConstants.GameResult.LOSE_GAME && results[i] != CoreConstants.GameResult.WIN_GAME)
+                values[i] = normalised[i];
+        }
+        return values;
     }
 
     private double[] invertNormalized(double[] distancesArray) {
@@ -143,7 +196,7 @@ public class JSONBagHeuristic implements IStateHeuristic {
         return ret;
     }
 
-    public JSONBagHeuristic copy() {
+    public JSONBagHeuristic copyHeuristic() {
         JSONBagHeuristic copy = new JSONBagHeuristic(prototypes, new ArrayList<>(filterSet));
         copy.current.copyTokensFrom(current);
         return copy;

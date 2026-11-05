@@ -126,7 +126,7 @@ public class JSONBagHeuristicTest {
         JSONBagHeuristic heuristic = heuristicWith(stateBag, otherBag);
         heuristic.resetCurrentBag(gameState);
 
-        JSONBagHeuristic copy = heuristic.copy();
+        JSONBagHeuristic copy = heuristic.copyHeuristic();
         heuristic.updateJSONBag(gameState);
 
         assertEquals(stateBag, copy.currentJSONBag);
