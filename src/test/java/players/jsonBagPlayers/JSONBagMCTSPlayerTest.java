@@ -17,9 +17,11 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeTrue;
@@ -41,6 +43,7 @@ public class JSONBagMCTSPlayerTest {
 
     private static MCTSParams params(String information, String opponentTreePolicy, int determinisations, int budget) {
         MCTSParams params = new MCTSParams();
+        params.setParameterValue("randomSeed", 1234);
         params.setParameterValue("rolloutLength", 0);
         params.setParameterValue("information", information);
         params.setParameterValue("opponentTreePolicy", opponentTreePolicy);
@@ -57,16 +60,39 @@ public class JSONBagMCTSPlayerTest {
         return Game.runOne(gameType, null, players, seed, false, null, null, 0);
     }
 
+    /** Counts evaluations, to prove the search consults the value function rather than merely holding it. */
+    static class CountingBagHeuristic extends JSONBagHeuristic {
+        int evaluations;
+
+        CountingBagHeuristic(List<Map<String, Integer>> prototypes) {
+            super(prototypes);
+        }
+
+        @Override
+        public double[] evaluateAll(AbstractGameState gs) {
+            evaluations++;
+            return super.evaluateAll(gs);
+        }
+    }
+
+    /** The number of distinct tokens in one game's opening state: the floor a trajectory bag starts from. */
+    private static int openingTokens(GameType gameType, long seed) {
+        return Tokenizer.tokenize(gameType.createGameInstance(2, seed).getGameState()).size();
+    }
+
     @Test
     public void stockMctsWithAJsonBagHeuristicPlaysAFullGame() {
-        JSONBagHeuristic heuristic = new JSONBagHeuristic(prototypesFor(GameType.Connect4, 2, 11L));
+        CountingBagHeuristic heuristic = new CountingBagHeuristic(prototypesFor(GameType.Connect4, 2, 11L));
         MCTSParams params = params("Information_Set", "OneTree", 1, 40);
         params.setParameterValue("heuristic", heuristic);
 
         Game game = play(GameType.Connect4, new MCTSPlayer(params), 1234L);
 
         assertNotEquals(CoreConstants.GameResult.GAME_ONGOING, game.getGameState().getGameStatus());
-        assertTrue("the trajectory bag should hold more than the opening state", heuristic.currentJSONBag.size() > 0);
+        assertTrue("the search must consult the value function, evaluations=" + heuristic.evaluations,
+                heuristic.evaluations > 0);
+        assertTrue("the trajectory bag must grow past the opening state, was " + heuristic.currentJSONBag.size(),
+                heuristic.currentJSONBag.size() > openingTokens(GameType.Connect4, 1234L));
     }
 
     @Test
@@ -110,7 +136,11 @@ public class JSONBagMCTSPlayerTest {
         Game game = play(GameType.Connect4, new MCTSPlayer(params), 2026L);
 
         assertNotEquals(CoreConstants.GameResult.GAME_ONGOING, game.getGameState().getGameStatus());
-        assertTrue("the trajectory bag should accumulate well past the opening state",
-                heuristic.currentJSONBag.size() > 50);
+        // the bag is filtered by the descriptor's whitelist, so compare against a filtered opening state
+        Set<String> whitelist = new HashSet<>(Tokenizer.loadStringList(filter.toAbsolutePath().toString()));
+        int opening = Tokenizer.tokenize(GameType.Connect4.createGameInstance(2, 2026L).getGameState(), whitelist, true).size();
+        assertTrue("the trajectory bag must grow past the filtered opening state (" + opening + "), was "
+                        + heuristic.currentJSONBag.size(),
+                heuristic.currentJSONBag.size() > opening);
     }
 }
